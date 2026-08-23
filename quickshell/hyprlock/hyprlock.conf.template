@@ -1,0 +1,57 @@
+# Hyprlock config. Source the generated colors file, then use $island_*
+# variables below. Regenerated on every theme change by
+# scripts/island-set-theme.sh -- see ARCHITECTURE.md section 4 for why this
+# is a file hand-off rather than a live binding (hyprlock is a cold process,
+# it can't read a running QML singleton).
+#
+# NOTE: typography/sizing here is INTENTIONALLY independent of Theme.metrics
+# (confirmed: Theme.colors flows to hyprlock, Theme.metrics does not). Adjust
+# font sizes below directly if you want a different look -- don't wire them
+# to the Island's bar-height/font-size sliders.
+
+source = ~/.cache/island/hyprlock-colors.conf
+
+background {
+    monitor =
+    path = screenshot
+    blur_passes = 3
+    color = $island_bg
+}
+
+label {
+    monitor =
+    text = cmd[update:1000] echo "$(date +'%H:%M')"
+    color = $island_text
+    font_size = 90
+    font_family = Geist
+    position = 0, 100
+    halign = center
+    valign = center
+}
+
+label {
+    monitor =
+    text = cmd[update:60000] echo "$(date +'%A, %d %B')"
+    color = $island_text
+    font_size = 20
+    font_family = Geist
+    position = 0, 0
+    halign = center
+    valign = center
+}
+
+input-field {
+    monitor =
+    size = 320, 50
+    outline_thickness = 1
+    dots_size = 0.2
+    outer_color = $island_surface
+    inner_color = $island_surface
+    font_color = $island_text
+    check_color = $island_accent
+    fail_color = $island_danger
+    placeholder_text = <span foreground="##888888">Password</span>
+    position = 0, -160
+    halign = center
+    valign = center
+}

@@ -1,0 +1,27 @@
+cd ~/dotfiles
+
+cat > .gitignore <<'EOF'
+# Runtime / generated state
+.cache/
+cache/
+*.log
+
+# Secrets
+.env
+.env.*
+*.pem
+*.key
+credentials*
+secrets*
+
+# Editors / OS
+.DS_Store
+*.swp
+*.swo
+*~
+
+# Generated archives
+*.tar
+*.tar.gz
+*.zip
+
