@@ -63,10 +63,10 @@ Each top-level directory is one unit that is symlinked into `~/.config/<name>`.
 
 | Unit | What it is |
 | --- | --- |
-| `hypr/` | Hyprland config in Lua. `hyprland.lua` requires `modules/*` in order. |
+| `hypr/` | Hyprland config in Lua. `hyprland.lua` requires `modules/*` in order, then `hypridle.lua`, which writes `hypridle.toml` and starts the daemon once per session. |
 | `quickshell/` | The shell. `shell.qml` is the entrypoint; `services/` are singletons, `surfaces/` are windows, `modules/Keybinds.qml` is the shortcut hub. |
 | `colors/` | Theme palettes and the *generated* per-app colour files (`current.json`, `hyprland.conf`, `kitty.conf`, `gtk.css`, `colors.css`, `colors.sh`). |
-| `kitty/` | Terminal config. `current-theme.conf` is generated; `kitty.conf` includes it. |
+| `kitty/` | Terminal config. `kitty.conf` is the whole config and the terminal keeps its stock background — nothing includes `current-theme.conf`, which is kept only as a record of the last generated palette. |
 | `vlc/`, `Thunar/` | App config. |
 
 `hypr/modules/` is the shape to follow when adding config: one file per concern,

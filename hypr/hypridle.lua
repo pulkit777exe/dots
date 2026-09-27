@@ -6,10 +6,17 @@
 -- from a Lua config is to drop a TOML file and start the daemon at session
 -- boot. `autostart.lua` already launches Hyprland-managed daemons; this
 -- file just writes the TOML and registers the start command.
+--
+-- This module was never required by hyprland.lua, so none of the below ever
+-- ran: the daemon was not started and the TOML was not written. The whole
+-- idle chain -- dim, lock, display off, suspend -- was dead. It is now
+-- required from hyprland.lua, and the work is scoped to `hyprland.start` so
+-- that a `hyprctl reload` neither rewrites the TOML nor re-checks the daemon.
 
 local home = os.getenv("HOME")
 local toml_path = home .. "/.config/hypr/hypridle.toml"
 
+hl.on("hyprland.start", function()
 -- 1. Write the hypridle config.
 -- The chain mirrors the spec (Idle -> dim -> lock -> display off -> suspend):
 --   - 90s idle: dim via `hyprctl` keyword (compositor dim, not brightness)
@@ -70,3 +77,4 @@ if not pid or pid == "" then
     -- the trailing `&` and redirected stdio.
     os.execute("setsid hypridle >/dev/null 2>&1 &")
 end
+end)

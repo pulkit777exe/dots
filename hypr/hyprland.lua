@@ -11,6 +11,12 @@ require("modules.environment")
 -- header comment for what depends on what and why the order matters.
 require("modules.startup")
 
+-- Idle lifecycle (dim -> lock -> display off -> suspend). Also never required
+-- before, so hypridle was not started and its TOML was never written. Loaded
+-- defensively with an absolute path, like openwhispr below, so a missing file
+-- cannot take the rest of the config down with it.
+pcall(require, (os.getenv("XDG_CONFIG_HOME") or (os.getenv("HOME") .. "/.config")) .. "/hypr/hypridle.lua")
+
 -- Hardware
 require("modules.monitors")
 require("modules.input")
