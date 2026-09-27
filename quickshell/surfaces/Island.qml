@@ -417,7 +417,13 @@ Item {
             topRightRadius: (root.notchMode && !rightDotWrap.isExpanded) ? 0 : cornerRadius
             bottomLeftRadius: cornerRadius
             bottomRightRadius: cornerRadius
-            backgroundColor: rightDotWrap.isExpanded ? "#141414" : "#000000"
+            // Pure black behind the expanded panel, matching the reference:
+            // sampling its panel background gives (0,0,0), while the cards on
+            // top are (24,22,20). #141414 was close enough to read as "dark"
+            // but it lifted the whole panel off the desktop and flattened the
+            // contrast against the cards. The collapsed dot was already black.
+            backgroundColor: "#000000"
+
             shadow: rightDotWrap.isExpanded
 
             Behavior on cornerRadius {

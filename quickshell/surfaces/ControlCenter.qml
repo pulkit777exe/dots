@@ -1167,8 +1167,10 @@ Surface {
     // ── CcPill — solid pill toggle ────────────────────────────────
     component CcPill: Rectangle {
         id: pill
-        height: 52
-        radius: 15
+        // 57 = the 41px badge plus the reference's 8px of padding above and
+        // below it (badge top 76, panel fill top 68).
+        height: 57
+        radius: 16
         property bool active: false
         property string icon: ""
         property string label: ""
@@ -1200,11 +1202,14 @@ Surface {
             anchors { fill: parent; leftMargin: 9; rightMargin: 11 }
             spacing: 9
 
-            // Circular icon badge — measured off the reference at 36px with a
-            // symmetric width taper, so a circle, not a rounded square.
+            // Circular icon badge. 41px, measured off the reference by taking
+            // the tight bounding box of the solid teal circle inside the Wi-Fi
+            // pill: x 727..767, y 76..116. The old 36 came from a comment that
+            // claimed it was measured and was not. Symmetric width taper, so a
+            // circle, not a rounded square.
             Rectangle {
-                Layout.preferredWidth: 36
-                Layout.preferredHeight: 36
+                Layout.preferredWidth: 41
+                Layout.preferredHeight: 41
                 radius: width / 2
                 color: pill.active ? root.accent : "#2a2a2a"
                 Behavior on color { ColorAnimation { duration: MotionConfig.hover() } }
@@ -1212,7 +1217,7 @@ Surface {
                 Icon {
                     anchors.centerIn: parent
                     icon: pill.icon
-                    size: 18
+                    size: 20
                     iconColor: pill.active ? root.accentText : "#DDDDDD"
                 }
             }
@@ -1238,9 +1243,10 @@ Surface {
     // ── CcIconBtn — solid small button (Lock, Night Light) ────────
     component CcIconBtn: Rectangle {
         id: iconBtn
-        // Circular, 52px — the reference's lock/moon buttons measure 52px
-        // across with the same symmetric taper as the badges.
-        width: 52; height: 52; radius: width / 2
+        // Circular, 60px. The reference's moon button is a solid accent circle
+        // at x 1143..1202, y 138..196 -- 60x59 -- so it is directly measurable
+        // as a bounding box. The old 52 was a carried-over guess.
+        width: 60; height: 60; radius: width / 2
         property string icon: ""
         property bool active: false
         signal clicked()
