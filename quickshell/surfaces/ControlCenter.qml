@@ -33,6 +33,9 @@ Surface {
     readonly property color bgSliderTrack: "#0d0b0a"
 
     width: 460
+    // Surface is an Item, so implicitHeight alone does not size it. Without
+    // this the panel kept a fixed height and clipped the drill-down.
+    height: implicitHeight
     cornerRadius: 24
     backgroundColor: root.bgSurface
     borderColor: "#262626"
@@ -88,18 +91,22 @@ Surface {
         }
     }
 
-    // ── Implicit height follows active sub-view ──────────────────
-    implicitHeight: {
-        if (view === "bluetooth") return btPage.implicitHeight + 28
-        if (view === "display")   return dispPage.implicitHeight + 28
-        if (view === "wifi")      return wifiPage.implicitHeight + 28
-        if (view === "sound")     return soundPage.implicitHeight + 28
-        return homePage.implicitHeight + 28
-    }
-    Behavior on implicitHeight {
-        enabled: !MotionConfig.reduceMotion
-        SpringAnimation { spring: 4.2; damping: MotionConfig.springDamping; mass: 0.85 }
-    }
+    // ── Fixed height ─────────────────────────────────────────────
+    // The panel does NOT resize per view. It used to derive its height from
+    // the active page and spring between sizes, which made it visibly
+    // readjust every time a page loaded its async content (Bluetooth scan,
+    // PipeWire enumeration) and left it stuck at the wrong size when that
+    // content arrived late.
+    //
+    // A constant height means the drill-downs all open into the same box.
+    // Long lists scroll inside it rather than growing the panel.
+    readonly property int panelHeight: 560
+    implicitHeight: panelHeight
+
+    // Vertical space a drill-down gets: it starts below both pill rows and
+    // ends at the panel's bottom margin.
+    readonly property int popoverTop: 142
+    readonly property int popoverHeight: panelHeight - popoverTop - 14
 
     // ═══════════════════════════════════════════════════════════════
     // HOME PAGE  (Reference 1)
@@ -321,7 +328,8 @@ Surface {
             top: parent.top; bottom: parent.bottom
             left: parent.left; right: parent.right
             leftMargin: 10; rightMargin: 10
-            topMargin: 66; bottomMargin: 14
+            topMargin: root.popoverTop
+            bottomMargin: 14
         }
         radius: 18
         color: root.bgSurface
@@ -342,7 +350,8 @@ Surface {
             top: parent.top; bottom: parent.bottom
             left: parent.left; right: parent.right
             leftMargin: 10; rightMargin: 10
-            topMargin: 66; bottomMargin: 14
+            topMargin: root.popoverTop
+            bottomMargin: 14
         }
         spacing: 0
         visible: root.view === "bluetooth"
@@ -476,7 +485,8 @@ Surface {
             top: parent.top; bottom: parent.bottom
             left: parent.left; right: parent.right
             leftMargin: 10; rightMargin: 10
-            topMargin: 66; bottomMargin: 14
+            topMargin: root.popoverTop
+            bottomMargin: 14
         }
         spacing: 0
         visible: root.view === "sound"
@@ -623,7 +633,8 @@ Surface {
             top: parent.top; bottom: parent.bottom
             left: parent.left; right: parent.right
             leftMargin: 10; rightMargin: 10
-            topMargin: 66; bottomMargin: 14
+            topMargin: root.popoverTop
+            bottomMargin: 14
         }
         spacing: 0
         visible: root.view === "display"
@@ -715,7 +726,8 @@ Surface {
             top: parent.top; bottom: parent.bottom
             left: parent.left; right: parent.right
             leftMargin: 10; rightMargin: 10
-            topMargin: 66; bottomMargin: 14
+            topMargin: root.popoverTop
+            bottomMargin: 14
         }
         spacing: 0
         visible: root.view === "wifi"
