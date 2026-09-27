@@ -192,6 +192,45 @@ Singleton {
     // Legacy single-device discovery
     // ------------------------------------------------------------
 
+    // ── Refresh rates ──────────────────────────────────────────────
+    // Quickshell.screens carries width/height/model but NOT refresh rate, so
+    // the control centre's monitor subtitle rendered "NaN Hz". Hyprland does
+    // report it, via `hyprctl monitors -j`. Keyed by output name, which is
+    // the same key Quickshell.screens uses and the same key
+    // getMonitor() matches on.
+    //
+    // A missing entry is normal (non-Hyprland, or the call failed) — callers
+    // must omit the segment rather than print NaN.
+    property var refreshRates: ({})
+
+    Process {
+        id: monitorProbe
+        command: ["hyprctl", "-j", "monitors"]
+
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try {
+                    const parsed = JSON.parse(text);
+                    const map = {};
+                    for (const m of parsed) {
+                        if (!m || !m.name) continue;
+                        // This Hyprland reports `refreshRate` (a float, e.g.
+                        // 144.00301). Older builds used `refresh`, and some
+                        // report millihertz, so accept both.
+                        let hz = (typeof m.refreshRate === "number") ? m.refreshRate : m.refresh;
+                        if (typeof hz === "number" && hz > 1000) hz = hz / 1000;
+                        if (typeof hz === "number" && isFinite(hz) && hz > 0)
+                            map[m.name] = Math.round(hz);
+                    }
+                    root.refreshRates = map;
+                } catch (e) {
+                    // Leave the previous map alone; an unreadable response is
+                    // not worth clearing good data over.
+                }
+            }
+        }
+    }
+
     Process {
         id: discover
 
@@ -228,8 +267,10 @@ Singleton {
         }
     }
 
-    Component.onCompleted:
-        discover.running = true
+    Component.onCompleted: {
+        discover.running = true;
+        monitorProbe.running = true;
+    }
 
     Process {
         id: setter

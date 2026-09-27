@@ -360,11 +360,12 @@ Surface {
         // Matches whichever page is open, so the card is exactly the page's
         // box. Both hang off the panel's bottom edge and grow upward in
         // proportion to content: a short page sits low, a tall one reaches
-        // higher.
-        height: root.view === "bluetooth" ? btPage.height
-               : root.view === "display"   ? dispPage.height
-               : root.view === "wifi"      ? wifiPage.height
-               : root.view === "sound"     ? soundPage.height
+        // higher. The page ids are the Flickables themselves, so a scrolling
+        // page still reports the same box and the card never drifts off it.
+        height: root.view === "bluetooth" ? btFlick.height
+               : root.view === "display"   ? dispFlick.height
+               : root.view === "wifi"      ? wifiFlick.height
+               : root.view === "sound"     ? soundFlick.height
                : 0
         y: root.panelHeight - 14 - height
         radius: 18
@@ -377,129 +378,141 @@ Surface {
     // ═══════════════════════════════════════════════════════════════
     // BLUETOOTH PAGE  (Reference 2)
     // ═══════════════════════════════════════════════════════════════
-    ColumnLayout {
-        id: btPage
+    Flickable {
+        id: btFlick
         // Inset overlay card, not a full-page replacement: the reference keeps
         // the home visible behind the drill-down, starting below its first
         // pill row.
         anchors { left: parent.left; right: parent.right; leftMargin: 10; rightMargin: 10 }
-        // Bottom-anchored: the popover hangs off the panel's bottom edge
-        // and grows upward in proportion to its content, so a short page
-        // sits low and a tall one reaches higher.
-        height: Math.min(implicitHeight, root.panelHeight - 14)
+        // Bottom-anchored: the popover hangs off the panel's bottom edge and
+        // grows upward in proportion to its content, so a short page sits low
+        // and a tall one reaches higher. The BOX is still placed exactly that
+        // way; only the content inside it scrolls, so a list longer than the
+        // panel can be reached instead of being silently clipped.
+        height: Math.min(btFlickContent.implicitHeight, root.panelHeight - 14)
         y: root.panelHeight - 14 - height
-        spacing: 0
+        contentWidth: width
+        contentHeight: btFlickContent.implicitHeight
+        clip: true
+        boundsBehavior: Flickable.StopAtBounds
+        // Nothing to scroll when the content fits: no travel, no grab.
+        interactive: contentHeight > height
+        flickableDirection: Flickable.VerticalFlick
         visible: root.view === "bluetooth"
 
-
-        Item { Layout.preferredHeight: 12 }
-
-        // ── Sticky mini-header ───────────────────────────────────
-        SubPageHeader {
-            Layout.fillWidth: true
-            title: "Bluetooth"
-            toggleVisible: true
-            toggleOn: Bluetooth.enabled
-            onBack: root.view = "home"
-            onToggled: { Bluetooth.toggle(); Bluetooth.refresh(); }
-        }
-
-        Item { Layout.preferredHeight: 12 }
-
-        Item { Layout.preferredHeight: 14 }
-
-        // ── Connected devices ─────────────────────────────────────
-        Item {
-            id: btConnectedWrap
-            Layout.fillWidth: true
-            implicitHeight: btConnectedCol.implicitHeight
-            visible: Bluetooth.devices.filter(d => d.connected).length > 0
-
-            ColumnLayout {
-                id: btConnectedCol
-                width: parent.width
-                spacing: 6
-
-                SectionLabel { text: "Connected" }
-
-                Repeater {
-                    model: Bluetooth.devices.filter(d => d.connected)
-                    CcBtRow {
-                        required property var modelData
-                        Layout.fillWidth: true
-                        device: modelData
-                        onConnect: Bluetooth.connectDevice(modelData.mac)
-                        onDisconnect: Bluetooth.disconnectDevice(modelData.mac)
-                        onPair: Bluetooth.pair(modelData.mac)
-                    }
-                }
-            }
-        }
-
-        Item { Layout.preferredHeight: btConnectedWrap.visible ? 12 : 0 }
-
-        // ── Saved / Paired ───────────────────────────────────────
-        Item {
-            id: btSavedWrap
-            Layout.fillWidth: true
-            implicitHeight: btSavedCol.implicitHeight
-            visible: Bluetooth.devices.filter(d => d.paired && !d.connected).length > 0
-
-            ColumnLayout {
-                id: btSavedCol
-                width: parent.width
-                spacing: 6
-
-                SectionLabel { text: "Saved" }
-
-                Repeater {
-                    model: Bluetooth.devices.filter(d => d.paired && !d.connected)
-                    CcBtRow {
-                        required property var modelData
-                        Layout.fillWidth: true
-                        device: modelData
-                        onConnect: Bluetooth.connectDevice(modelData.mac)
-                        onDisconnect: Bluetooth.disconnectDevice(modelData.mac)
-                        onPair: Bluetooth.pair(modelData.mac)
-                    }
-                }
-            }
-        }
-
-        Item { Layout.preferredHeight: btSavedWrap.visible ? 12 : 0 }
-
-        // ── Nearby ───────────────────────────────────────────────
         ColumnLayout {
-            Layout.fillWidth: true
-            spacing: 6
-            visible: Bluetooth.enabled
+            id: btFlickContent
+            width: btFlick.width
+            spacing: 0
+            Item { Layout.preferredHeight: 12 }
 
-            RowLayout {
+            // ── Sticky mini-header ───────────────────────────────────
+            SubPageHeader {
                 Layout.fillWidth: true
-                SectionLabel { text: "Nearby" }
-                Item { Layout.fillWidth: true }
-                RowLayout {
+                title: "Bluetooth"
+                toggleVisible: true
+                toggleOn: Bluetooth.enabled
+                onBack: root.view = "home"
+                onToggled: { Bluetooth.toggle(); Bluetooth.refresh(); }
+            }
+
+            Item { Layout.preferredHeight: 12 }
+
+            Item { Layout.preferredHeight: 14 }
+
+            // ── Connected devices ─────────────────────────────────────
+            Item {
+                id: btConnectedWrap
+                Layout.fillWidth: true
+                implicitHeight: btConnectedCol.implicitHeight
+                visible: Bluetooth.devices.filter(d => d.connected).length > 0
+
+                ColumnLayout {
+                    id: btConnectedCol
+                    width: parent.width
                     spacing: 6
-                    visible: Bluetooth.scanning
-                    Rectangle { Layout.preferredWidth: 6; Layout.preferredHeight: 6; radius: 3; color: root.accent }
-                    StyledText { text: "Scanning"; font.pixelSize: 11; color: "#888888" }
+
+                    SectionLabel { text: "Connected" }
+
+                    Repeater {
+                        model: Bluetooth.devices.filter(d => d.connected)
+                        CcBtRow {
+                            required property var modelData
+                            Layout.fillWidth: true
+                            device: modelData
+                            onConnect: Bluetooth.connectDevice(modelData.mac)
+                            onDisconnect: Bluetooth.disconnectDevice(modelData.mac)
+                            onPair: Bluetooth.pair(modelData.mac)
+                        }
+                    }
                 }
             }
 
-            Repeater {
-                model: Bluetooth.devices.filter(d => !d.paired)
-                CcBtRow {
-                    required property var modelData
+            Item { Layout.preferredHeight: btConnectedWrap.visible ? 12 : 0 }
+
+            // ── Saved / Paired ───────────────────────────────────────
+            Item {
+                id: btSavedWrap
+                Layout.fillWidth: true
+                implicitHeight: btSavedCol.implicitHeight
+                visible: Bluetooth.devices.filter(d => d.paired && !d.connected).length > 0
+
+                ColumnLayout {
+                    id: btSavedCol
+                    width: parent.width
+                    spacing: 6
+
+                    SectionLabel { text: "Saved" }
+
+                    Repeater {
+                        model: Bluetooth.devices.filter(d => d.paired && !d.connected)
+                        CcBtRow {
+                            required property var modelData
+                            Layout.fillWidth: true
+                            device: modelData
+                            onConnect: Bluetooth.connectDevice(modelData.mac)
+                            onDisconnect: Bluetooth.disconnectDevice(modelData.mac)
+                            onPair: Bluetooth.pair(modelData.mac)
+                        }
+                    }
+                }
+            }
+
+            Item { Layout.preferredHeight: btSavedWrap.visible ? 12 : 0 }
+
+            // ── Nearby ───────────────────────────────────────────────
+            ColumnLayout {
+                Layout.fillWidth: true
+                spacing: 6
+                visible: Bluetooth.enabled
+
+                RowLayout {
                     Layout.fillWidth: true
-                    device: modelData
-                    onConnect: Bluetooth.connectDevice(modelData.mac)
-                    onDisconnect: Bluetooth.disconnectDevice(modelData.mac)
-                    onPair: Bluetooth.pair(modelData.mac)
+                    SectionLabel { text: "Nearby" }
+                    Item { Layout.fillWidth: true }
+                    RowLayout {
+                        spacing: 6
+                        visible: Bluetooth.scanning
+                        Rectangle { Layout.preferredWidth: 6; Layout.preferredHeight: 6; radius: 3; color: root.accent }
+                        StyledText { text: "Scanning"; font.pixelSize: 11; color: "#888888" }
+                    }
+                }
+
+                Repeater {
+                    model: Bluetooth.devices.filter(d => !d.paired)
+                    CcBtRow {
+                        required property var modelData
+                        Layout.fillWidth: true
+                        device: modelData
+                        onConnect: Bluetooth.connectDevice(modelData.mac)
+                        onDisconnect: Bluetooth.disconnectDevice(modelData.mac)
+                        onPair: Bluetooth.pair(modelData.mac)
+                    }
                 }
             }
-        }
 
-        Item { Layout.preferredHeight: 4 }
+            Item { Layout.preferredHeight: 4 }
+        }
     }
 
 
@@ -511,394 +524,430 @@ Surface {
     // and a check on the right. The page did not exist before: the Sound
     // card had no chevron because there was nowhere to go.
     // ═══════════════════════════════════════════════════════════════
-    ColumnLayout {
-        id: soundPage
+    Flickable {
+        id: soundFlick
         // Inset overlay card, not a full-page replacement: the reference keeps
         // the home visible behind the drill-down, starting below its first
         // pill row.
         anchors { left: parent.left; right: parent.right; leftMargin: 10; rightMargin: 10 }
-        // Bottom-anchored: the popover hangs off the panel's bottom edge
-        // and grows upward in proportion to its content, so a short page
-        // sits low and a tall one reaches higher.
-        height: Math.min(implicitHeight, root.panelHeight - 14)
+        // Bottom-anchored: the popover hangs off the panel's bottom edge and
+        // grows upward in proportion to its content, so a short page sits low
+        // and a tall one reaches higher. The BOX is still placed exactly that
+        // way; only the content inside it scrolls, so a list longer than the
+        // panel can be reached instead of being silently clipped.
+        height: Math.min(soundFlickContent.implicitHeight, root.panelHeight - 14)
         y: root.panelHeight - 14 - height
-        spacing: 0
+        contentWidth: width
+        contentHeight: soundFlickContent.implicitHeight
+        clip: true
+        boundsBehavior: Flickable.StopAtBounds
+        // Nothing to scroll when the content fits: no travel, no grab.
+        interactive: contentHeight > height
+        flickableDirection: Flickable.VerticalFlick
         visible: root.view === "sound"
 
+        ColumnLayout {
+            id: soundFlickContent
+            width: soundFlick.width
+            spacing: 0
+            Item { Layout.preferredHeight: 12 }
 
-        Item { Layout.preferredHeight: 12 }
-
-        // ── Sticky mini-header ───────────────────────────────────
-        SubPageHeader {
-            Layout.fillWidth: true
-            title: "Sound"
-            onBack: root.view = "home"
-        }
-
-        Item { Layout.preferredHeight: 10 }
-
-        // ── Output ───────────────────────────────────────────────
-        StyledText {
-            text: "Output"
-            font.pixelSize: 11
-            color: "#777777"
-        }
-        Item { Layout.preferredHeight: 6 }
-
-        Repeater {
-            model: Volume.sinks
-            delegate: CcDeviceRow {
-                required property var modelData
+            // ── Sticky mini-header ───────────────────────────────────
+            SubPageHeader {
                 Layout.fillWidth: true
-                label: Volume.displayName(modelData)
-                icon: "speaker"
-                selected: Volume.isDefaultSink(modelData)
-                onPicked: Volume.setDefaultSink(modelData)
+                title: "Sound"
+                onBack: root.view = "home"
             }
-        }
 
-        Item { Layout.preferredHeight: 8 }
+            Item { Layout.preferredHeight: 10 }
 
-        // Output volume
-        CcDeviceSlider {
-            Layout.fillWidth: true
-            icon: Volume.muted ? "volume_off" : "volume_up"
-            value: Volume.muted ? 0 : Volume.volumePercent
-            onMoved: (f) => Volume.setVolume(f * 100)
-        }
-
-        Item { Layout.preferredHeight: 12 }
-
-        // ── Input ────────────────────────────────────────────────
-        StyledText {
-            text: "Input"
-            font.pixelSize: 11
-            color: "#777777"
-        }
-        Item { Layout.preferredHeight: 6 }
-
-        Repeater {
-            model: Volume.sources
-            delegate: CcDeviceRow {
-                required property var modelData
-                Layout.fillWidth: true
-                label: Volume.displayName(modelData)
-                icon: "mic"
-                selected: Volume.isDefaultSource(modelData)
-                onPicked: Volume.setDefaultSource(modelData)
+            // ── Output ───────────────────────────────────────────────
+            StyledText {
+                text: "Output"
+                font.pixelSize: 11
+                color: "#777777"
             }
-        }
+            Item { Layout.preferredHeight: 6 }
 
-        Item { Layout.preferredHeight: 8 }
-
-        // Input volume
-        CcDeviceSlider {
-            Layout.fillWidth: true
-            icon: Volume.micMuted ? "mic_off" : "mic"
-            value: Volume.micMuted ? 0 : Volume.micVolumePercent
-            onMoved: (f) => Volume.setMicVolume(f * 100)
-        }
-
-        Item { Layout.preferredHeight: 12 }
-
-        // ── Apps ─────────────────────────────────────────────────
-        StyledText {
-            text: "Apps"
-            font.pixelSize: 11
-            color: "#777777"
-            visible: Volume.streams.length > 0
-        }
-        Item { Layout.preferredHeight: 6; visible: Volume.streams.length > 0 }
-
-        Repeater {
-            model: Volume.streams
-            delegate: ColumnLayout {
-                required property var modelData
-                Layout.fillWidth: true
-                spacing: 6
-
-                StyledText {
-                    text: Volume.displayName(modelData)
-                    font.pixelSize: 12
-                    font.weight: Font.Medium
-                    color: "#DDDDDD"
-                    elide: Text.ElideRight
+            Repeater {
+                model: Volume.sinks
+                delegate: CcDeviceRow {
+                    required property var modelData
                     Layout.fillWidth: true
+                    label: Volume.displayName(modelData)
+                    icon: "speaker"
+                    selected: Volume.isDefaultSink(modelData)
+                    onPicked: Volume.setDefaultSink(modelData)
                 }
+            }
 
-                // Per-app stream volume. The node is tracked in the service
-                // (PwObjectTracker) so this stays live.
-                CcDeviceSlider {
+            Item { Layout.preferredHeight: 8 }
+
+            // Output volume
+            CcDeviceSlider {
+                Layout.fillWidth: true
+                icon: Volume.muted ? "volume_off" : "volume_up"
+                value: Volume.muted ? 0 : Volume.volumePercent
+                onMoved: (f) => Volume.setVolume(f * 100)
+            }
+
+            Item { Layout.preferredHeight: 12 }
+
+            // ── Input ────────────────────────────────────────────────
+            StyledText {
+                text: "Input"
+                font.pixelSize: 11
+                color: "#777777"
+            }
+            Item { Layout.preferredHeight: 6 }
+
+            Repeater {
+                model: Volume.sources
+                delegate: CcDeviceRow {
+                    required property var modelData
                     Layout.fillWidth: true
-                    icon: "volume_up"
-                    value: modelData.audio ? Math.round(modelData.audio.volume * 100) : 0
-                    onMoved: (f) => {
-                        if (!modelData.audio) return;
-                        modelData.audio.muted = false;
-                        modelData.audio.volume = Math.max(0, Math.min(1, f));
+                    label: Volume.displayName(modelData)
+                    icon: "mic"
+                    selected: Volume.isDefaultSource(modelData)
+                    onPicked: Volume.setDefaultSource(modelData)
+                }
+            }
+
+            Item { Layout.preferredHeight: 8 }
+
+            // Input volume
+            CcDeviceSlider {
+                Layout.fillWidth: true
+                icon: Volume.micMuted ? "mic_off" : "mic"
+                value: Volume.micMuted ? 0 : Volume.micVolumePercent
+                onMoved: (f) => Volume.setMicVolume(f * 100)
+            }
+
+            Item { Layout.preferredHeight: 12 }
+
+            // ── Apps ─────────────────────────────────────────────────
+            StyledText {
+                text: "Apps"
+                font.pixelSize: 11
+                color: "#777777"
+                visible: Volume.streams.length > 0
+            }
+            Item { Layout.preferredHeight: 6; visible: Volume.streams.length > 0 }
+
+            Repeater {
+                model: Volume.streams
+                delegate: ColumnLayout {
+                    required property var modelData
+                    Layout.fillWidth: true
+                    spacing: 6
+
+                    StyledText {
+                        text: Volume.displayName(modelData)
+                        font.pixelSize: 12
+                        font.weight: Font.Medium
+                        color: "#DDDDDD"
+                        elide: Text.ElideRight
+                        Layout.fillWidth: true
+                    }
+
+                    // Per-app stream volume. The node is tracked in the service
+                    // (PwObjectTracker) so this stays live.
+                    CcDeviceSlider {
+                        Layout.fillWidth: true
+                        icon: "volume_up"
+                        value: modelData.audio ? Math.round(modelData.audio.volume * 100) : 0
+                        onMoved: (f) => {
+                            if (!modelData.audio) return;
+                            modelData.audio.muted = false;
+                            modelData.audio.volume = Math.max(0, Math.min(1, f));
+                        }
                     }
                 }
             }
-        }
 
-        // No PipeWire, or nothing enumerated yet.
-        StyledText {
-            Layout.fillWidth: true
-            visible: Volume.sinks.length === 0 && Volume.sources.length === 0
-            text: Pipewire.ready ? "No audio devices found" : "Waiting for PipeWire…"
-            font.pixelSize: 12
-            color: "#777777"
-            horizontalAlignment: Text.AlignHCenter
-        }
+            // No PipeWire, or nothing enumerated yet.
+            StyledText {
+                Layout.fillWidth: true
+                visible: Volume.sinks.length === 0 && Volume.sources.length === 0
+                text: Pipewire.ready ? "No audio devices found" : "Waiting for PipeWire…"
+                font.pixelSize: 12
+                color: "#777777"
+                horizontalAlignment: Text.AlignHCenter
+            }
 
-        Item { Layout.preferredHeight: 4 }
+            Item { Layout.preferredHeight: 4 }
+        }
     }
 
 
     // ═══════════════════════════════════════════════════════════════
     // DISPLAY PAGE  (Reference 3)
     // ═══════════════════════════════════════════════════════════════
-    ColumnLayout {
-        id: dispPage
+    Flickable {
+        id: dispFlick
         // Inset overlay card, not a full-page replacement: the reference keeps
         // the home visible behind the drill-down, starting below its first
         // pill row.
         anchors { left: parent.left; right: parent.right; leftMargin: 10; rightMargin: 10 }
-        // Bottom-anchored: the popover hangs off the panel's bottom edge
-        // and grows upward in proportion to its content, so a short page
-        // sits low and a tall one reaches higher.
-        height: Math.min(implicitHeight, root.panelHeight - 14)
+        // Bottom-anchored: the popover hangs off the panel's bottom edge and
+        // grows upward in proportion to its content, so a short page sits low
+        // and a tall one reaches higher. The BOX is still placed exactly that
+        // way; only the content inside it scrolls, so a list longer than the
+        // panel can be reached instead of being silently clipped.
+        height: Math.min(dispFlickContent.implicitHeight, root.panelHeight - 14)
         y: root.panelHeight - 14 - height
-        spacing: 0
+        contentWidth: width
+        contentHeight: dispFlickContent.implicitHeight
+        clip: true
+        boundsBehavior: Flickable.StopAtBounds
+        // Nothing to scroll when the content fits: no travel, no grab.
+        interactive: contentHeight > height
+        flickableDirection: Flickable.VerticalFlick
         visible: root.view === "display"
 
+        ColumnLayout {
+            id: dispFlickContent
+            width: dispFlick.width
+            spacing: 0
+            Item { Layout.preferredHeight: 12 }
 
-        Item { Layout.preferredHeight: 12 }
-
-        // ── Sticky mini-header ───────────────────────────────────
-        SubPageHeader {
-            Layout.fillWidth: true
-            title: "Display"
-            onBack: root.view = "home"
-        }
-
-        Item { Layout.preferredHeight: 12 }
-
-        Item { Layout.preferredHeight: 14 }
-
-        // ── Per-monitor brightness cards ──────────────────────────
-        Repeater {
-            model: Brightness.monitors
-            ColumnLayout {
-                required property var modelData
+            // ── Sticky mini-header ───────────────────────────────────
+            SubPageHeader {
                 Layout.fillWidth: true
-                spacing: 10
-
-                MonitorCard {
-                    Layout.fillWidth: true
-                    monitorModel: modelData
-                }
-
-                Item { Layout.preferredHeight: 4 }
+                title: "Display"
+                onBack: root.view = "home"
             }
-        }
 
-        // ── Night Light solid card ────────────────────────────────
-        Rectangle {
-            Layout.fillWidth: true
-            Layout.preferredHeight: 56
-            radius: 14
-            color: root.bgCard
-            border.color: "#282828"
-            border.width: 1
+            Item { Layout.preferredHeight: 12 }
 
-            RowLayout {
-                anchors { fill: parent; leftMargin: 12; rightMargin: 12 }
-                spacing: 12
+            Item { Layout.preferredHeight: 14 }
 
-                Rectangle {
-                    Layout.preferredWidth: 36; Layout.preferredHeight: 36; radius: 10
-                    color: NightLight.enabled ? Qt.rgba(root.accent.r, root.accent.g, root.accent.b, 0.25) : "#2c2c2c"
+            // ── Per-monitor brightness cards ──────────────────────────
+            Repeater {
+                model: Brightness.monitors
+                ColumnLayout {
+                    required property var modelData
+                    Layout.fillWidth: true
+                    spacing: 10
 
-                    Icon {
-                        anchors.centerIn: parent
-                        icon: "nightlight"
-                        size: 18
-                        iconColor: NightLight.enabled ? root.accent : "#AAAAAA"
+                    MonitorCard {
+                        Layout.fillWidth: true
+                        monitorModel: modelData
+                    }
+
+                    Item { Layout.preferredHeight: 4 }
+                }
+            }
+
+            // ── Night Light solid card ────────────────────────────────
+            Rectangle {
+                Layout.fillWidth: true
+                Layout.preferredHeight: 56
+                radius: 14
+                color: root.bgCard
+                border.color: "#282828"
+                border.width: 1
+
+                RowLayout {
+                    anchors { fill: parent; leftMargin: 12; rightMargin: 12 }
+                    spacing: 12
+
+                    Rectangle {
+                        Layout.preferredWidth: 36; Layout.preferredHeight: 36; radius: 10
+                        color: NightLight.enabled ? Qt.rgba(root.accent.r, root.accent.g, root.accent.b, 0.25) : "#2c2c2c"
+
+                        Icon {
+                            anchors.centerIn: parent
+                            icon: "nightlight"
+                            size: 18
+                            iconColor: NightLight.enabled ? root.accent : "#AAAAAA"
+                        }
+                    }
+
+                    ColumnLayout {
+                        Layout.fillWidth: true
+                        spacing: 1
+                        StyledText { text: "Night Light"; font.pixelSize: 13; font.weight: Font.Medium; color: "#FFFFFF" }
+                        StyledText { text: NightLight.enabled ? "On" : "Off"; font.pixelSize: 11; color: "#777777" }
+                    }
+
+                    Toggle {
+                        checked: NightLight.enabled
+                        accentColor: root.accent
+                        onToggled: NightLight.toggle()
                     }
                 }
-
-                ColumnLayout {
-                    Layout.fillWidth: true
-                    spacing: 1
-                    StyledText { text: "Night Light"; font.pixelSize: 13; font.weight: Font.Medium; color: "#FFFFFF" }
-                    StyledText { text: NightLight.enabled ? "On" : "Off"; font.pixelSize: 11; color: "#777777" }
-                }
-
-                Toggle {
-                    checked: NightLight.enabled
-                    accentColor: root.accent
-                    onToggled: NightLight.toggle()
-                }
             }
-        }
 
-        Item { Layout.preferredHeight: 4 }
+            Item { Layout.preferredHeight: 4 }
+        }
     }
 
 
     // ═══════════════════════════════════════════════════════════════
     // WIFI PAGE (Solid cards list)
     // ═══════════════════════════════════════════════════════════════
-    ColumnLayout {
-        id: wifiPage
+    Flickable {
+        id: wifiFlick
         // Inset overlay card, not a full-page replacement: the reference keeps
         // the home visible behind the drill-down, starting below its first
         // pill row.
         anchors { left: parent.left; right: parent.right; leftMargin: 10; rightMargin: 10 }
-        // Bottom-anchored: the popover hangs off the panel's bottom edge
-        // and grows upward in proportion to its content, so a short page
-        // sits low and a tall one reaches higher.
-        height: Math.min(implicitHeight, root.panelHeight - 14)
+        // Bottom-anchored: the popover hangs off the panel's bottom edge and
+        // grows upward in proportion to its content, so a short page sits low
+        // and a tall one reaches higher. The BOX is still placed exactly that
+        // way; only the content inside it scrolls, so a list longer than the
+        // panel can be reached instead of being silently clipped.
+        height: Math.min(wifiFlickContent.implicitHeight, root.panelHeight - 14)
         y: root.panelHeight - 14 - height
-        spacing: 0
+        contentWidth: width
+        contentHeight: wifiFlickContent.implicitHeight
+        clip: true
+        boundsBehavior: Flickable.StopAtBounds
+        // Nothing to scroll when the content fits: no travel, no grab.
+        interactive: contentHeight > height
+        flickableDirection: Flickable.VerticalFlick
         visible: root.view === "wifi"
 
-
-        Item { Layout.preferredHeight: 12 }
-
-        SubPageHeader {
-            Layout.fillWidth: true
-            title: "Wi-Fi"
-            toggleVisible: true
-            toggleOn: Wifi.enabled
-            onBack: root.view = "home"
-            onToggled: Wifi.toggle()
-        }
-
-        Item { Layout.preferredHeight: 12 }
-
-        Item { Layout.preferredHeight: 14 }
-
-        // ── Connected network ──────────────────────────────────────
-        // The joined network gets its own card rather than sitting at the top
-        // of a flat list: accent badge + SSID + "Connected · WPA2 · 78%
-        // signal" readout, with a BORDERED Disconnect pill on the right.
-        Rectangle {
-            Layout.fillWidth: true
-            Layout.preferredHeight: 60
-            radius: 13
-            color: root.bgItem
-            border.color: root.accent
-            border.width: 1
-            visible: Wifi.connected
-
-            RowLayout {
-                anchors { fill: parent; leftMargin: 12; rightMargin: 12 }
-                spacing: 12
-
-                Rectangle {
-                    Layout.preferredWidth: 40; Layout.preferredHeight: 40; radius: width / 2
-                    color: root.accent
-
-                    Icon {
-                        anchors.centerIn: parent
-                        icon: "wifi"
-                        size: 20
-                        iconColor: root.accentText
-                    }
-                }
-
-                ColumnLayout {
-                    Layout.fillWidth: true
-                    spacing: 1
-                    StyledText {
-                        text: Wifi.ssid
-                        font.pixelSize: 13; font.weight: Font.DemiBold; color: "#FFFFFF"
-                        elide: Text.ElideRight; Layout.fillWidth: true
-                    }
-                    StyledText {
-                        text: root.activeMeta
-                        font.pixelSize: 11; color: "#777777"
-                        elide: Text.ElideRight; Layout.fillWidth: true
-                    }
-                }
-
-                // Hairline pill, not a filled button — the reference's
-                // Disconnect is accent text inside a rounded outline.
-                Rectangle {
-                    Layout.preferredHeight: 30
-                    Layout.preferredWidth: wifiDisconnectLabel.implicitWidth + 24
-                    radius: height / 2
-                    color: "transparent"
-                    border.color: "#282828"
-                    border.width: 1
-                    HoverHandler { cursorShape: Qt.PointingHandCursor }
-                    TapHandler { onTapped: { Wifi.disconnect() } }
-
-                    StyledText {
-                        id: wifiDisconnectLabel
-                        anchors.centerIn: parent
-                        text: "Disconnect"
-                        font.pixelSize: 11
-                        color: root.accent
-                    }
-                }
-            }
-        }
-
-        Item { Layout.preferredHeight: 14 }
-
-        // ── Networks header ────────────────────────────────────────
-        RowLayout {
-            Layout.fillWidth: true
-            spacing: 8
-
-            StyledText { text: "Networks"; font.pixelSize: 11; color: "#777777" }
-            Item { Layout.fillWidth: true }
-            RowLayout {
-                spacing: 6
-                visible: Wifi.scanning
-                Rectangle { Layout.preferredWidth: 6; Layout.preferredHeight: 6; radius: 3; color: root.accent }
-                StyledText { text: "Scanning"; font.pixelSize: 11; color: "#777777" }
-            }
-        }
-
-        Item { Layout.preferredHeight: 6 }
-
         ColumnLayout {
-            Layout.fillWidth: true
-            spacing: 6
+            id: wifiFlickContent
+            width: wifiFlick.width
+            spacing: 0
+            Item { Layout.preferredHeight: 12 }
 
-            Repeater {
-                // The joined network lives in the card above, so it is not
-                // repeated in this list.
-                model: Wifi.networks.filter(n => !n.active)
-                Rectangle {
-                    required property var modelData
-                    Layout.fillWidth: true
-                    height: 48
-                    radius: 12
-                    color: wifiRowHover.hovered ? root.bgItemHover : root.bgItem
-                    border.color: "#2c2c2c"
-                    border.width: 1
-                    Behavior on color { ColorAnimation { duration: MotionConfig.hover() } }
+            SubPageHeader {
+                Layout.fillWidth: true
+                title: "Wi-Fi"
+                toggleVisible: true
+                toggleOn: Wifi.enabled
+                onBack: root.view = "home"
+                onToggled: Wifi.toggle()
+            }
 
-                    HoverHandler { id: wifiRowHover; cursorShape: Qt.PointingHandCursor }
-                    TapHandler { onTapped: root.attemptWifiConnect(modelData.ssid, modelData.secured) }
+            Item { Layout.preferredHeight: 12 }
 
-                    RowLayout {
-                        anchors { fill: parent; leftMargin: 12; rightMargin: 12 }
-                        spacing: 10
-                        Icon { icon: "wifi"; size: 16; iconColor: "#AAAAAA" }
-                        StyledText { Layout.fillWidth: true; text: modelData.ssid; font.pixelSize: 13; color: "#FFFFFF"; elide: Text.ElideRight }
-                        StyledText { text: modelData.strength + "%"; font.pixelSize: 11; color: "#888888" }
+            Item { Layout.preferredHeight: 14 }
+
+            // ── Connected network ──────────────────────────────────────
+            // The joined network gets its own card rather than sitting at the top
+            // of a flat list: accent badge + SSID + "Connected · WPA2 · 78%
+            // signal" readout, with a BORDERED Disconnect pill on the right.
+            Rectangle {
+                Layout.fillWidth: true
+                Layout.preferredHeight: 60
+                radius: 13
+                color: root.bgItem
+                border.color: root.accent
+                border.width: 1
+                visible: Wifi.connected
+
+                RowLayout {
+                    anchors { fill: parent; leftMargin: 12; rightMargin: 12 }
+                    spacing: 12
+
+                    Rectangle {
+                        Layout.preferredWidth: 40; Layout.preferredHeight: 40; radius: width / 2
+                        color: root.accent
+
+                        Icon {
+                            anchors.centerIn: parent
+                            icon: "wifi"
+                            size: 20
+                            iconColor: root.accentText
+                        }
+                    }
+
+                    ColumnLayout {
+                        Layout.fillWidth: true
+                        spacing: 1
+                        StyledText {
+                            text: Wifi.ssid
+                            font.pixelSize: 13; font.weight: Font.DemiBold; color: "#FFFFFF"
+                            elide: Text.ElideRight; Layout.fillWidth: true
+                        }
+                        StyledText {
+                            text: root.activeMeta
+                            font.pixelSize: 11; color: "#777777"
+                            elide: Text.ElideRight; Layout.fillWidth: true
+                        }
+                    }
+
+                    // Hairline pill, not a filled button — the reference's
+                    // Disconnect is accent text inside a rounded outline.
+                    Rectangle {
+                        Layout.preferredHeight: 30
+                        Layout.preferredWidth: wifiDisconnectLabel.implicitWidth + 24
+                        radius: height / 2
+                        color: "transparent"
+                        border.color: "#282828"
+                        border.width: 1
+                        HoverHandler { cursorShape: Qt.PointingHandCursor }
+                        TapHandler { onTapped: { Wifi.disconnect() } }
+
+                        StyledText {
+                            id: wifiDisconnectLabel
+                            anchors.centerIn: parent
+                            text: "Disconnect"
+                            font.pixelSize: 11
+                            color: root.accent
+                        }
                     }
                 }
             }
-        }
 
-        Item { Layout.preferredHeight: 6 }
+            Item { Layout.preferredHeight: 14 }
+
+            // ── Networks header ────────────────────────────────────────
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: 8
+
+                StyledText { text: "Networks"; font.pixelSize: 11; color: "#777777" }
+                Item { Layout.fillWidth: true }
+                RowLayout {
+                    spacing: 6
+                    visible: Wifi.scanning
+                    Rectangle { Layout.preferredWidth: 6; Layout.preferredHeight: 6; radius: 3; color: root.accent }
+                    StyledText { text: "Scanning"; font.pixelSize: 11; color: "#777777" }
+                }
+            }
+
+            Item { Layout.preferredHeight: 6 }
+
+            ColumnLayout {
+                Layout.fillWidth: true
+                spacing: 6
+
+                Repeater {
+                    // The joined network lives in the card above, so it is not
+                    // repeated in this list.
+                    model: Wifi.networks.filter(n => !n.active)
+                    Rectangle {
+                        required property var modelData
+                        Layout.fillWidth: true
+                        height: 48
+                        radius: 12
+                        color: wifiRowHover.hovered ? root.bgItemHover : root.bgItem
+                        border.color: "#2c2c2c"
+                        border.width: 1
+                        Behavior on color { ColorAnimation { duration: MotionConfig.hover() } }
+
+                        HoverHandler { id: wifiRowHover; cursorShape: Qt.PointingHandCursor }
+                        TapHandler { onTapped: root.attemptWifiConnect(modelData.ssid, modelData.secured) }
+
+                        RowLayout {
+                            anchors { fill: parent; leftMargin: 12; rightMargin: 12 }
+                            spacing: 10
+                            Icon { icon: "wifi"; size: 16; iconColor: "#AAAAAA" }
+                            StyledText { Layout.fillWidth: true; text: modelData.ssid; font.pixelSize: 13; color: "#FFFFFF"; elide: Text.ElideRight }
+                            StyledText { text: modelData.strength + "%"; font.pixelSize: 11; color: "#888888" }
+                        }
+                    }
+                }
+            }
+
+            Item { Layout.preferredHeight: 6 }
+        }
     }
 
     // ── Wi-Fi password overlay ────────────────────────────────────
@@ -1198,7 +1247,6 @@ Surface {
                     function set(mx) { devSlider.moved(Math.max(0, Math.min(1, mx / width))); }
                     onPressed: (e) => set(e.x)
                     onPositionChanged: (e) => { if (pressed) set(e.x); }
-                    onWheel: (e) => e.accept()
                 }
             }
 
@@ -1476,10 +1524,18 @@ Surface {
 
         readonly property real brightness: monitorModel ? monitorModel.brightness : 0
         readonly property string monName: monitorModel ? monitorModel.modelData.name : ""
-        readonly property string monDesc: monitorModel ? (
-            monitorModel.modelData.width + "×" + monitorModel.modelData.height +
-            "  ·  " + Math.round(monitorModel.modelData.refreshRate) + " Hz"
-        ) : ""
+        // Quickshell.screens has no refresh rate, so it comes from the
+        // Brightness service's Hyprland probe. Omit the segment when it is
+        // unknown rather than printing "NaN Hz", which is what this did.
+        readonly property string _hz: {
+            const hz = monitorModel ? Brightness.refreshRates[monitorModel.modelData.name] : undefined;
+            return (typeof hz === "number" && isFinite(hz) && hz > 0) ? Math.round(hz) + " Hz" : "";
+        }
+        readonly property string monDesc: monitorModel ? [
+            monitorModel.modelData.width + "×" + monitorModel.modelData.height,
+            _hz,
+            (monitorModel.modelData.scale ? Number(monitorModel.modelData.scale).toFixed(2).replace(/0$/, "") + "x" : "")
+        ].filter(s => s !== "").join("  ·  ") : ""
 
         // There is no Hyprland focused-output feed wired into this config, so
         // "focused" is the service's own active monitor — getMonitor("active")
@@ -1603,7 +1659,7 @@ Surface {
                         StyledText {
                             id: scaleLabel
                             anchors.centerIn: parent
-                            text: modelData + "x"
+                            text: Number(modelData).toFixed(2).replace(/0$/, "") + "x"
                             font.pixelSize: 12; font.weight: Font.Medium
                             color: selected ? root.accentText : "#AAAAAA"
                         }
@@ -1624,10 +1680,12 @@ Surface {
                     StyledText { text: "Resolution"; font.pixelSize: 12; color: "#AAAAAA" }
                     Item { Layout.fillWidth: true }
                     StyledText {
+                        // Same omission rule as monDesc: no refresh rate
+                        // means no "@ ... Hz" segment, never "NaN Hz".
                         text: mc.monitorModel
                             ? (mc.monitorModel.modelData.width + "×" +
-                               mc.monitorModel.modelData.height + " @ " +
-                               Math.round(mc.monitorModel.modelData.refreshRate) + " Hz")
+                               mc.monitorModel.modelData.height +
+                               (mc._hz ? " @ " + mc._hz : ""))
                             : ""
                         font.pixelSize: 12; color: "#888888"
                     }
