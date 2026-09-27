@@ -254,6 +254,18 @@ check_session() {
 }
 
 main() {
+    # Refuse root. CONFIG_DIR is derived from $HOME, so under sudo this
+    # installs into /root/.config instead of the real user's config — it
+    # reports success while doing nothing useful, and leaves stray symlinks
+    # in root's home pointing into the user's dotfiles. Nothing here needs
+    # root: it only writes inside $HOME.
+    if [ "$(id -u)" -eq 0 ]; then
+        err "Refusing to run as root."
+        err "Run it as your normal user:  ./install.sh"
+        err "(Under sudo, \$HOME is /root, so this would link /root/.config instead of yours.)"
+        exit 1
+    fi
+
     if [ -z "$REPO_DIR" ]; then
         err "cannot locate the repo root (no hypr/ and colors/ found)."
         err "Run this from a clone of the repo, or use ./bootstrap.sh."

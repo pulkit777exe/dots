@@ -40,6 +40,12 @@ and never deletes: an existing `~/.config/<unit>` is renamed to
 `<unit>.pre-install.<timestamp>`, and it asks before doing that unless you
 pass `--yes`.
 
+> **Do not run it with `sudo`.** Both scripts refuse to run as root, and they
+> mean it. `CONFIG_DIR` comes from `$HOME`, so under sudo the installer would
+> link `/root/.config` instead of yours, report success while achieving
+> nothing, and leave stray symlinks in root's home pointing into your dotfiles.
+> Nothing here needs root — it only writes inside `$HOME`.
+
 ### Before you run the one-liner
 
 The one-command install fetches and runs code from a remote, so whoever

@@ -1,27 +1,29 @@
 {
   "default": "everforest",
-  "current": "everforest",
-  "scheme": "dark",
-  "accent": "#f5e3a3",
-  "background": "#195129",
   "themes": {
     "ariadne": {
-      "name": "ariadne"
+      "name": "ariadne",
+      "wallpaperDir": "/home/pulkit/Downloads/aridane"
     },
     "catppuccin": {
-      "name": "catppuccin"
+      "name": "catppuccin",
+      "wallpaperDir": "/home/pulkit/Downloads/catpuccin"
     },
     "everforest": {
-      "name": "everforest"
+      "name": "everforest",
+      "wallpaperDir": "/home/pulkit/Downloads/everforest"
     },
     "gruvbox": {
-      "name": "gruvbox"
+      "name": "gruvbox",
+      "wallpaperDir": "/home/pulkit/Downloads/gruvbox"
     },
     "horizon": {
-      "name": "horizon"
+      "name": "horizon",
+      "wallpaperDir": "/home/pulkit/Downloads/horizon"
     },
     "monochrome": {
-      "name": "monochrome"
+      "name": "monochrome",
+      "wallpaperDir": "/home/pulkit/Downloads/monochrome"
     }
   }
 }
