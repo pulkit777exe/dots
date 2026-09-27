@@ -1,0 +1,16 @@
+{
+  "name": "Ariadne",
+  "colors": {
+    "background": "#014c8e",
+    "surface": "#015fb1",
+    "surfaceAlt": "#0172d4",
+    "border": "#1fcde7e0",
+    "text": "#cde7e0",
+    "textMuted": "#4c83b2",
+    "accent": "#cfb555",
+    "accentText": "#101010",
+    "danger": "#cfb555",
+    "warning": "#cfb555",
+    "success": "#4abf5c"
+  }
+}

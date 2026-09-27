@@ -1,0 +1,32 @@
+general {
+    lock_cmd = pidof hyprlock || hyprlock          # don't spawn a second lock
+    before_sleep_cmd = loginctl lock-session
+    after_sleep_cmd = hyprctl dispatch dpms on
+}
+
+# Display power management — wake/blank on activity
+listener {
+    timeout = 300
+    on-timeout = hyprctl dispatch dpms off
+    on-resume = hyprctl dispatch dpms on
+}
+
+# Suspend — kernel level via logind
+listener {
+    timeout = 600
+    on-timeout = systemctl suspend
+}
+
+# Lock — secure, delegated to hyprlock (system auth, not shell)
+listener {
+    timeout = 120
+    on-timeout = loginctl lock-session
+}
+
+# Dim — compositor-level dim only (do NOT touch brightness, the user is at
+# the desk; brightnessctl dimming is destructive and surprising).
+listener {
+    timeout = 90
+    on-timeout = hyprctl hyprland dispatch dim active
+    on-resume = hyprctl hyprland dispatch dim 0
+}

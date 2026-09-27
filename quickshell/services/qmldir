@@ -1,10 +1,24 @@
-singleton NetworkService 1.0 NetworkService.qml
-singleton BluetoothService 1.0 BluetoothService.qml
-singleton AudioService 1.0 AudioService.qml
-singleton MprisService 1.0 MprisService.qml
-singleton NotificationService 1.0 NotificationService.qml
-singleton UPowerService 1.0 UPowerService.qml
-singleton BrightnessService 1.0 BrightnessService.qml
-singleton NightLightService 1.0 NightLightService.qml
-singleton PeaceService 1.0 PeaceService.qml
-singleton HyprlandService 1.0 HyprlandService.qml
+module services
+
+singleton Theme 1.0 Theme.qml
+singleton UiState 1.0 UiState.qml
+singleton Battery 1.0 Battery.qml
+singleton Volume 1.0 Volume.qml
+singleton Brightness 1.0 Brightness.qml
+singleton Wifi 1.0 Wifi.qml
+singleton Bluetooth 1.0 Bluetooth.qml
+singleton PowerProfile 1.0 PowerProfile.qml
+singleton Notifications 1.0 Notifications.qml
+singleton AppLauncher 1.0 AppLauncher.qml
+singleton Auth 1.0 Auth.qml
+singleton NightLight 1.0 NightLight.qml
+singleton Iris 1.0 Iris.qml
+singleton Media 1.0 Media.qml
+singleton BarConfig 1.0 BarConfig.qml
+singleton MotionConfig 1.0 MotionConfig.qml
+singleton Clipboard 1.0 Clipboard.qml
+singleton Cava 1.0 Cava.qml
+singleton DeviceProfile 1.0 DeviceProfile.qml
+singleton ConfigStore 1.0 ConfigStore.qml
+singleton IdleInhibit 1.0 IdleInhibit.qml
+BrightnessMonitor 1.0 BrightnessMonitor.qml

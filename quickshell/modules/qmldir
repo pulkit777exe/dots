@@ -1,0 +1,2 @@
+module qs.modules
+singleton Keybinds 1.0 Keybinds.qml

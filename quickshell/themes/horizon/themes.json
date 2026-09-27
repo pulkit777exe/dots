@@ -1,0 +1,16 @@
+{
+  "name": "Horizon",
+  "colors": {
+    "background": "#152429",
+    "surface": "#213a40",
+    "surfaceAlt": "#2d5057",
+    "border": "#1ffc8f83",
+    "text": "#fc8f83",
+    "textMuted": "#48676f",
+    "accent": "#fa6b5b",
+    "accentText": "#101010",
+    "danger": "#fa6b5b",
+    "warning": "#fd7a58",
+    "success": "#45c486"
+  }
+}

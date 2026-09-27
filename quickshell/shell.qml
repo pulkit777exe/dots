@@ -1,150 +1,314 @@
 import QtQuick
+import QtQuick.Effects
 import Quickshell
-import Quickshell.Io
 import Quickshell.Wayland
-import "core"
-import "components"
-import "services"
+import Quickshell.Hyprland
+import qs.services
+import qs.surfaces
+import qs.modules
 
-/**
- * Entry point.
- *
- * The PanelWindow now spans the full monitor width (not just auto-sized to
- * content) because it hosts an always-present hot-zone strip at the top --
- * that's how the island can be brought back with the cursor even while its
- * actual content is hidden (workspace-aware auto-hide, see
- * HyprlandService.qml). The visible content itself stays centered and
- * sized to whatever's loaded, same as before.
- *
- * Visibility rule (confirmed): hidden whenever the active workspace has any
- * window AND the island isn't mid-interaction (peeking, expanded, a toast,
- * the launcher, or locked all force it visible regardless of workspace state).
- */
+// shell.qml
+// Entry point: `quickshell -c /path/to/this/dir` (or symlink this whole
+// directory to ~/.config/quickshell/<name>/ and run `qs -c <name>`).
+//
+// Four layer-shell windows per screen:
+//   WallpaperWindow - Background layer, wallpaper crossfade.
+//   BackdropWindow  - Top layer (BELOW Overlay), fullscreen dark scrim.
+//                     Separate from Island's Overlay window — the Island
+//                     simply renders above it, no mask-subtraction needed,
+//                     which is the architectural fix for the seam artifact.
+//   BarWindow       - Overlay, top strip, Island morphing surface.
+//   OverlayWindow   - Overlay, full-screen, notifications/OSD/auth.
+//
+// Every surface is mounted once and simply reacts to UiState / service
+// properties — there is no polling anywhere in this file either.
 ShellRoot {
-    PanelWindow {
-        id: window
-        anchors.top: true
-        anchors.left: true
-        anchors.right: true
-        margins.top: 6
+    id: shellRoot
+    property var _keybinds: Keybinds
 
-        implicitHeight: Math.max(Config.hotZoneHeight, content.implicitHeight + 12)
-        color: "transparent"
-        exclusiveZone: 0
+    // ---- Wallpaper: Background layer with macOS-like crossfade ----
+    Variants {
+        model: Quickshell.screens
+        PanelWindow {
+            id: wallWin
+            required property var modelData
+            screen: modelData
+            anchors { top: true; bottom: true; left: true; right: true }
+            exclusiveZone: 0
+            color: "black"
+            WlrLayershell.layer: WlrLayer.Background
+            WlrLayershell.namespace: "quickshell-wallpaper"
 
-        // Layer-shell surfaces get no keyboard focus by default. "OnDemand"
-        // lets a child request it (e.g. Launcher's search TextInput) without
-        // permanently stealing focus the rest of the time the island is
-        // idle/minimal -- unlike "Exclusive", which would grab focus
-        // continuously and break normal desktop use.
-        WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand
+            readonly property string transitionStyle: ConfigStore.wallpaperTransitionStyle
+            readonly property real progress: Theme.wallpaperProgress
+            readonly property bool isTransitioning: Theme.wallpaperTransitioning
 
-        readonly property bool islandVisible: HyprlandService.activeWorkspaceEmpty || IslandState.visible
+            // Base outgoing wallpaper
+            Image {
+                id: wallFrom
+                anchors.fill: parent
+                source: Theme.wallpaperFrom
+                fillMode: Image.PreserveAspectCrop
+                asynchronous: true
+                cache: true
+                smooth: true
+                visible: wallWin.transitionStyle !== "circleOut" || !wallWin.isTransitioning
 
-        // Always-present proximity target. Only this thin strip captures
-        // hover/clicks when the island's content is hidden -- everything
-        // else in this transparent window passes clicks through to
-        // whatever's underneath.
-        MouseArea {
-            anchors.top: parent.top
-            anchors.horizontalCenter: parent.horizontalCenter
-            width: Config.hotZoneWidth
-            height: Config.hotZoneHeight
-            hoverEnabled: true
-            onEntered: IslandState.onIslandHoverEntered()
-            onExited: IslandState.onIslandHoverExited()
+                opacity: {
+                    if (wallWin.transitionStyle === "instant") return 0;
+                    if (wallWin.transitionStyle === "fade") return 1 - wallWin.progress;
+                    return 1;
+                }
+                scale: wallWin.transitionStyle === "fade" ? (1 + (1 - wallWin.progress) * 0.015) : 1
+                x: wallWin.transitionStyle === "slide" ? (-width * wallWin.progress) : 0
+                y: wallWin.transitionStyle === "slideVertical" ? (-height * wallWin.progress) : 0
+            }
+
+            // Base incoming wallpaper
+            Image {
+                id: wallTo
+                anchors.fill: parent
+                source: Theme.wallpaperTo || Theme.currentWallpaper
+                fillMode: Image.PreserveAspectCrop
+                asynchronous: true
+                cache: true
+                smooth: true
+                visible: wallWin.transitionStyle !== "circleOut" || !wallWin.isTransitioning
+
+                opacity: {
+                    if (wallWin.transitionStyle === "instant") return wallWin.progress >= 1 ? 1 : 1;
+                    if (wallWin.transitionStyle === "fade") return wallWin.progress;
+                    return 1;
+                }
+                scale: wallWin.transitionStyle === "fade" ? (1 + (1 - wallWin.progress) * 0.025) : 1
+                x: wallWin.transitionStyle === "slide" ? (width * (1 - wallWin.progress)) : 0
+                y: wallWin.transitionStyle === "slideVertical" ? (height * (1 - wallWin.progress)) : 0
+            }
+
+            // Circle Out / Radial Wipe — proper circular reveal using MultiEffect + mask
+            // circleMaskItem is a growing rounded-rectangle rendered off-screen;
+            // wallpaperCircle uses it as a mask source through MultiEffect.
+            Item {
+                id: circleWipeContainer
+                anchors.fill: parent
+                visible: wallWin.transitionStyle === "circleOut" && wallWin.isTransitioning
+
+                // Old wallpaper underneath
+                Image {
+                    anchors.fill: parent
+                    source: Theme.wallpaperFrom
+                    fillMode: Image.PreserveAspectCrop
+                    asynchronous: true
+                    cache: true
+                    smooth: true
+                }
+
+                // Circle mask — grows from 0 to cover the full diagonal
+                Item {
+                    id: circleMaskItem
+                    anchors.fill: parent
+                    visible: false  // rendered only as mask source
+
+                    Rectangle {
+                        readonly property real diagLen: Math.sqrt(
+                            wallWin.width * wallWin.width + wallWin.height * wallWin.height)
+                        readonly property real side: Math.max(0, diagLen * wallWin.progress + 2)
+                        anchors.centerIn: parent
+                        width: side; height: side
+                        radius: side / 2
+                        color: "black"
+                    }
+                }
+
+                // New wallpaper revealed through the growing circle mask
+                Image {
+                    id: wallpaperCircle
+                    anchors.fill: parent
+                    source: Theme.wallpaperTo || Theme.currentWallpaper
+                    fillMode: Image.PreserveAspectCrop
+                    asynchronous: true
+                    cache: true
+                    smooth: true
+                    layer.enabled: true
+                    layer.smooth: true
+                    layer.effect: MultiEffect {
+                        maskEnabled: true
+                        maskSource: circleMaskItem
+                        maskThresholdMin: 0.0
+                        maskThresholdMax: 1.0
+                    }
+                }
+            }
+
+            // Fallback solid color while wallpapers load or if none
+            Rectangle {
+                anchors.fill: parent
+                color: Theme.colors.background
+                opacity: (Theme.wallpaperFrom === "" && Theme.wallpaperTo === "") ? 0.3 : 0
+                Behavior on color { ColorAnimation { duration: MotionConfig.fade(); easing.type: Easing.OutCubic } }
+                z: -1
+            }
         }
+    }
 
-        Loader {
-            id: content
-            anchors.horizontalCenter: parent.horizontalCenter
-            y: window.islandVisible ? 6 : -(implicitHeight + 20)
-            opacity: window.islandVisible ? 1 : 0
+    // ---- Backdrop scrim: WlrLayer.Top — dedicated window BELOW Overlay ----
+    // The Island lives on WlrLayer.Overlay; this window on WlrLayer.Top.
+    // Compositors render Top below Overlay, so the Island always paints
+    // cleanly above the scrim — zero mask-subtraction, zero seam artifacts.
+    // Clicking the scrim dismisses the open surface.
+    Variants {
+        model: Quickshell.screens
+        PanelWindow {
+            required property var modelData
+            screen: modelData
+            anchors { top: true; bottom: true; left: true; right: true }
+            exclusiveZone: 0
+            color: "transparent"
+            WlrLayershell.layer: WlrLayer.Top
+            WlrLayershell.namespace: "quickshell-backdrop"
+            WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
+            // Pass through pointer events when no popup is open
+            mask: Region { item: UiState.anyOpen ? backdropClickTarget : null }
 
-            Behavior on y { NumberAnimation { duration: Config.animSlow; easing.type: Easing.OutCubic } }
-            Behavior on opacity { NumberAnimation { duration: Config.animNormal } }
+            Rectangle {
+                anchors.fill: parent
+                color: Qt.rgba(0, 0, 0, 0.30)
+                opacity: UiState.anyOpen ? 1 : 0
+                visible: opacity > 0.005
+                Behavior on opacity {
+                    NumberAnimation {
+                        duration: MotionConfig.fade(1.4)
+                        easing.type: Easing.OutCubic
+                    }
+                }
+            }
 
-            sourceComponent: {
-                switch (IslandState.shape) {
-                    case "idle":
-                    case "mediaChange":
-                        return idlePillComp
-                    case "volumeToast":
-                        return volumeToastComp
-                    case "brightnessToast":
-                        return brightnessToastComp
-                    case "notifToast":
-                        return notifToastComp
-                    case "expanded":
-                        return controlCenterComp
-                    case "launcher":
-                        return launcherComp
-                    default:
-                        return idlePillComp
+            Item {
+                id: backdropClickTarget
+                anchors.fill: parent
+                MouseArea {
+                    anchors.fill: parent
+                    cursorShape: Qt.ArrowCursor
+                    onClicked: UiState.closeAll()
                 }
             }
         }
-
-        Component { id: idlePillComp; IdlePill {} }
-        Component { id: volumeToastComp; VolumeToast { isBrightness: false } }
-        Component { id: brightnessToastComp; VolumeToast { isBrightness: true } }
-        Component { id: notifToastComp; NotificationToast {} }
-        Component { id: controlCenterComp; ControlCenter {} }
-        Component { id: launcherComp; Launcher {} }
     }
 
-    // -- Toast triggers --
-    // IslandState.showToast() existed from the start but nothing ever
-    // called it for volume/brightness/media -- these three Connections
-    // blocks are the only thing that was missing to make the whole toast
-    // system (Images 3/4) actually fire. Notification toasts are already
-    // wired from inside NotificationService itself.
+    // ---- Island / Bar: Overlay layer ----
+    Variants {
+        model: Quickshell.screens
 
-    Connections {
-        target: AudioService
-        function onVolumeChanged() { IslandState.showToast("volumeToast", Config.toastTimeout) }
-        function onMutedChanged() { IslandState.showToast("volumeToast", Config.toastTimeout) }
-    }
+        PanelWindow {
+            id: barWindow
+            required property var modelData
+            screen: modelData
 
-    Connections {
-        target: BrightnessService
-        function onBrightnessChanged() { IslandState.showToast("brightnessToast", Config.toastTimeout) }
-    }
+            anchors { top: true; left: true; right: true }
+            // Keep exclusiveZone at collapsed pill height so tiled windows
+            // don't jump when island expands — expanded island overlays,
+            // like macOS Dynamic Island.
+            exclusiveZone: island.barHeight + (island.notchMode ? 0 : island.gapFromEdge)
+            color: "transparent"
 
-    Connections {
-        target: MprisService
-        // Guard against firing on every 1s metadata poll -- only when the
-        // title actually changes to a new non-empty value while playing.
-        property string _lastTitle: ""
-        function onTitleChanged() {
-            if (MprisService.title !== "" && MprisService.title !== _lastTitle && MprisService.playbackStatus === "Playing") {
-                _lastTitle = MprisService.title
-                IslandState.showToast("mediaChange", Config.toastTimeout)
-            } else {
-                _lastTitle = MprisService.title
+            WlrLayershell.layer: WlrLayer.Overlay
+            WlrLayershell.namespace: "quickshell-bar"
+            focusable: Auth.pending === null && UiState.anyOpen
+            WlrLayershell.keyboardFocus: Auth.pending !== null ? WlrKeyboardFocus.None : (UiState.anyOpen ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None)
+
+            implicitHeight: UiState.anyOpen ? 700 : (island.barHeight + (island.notchMode ? 0 : island.gapFromEdge) + 16)
+
+            readonly property bool isFullscreen: Boolean(Hyprland.activeWindow && Hyprland.activeWindow.fullscreen) && !UiState.anyOpen
+
+            mask: Region {
+                Region { item: isFullscreen ? null : island.leftSurfaceItem }
+                Region { item: isFullscreen ? null : island.centerSurfaceItem }
+                Region { item: isFullscreen ? null : island.rightSurfaceItem }
+            }
+
+            HyprlandFocusGrab {
+                active: UiState.anyOpen && Auth.pending === null
+                windows: [barWindow]
+            }
+
+            Island {
+                id: island
+                opacity: barWindow.isFullscreen ? 0 : 1
+                Behavior on opacity { NumberAnimation { duration: MotionConfig.fade(); easing.type: Easing.OutCubic } }
+                anchors.top: parent.top
+                anchors.left: parent.left
+                anchors.right: parent.right
             }
         }
     }
 
-    // Global keybinds (Hyprland side: config/hyprland-island.conf) call
-    // `qs ipc call island <fn>` via scripts/island-dispatch.sh, which lands
-    // here. Confirm `qs ipc` is the right invocation for your installed
-    // Quickshell version -- the IpcHandler target/function mechanism itself
-    // is standard, the exact CLI spelling has shifted across versions.
-    IpcHandler {
-        target: "island"
+    // ---- Overlay: Notifications, OSD, Auth ----
+    Variants {
+        model: Quickshell.screens
 
-        function expanded(): void {
-            if (IslandState.shape === "expanded") IslandState.close()
-            else IslandState.openExpanded()
+        PanelWindow {
+            id: overlayWindow
+            required property var modelData
+            screen: modelData
+
+            anchors { top: true; bottom: true; left: true; right: true }
+            exclusiveZone: 0
+            color: "transparent"
+
+            WlrLayershell.layer: WlrLayer.Overlay
+            WlrLayershell.namespace: "quickshell-overlay"
+            focusable: Auth.pending !== null
+            WlrLayershell.keyboardFocus: Auth.pending !== null
+                ? WlrKeyboardFocus.Exclusive
+                : WlrKeyboardFocus.None
+
+            mask: Region {
+                Region { item: Notifications.active.length > 0 ? notifWrap : null }
+                Region { item: osd.opacity > 0.01 ? osdWrap : null }
+                Region { item: Auth.pending !== null ? authWrap : null }
+            }
+
+            // ---- Notifications: top-right stack ----
+            Item {
+                id: notifWrap
+                anchors.top: parent.top
+                anchors.right: parent.right
+                anchors.margins: 16
+                width: stack.width
+                height: stack.implicitHeight
+
+                NotificationStack { id: stack }
+            }
+
+            // ---- OSD: bottom-center, transient ----
+            Item {
+                id: osdWrap
+                anchors.bottom: parent.bottom
+                anchors.horizontalCenter: parent.horizontalCenter
+                anchors.bottomMargin: 64
+                width: osd.width
+                height: osd.height
+
+                OSD { id: osd }
+
+                Connections {
+                    target: Volume
+                    function onOsdRequested(percent) { osd.showVolume(percent, Volume.muted) }
+                }
+                Connections {
+                    target: Brightness
+                    function onOsdRequested(percent) { osd.showBrightness(percent) }
+                }
+            }
+
+            // ---- Auth prompt: full-window scrim + centered dialog ----
+            Item {
+                id: authWrap
+                anchors.fill: parent
+                visible: Auth.pending !== null
+
+                AuthOverlay {}
+            }
         }
-        function launcher(): void {
-            if (IslandState.shape === "launcher") IslandState.close()
-            else IslandState.openLauncher()
-        }
-        function theme(): void { IslandState.openThemeDirect() }
-        function wallpaper(): void { IslandState.openWallpaperDirect() }
-        function settings(): void { IslandState.openSettingsDirect() }
-        function power(): void { IslandState.openPowerDirect() }
     }
 }

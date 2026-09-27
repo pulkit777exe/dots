@@ -1,10 +1,9 @@
-cd ~/dotfiles
-
-cat > .gitignore <<'EOF'
 # Runtime / generated state
 .cache/
 cache/
 *.log
+*.pyc
+__pycache__/
 
 # Secrets
 .env
@@ -25,3 +24,6 @@ secrets*
 *.tar.gz
 *.zip
 
+# Machine-local artifacts
+# Quickshell regenerates this per-run, pointing into /run/user/<uid>/quickshell/vfs/...
+.qmlls.ini
