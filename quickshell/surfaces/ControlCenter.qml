@@ -100,7 +100,7 @@ Surface {
     //
     // A constant height means the drill-downs all open into the same box.
     // Long lists scroll inside it rather than growing the panel.
-    readonly property int panelHeight: 560
+    readonly property int panelHeight: 460
     implicitHeight: panelHeight
 
     // Vertical space a drill-down gets: it starts below both pill rows and
