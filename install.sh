@@ -40,6 +40,7 @@ REPO_DIR="$(resolve_repo_dir || true)"
 CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}"
 DRY_RUN=0
 CHECK_ONLY=0
+ASSUME_YES=0
 
 # Every top-level dir in this repo that's meant to land in ~/.config/<name>.
 UNITS=(colors hypr kitty quickshell vlc Thunar)
@@ -51,11 +52,17 @@ run()  { if [ "$DRY_RUN" -eq 1 ]; then printf '   would run: %s\n' "$*"; else "$
 
 usage() {
     cat <<'USAGE'
-usage: install.sh [--dry-run] [--check] [--help]
+usage: install.sh [--dry-run] [--check] [--yes] [--help]
 
   --dry-run   print the plan without touching anything
   --check     only verify the installed config; make no changes
+  --yes       do not prompt before moving an existing config aside
   --help      show this message
+
+Moving an existing ~/.config/<unit> aside is always reversible — it is
+renamed to <unit>.pre-install.<timestamp>, never deleted — but it is the
+one step here that touches files this repo did not create, so it asks
+first unless --yes is given.
 USAGE
 }
 
@@ -63,6 +70,7 @@ while [ $# -gt 0 ]; do
     case "$1" in
         --dry-run)   DRY_RUN=1 ;;
         --check)     CHECK_ONLY=1 ;;
+        -y|--yes)    ASSUME_YES=1 ;;
         -h|--help)   usage; exit 0 ;;
         *)           err "unknown argument: $1"; usage >&2; exit 2 ;;
     esac
@@ -93,8 +101,28 @@ link_unit() {
 
     if [ -e "$dst" ] || [ -L "$dst" ]; then
         local backup="$dst.pre-install.$(date +%Y%m%d-%H%M%S)"
+
         if [ "$DRY_RUN" -eq 1 ]; then
             warn "$dst exists and isn't our symlink — would move it to $backup"
+        elif [ "$ASSUME_YES" -eq 0 ]; then
+            # This is the only step that touches files the repo didn't
+            # create. Refuse rather than guess when there is no TTY to ask
+            # on — a non-interactive run (CI, cron, a piped bootstrap) must
+            # never silently relocate someone's live config.
+            if [ ! -t 0 ]; then
+                err "$dst exists and isn't our symlink, and there is no terminal to confirm on."
+                err "Re-run with --yes to allow moving it to $backup, or move it yourself first."
+                return 1
+            fi
+            warn "$dst exists and isn't our symlink."
+            printf '   Move it to %s ? [y/N] ' "$backup"
+            local reply=""
+            read -r reply || reply=""
+            case "$reply" in
+                [yY]|[yY][eE][sS]) ;;
+                *) warn "left $dst alone"; return 0 ;;
+            esac
+            mv "$dst" "$backup"
         else
             warn "$dst exists and isn't our symlink — moving it to $backup"
             mv "$dst" "$backup"

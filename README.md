@@ -32,9 +32,24 @@ Then log out, pick the Hyprland session, and log back in.
 | --- | --- |
 | `./install.sh --dry-run` | Print the plan, change nothing |
 | `./install.sh --check` | Verify the live session; make no changes |
+| `./install.sh --yes` | Relocate existing configs without prompting |
 | `./bootstrap.sh` | Re-run clone/update + install (this is the update flow) |
 
-`install.sh` is idempotent — run it whenever you pull.
+`install.sh` is idempotent — run it whenever you pull. It never uses `sudo`
+and never deletes: an existing `~/.config/<unit>` is renamed to
+`<unit>.pre-install.<timestamp>`, and it asks before doing that unless you
+pass `--yes`.
+
+### Before you run the one-liner
+
+The one-command install fetches and runs code from a remote, so whoever
+controls this repository can run code as you. That is the standard dotfiles
+trade-off, but it is a real one. If you'd rather not take it, clone once,
+pin a commit, and read what you run — there is no build step and nothing here
+fetches anything at runtime, so reading it is a complete audit.
+
+See **[SECURITY.md](SECURITY.md)** for the trust model, what the installer
+will and won't touch, and the audit summary.
 
 ## Layout
 
