@@ -108,7 +108,10 @@ Surface {
         id: homePage
         anchors { top: parent.top; left: parent.left; right: parent.right; margins: 14 }
         spacing: 10
-        visible: root.view === "home"
+        // Stays visible while a drill-down is open: the reference keeps the
+        // first pill row showing above the inset card, which then covers the
+        // rest of the home.
+        visible: true
 
         // ── Row 1: Wi-Fi · Focus · Lock ─────────────────────────
         RowLayout {
@@ -306,14 +309,46 @@ Surface {
     }
 
 
+    // ── Drill-down card ────────────────────────────────────────────
+    // The sub-pages are inset cards that float over the home page rather
+    // than replacing it, matching the reference: the home's first pill row
+    // stays visible above and the panel edges show either side. Declared
+    // after homePage and before the sub-pages, so it paints over the home
+    // and under the sub-page content.
+    Rectangle {
+        id: drillCard
+        anchors {
+            top: parent.top; bottom: parent.bottom
+            left: parent.left; right: parent.right
+            leftMargin: 10; rightMargin: 10
+            topMargin: 66; bottomMargin: 14
+        }
+        radius: 18
+        color: root.bgSurface
+        border.color: "#282828"
+        border.width: 1
+        visible: root.view !== "home"
+    }
+
     // ═══════════════════════════════════════════════════════════════
     // BLUETOOTH PAGE  (Reference 2)
     // ═══════════════════════════════════════════════════════════════
     ColumnLayout {
         id: btPage
-        anchors { top: parent.top; left: parent.left; right: parent.right; margins: 14 }
+        // Inset overlay card, not a full-page replacement: the reference keeps
+        // the home visible behind the drill-down, starting below its first
+        // pill row.
+        anchors {
+            top: parent.top; bottom: parent.bottom
+            left: parent.left; right: parent.right
+            leftMargin: 10; rightMargin: 10
+            topMargin: 66; bottomMargin: 14
+        }
         spacing: 0
         visible: root.view === "bluetooth"
+
+
+        Item { Layout.preferredHeight: 12 }
 
         // ── Sticky mini-header ───────────────────────────────────
         SubPageHeader {
@@ -434,9 +469,20 @@ Surface {
     // ═══════════════════════════════════════════════════════════════
     ColumnLayout {
         id: soundPage
-        anchors { top: parent.top; left: parent.left; right: parent.right; margins: 14 }
+        // Inset overlay card, not a full-page replacement: the reference keeps
+        // the home visible behind the drill-down, starting below its first
+        // pill row.
+        anchors {
+            top: parent.top; bottom: parent.bottom
+            left: parent.left; right: parent.right
+            leftMargin: 10; rightMargin: 10
+            topMargin: 66; bottomMargin: 14
+        }
         spacing: 0
         visible: root.view === "sound"
+
+
+        Item { Layout.preferredHeight: 12 }
 
         // ── Sticky mini-header ───────────────────────────────────
         SubPageHeader {
@@ -570,9 +616,20 @@ Surface {
     // ═══════════════════════════════════════════════════════════════
     ColumnLayout {
         id: dispPage
-        anchors { top: parent.top; left: parent.left; right: parent.right; margins: 14 }
+        // Inset overlay card, not a full-page replacement: the reference keeps
+        // the home visible behind the drill-down, starting below its first
+        // pill row.
+        anchors {
+            top: parent.top; bottom: parent.bottom
+            left: parent.left; right: parent.right
+            leftMargin: 10; rightMargin: 10
+            topMargin: 66; bottomMargin: 14
+        }
         spacing: 0
         visible: root.view === "display"
+
+
+        Item { Layout.preferredHeight: 12 }
 
         // ── Sticky mini-header ───────────────────────────────────
         SubPageHeader {
@@ -651,9 +708,20 @@ Surface {
     // ═══════════════════════════════════════════════════════════════
     ColumnLayout {
         id: wifiPage
-        anchors { top: parent.top; left: parent.left; right: parent.right; margins: 14 }
+        // Inset overlay card, not a full-page replacement: the reference keeps
+        // the home visible behind the drill-down, starting below its first
+        // pill row.
+        anchors {
+            top: parent.top; bottom: parent.bottom
+            left: parent.left; right: parent.right
+            leftMargin: 10; rightMargin: 10
+            topMargin: 66; bottomMargin: 14
+        }
         spacing: 0
         visible: root.view === "wifi"
+
+
+        Item { Layout.preferredHeight: 12 }
 
         SubPageHeader {
             Layout.fillWidth: true
