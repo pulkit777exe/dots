@@ -201,10 +201,30 @@ the shell restarted (log out/in, or restart the `quickshell -p` process).
 | Path | Role |
 | --- | --- |
 | `shell.qml` | Entrypoint. Loads surfaces, imports `qs.modules` for the keybind hub. |
-| `services/` | QML singletons, one per concern, declared in `services/qmldir`. |
+| `services/` | QML singletons, one per concern, declared in `services/qmldir`. `Theme` is the palette, `Solid` is the shared surface chrome. |
 | `surfaces/` | Windows: launcher, control centre, OSD, pickers. |
+| `components/` | Reusable UI primitives. Nothing else lives here. |
 | `modules/Keybinds.qml` | Single place mapping shortcut names → actions. |
 | `scripts/` | Python helpers: palette discovery, publishing, wallpaper generation. |
 | `themes/` | Shell-side theme definitions. |
 
-See `quickshell/ARCHITECTURE.md` and `quickshell/docs/` for the longer version.
+### Adding a surface
+
+Two colour systems, and picking the wrong one is the fastest way to make the
+shell look inconsistent:
+
+- **`Theme.colors`** — the palette. Recolours when the theme changes. Use for
+  accent fills, selected states, and anything semantic.
+- **`Solid`** — the surface chrome: a fixed near-black layering system plus the
+  radii. Deliberately *not* themed; switching theme recolours the highlights,
+  not the furniture.
+
+Take colours from those, never from hex literals, and use `Solid.fg(a)` /
+`Solid.muted(a)` rather than `Qt.rgba(1, 1, 1, a)` for anything sitting on a
+theme-coloured fill. Check the result with:
+
+```bash
+qmllint -I . -I services -I components -I surfaces $(find . -name '*.qml')
+```
+
+See `quickshell/ARCHITECTURE.md` for the longer version.

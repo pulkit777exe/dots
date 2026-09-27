@@ -1,6 +1,7 @@
 module services
 
 singleton Theme 1.0 Theme.qml
+singleton Solid 1.0 Solid.qml
 singleton UiState 1.0 UiState.qml
 singleton Battery 1.0 Battery.qml
 singleton Volume 1.0 Volume.qml

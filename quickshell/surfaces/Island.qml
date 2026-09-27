@@ -246,7 +246,7 @@ Item {
                     text: root.currentTime
                     font.pixelSize: 14
                     font.weight: Font.DemiBold
-                    color: "#F7EFE1"
+                    color: Solid.fg(1)
                 }
 
                 MouseArea {

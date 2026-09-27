@@ -13,9 +13,9 @@ Item {
     Rectangle {
         id: bg
         anchors.fill: parent
-        radius: 24
-        color: "#141414"
-        border.color: "#282828"
+        radius: Solid.radiusPanel
+        color: Solid.bgSurface
+        border.color: Solid.borderSubtle
         border.width: 1
         clip: true
 
@@ -65,8 +65,8 @@ Item {
                 Rectangle {
                     anchors.fill: parent
                     radius: 16
-                    color: "#202020"
-                    border.color: "#2c2c2c"
+                    color: Solid.bgItem
+                    border.color: Solid.borderSubtle
                     border.width: 1
                     visible: Media.artUrl.length === 0
 
@@ -74,7 +74,7 @@ Item {
                         anchors.centerIn: parent
                         icon: "music_note"
                         size: 40
-                        iconColor: "#666666"
+                        iconColor: Solid.muted(1)
                     }
                 }
 
@@ -101,7 +101,7 @@ Item {
                     text: Media.title || "No media playing"
                     font.pixelSize: 17
                     font.weight: Font.Bold
-                    color: "#FFFFFF"
+                    color: Solid.fg(1)
                     elide: Text.ElideRight
                 }
 
@@ -125,7 +125,7 @@ Item {
                         Layout.preferredHeight: 18
                         Layout.preferredWidth: idLabel.implicitWidth + 12
                         radius: 5
-                        color: "#222222"
+                        color: Solid.bgItem
                         visible: Media.identity.length > 0
                         StyledText {
                             id: idLabel
@@ -133,7 +133,7 @@ Item {
                             text: Media.identity
                             font.pixelSize: 10
                             font.weight: Font.DemiBold
-                            color: "#888888"
+                            color: Solid.muted(1)
                         }
                     }
 
@@ -141,7 +141,7 @@ Item {
                         Layout.fillWidth: true
                         text: Media.album
                         font.pixelSize: 11
-                        color: "#666666"
+                        color: Solid.muted(1)
                         elide: Text.ElideRight
                         visible: text.length > 0
                     }
@@ -160,7 +160,7 @@ Item {
                         anchors { left: parent.left; right: parent.right; verticalCenter: parent.verticalCenter }
                         height: progressHover.hovered || scrubMouse.pressed ? 6 : 4
                         radius: height / 2
-                        color: "#2c2c2c"
+                        color: Solid.bgSliderTrack
                         clip: true
                         Behavior on height { NumberAnimation { duration: MotionConfig.hover() } }
 
@@ -195,7 +195,7 @@ Item {
                         text: Media.formatTime(Media.position)
                         font.pixelSize: 11
                         font.weight: Font.Medium
-                        color: "#888888"
+                        color: Solid.muted(1)
                     }
 
                     Item { Layout.fillWidth: true }
@@ -204,7 +204,7 @@ Item {
                         text: Media.formatTime(Media.length)
                         font.pixelSize: 11
                         font.weight: Font.Medium
-                        color: "#888888"
+                        color: Solid.muted(1)
                     }
                 }
 
@@ -218,7 +218,7 @@ Item {
                         icon: "skip_previous"
                         size: 32
                         iconSize: 18
-                        iconColor: "#CCCCCC"
+                        iconColor: Solid.fg(0.8)
                         enabled: Media.hasPlayer
                         onClicked: Media.previous()
                     }
@@ -247,7 +247,7 @@ Item {
                         icon: "skip_next"
                         size: 32
                         iconSize: 18
-                        iconColor: "#CCCCCC"
+                        iconColor: Solid.fg(0.8)
                         enabled: Media.hasPlayer
                         onClicked: Media.next()
                     }

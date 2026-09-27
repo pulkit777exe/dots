@@ -59,7 +59,7 @@ Item {
             text: root.currentTime
             font.pixelSize: 24
             font.weight: Font.DemiBold
-            color: "#F7EFE1"
+            color: Solid.fg(1)
         }
 
         // ---- Horizontal 7-Day Calendar Strip ----
@@ -103,8 +103,8 @@ Item {
                             font.pixelSize: modelData.isToday ? 10 : 11
                             font.weight: modelData.isToday ? Font.Bold : Font.Normal
                             color: modelData.isSunday
-                                ? "#E05252"
-                                : (modelData.isToday ? "#FFFFFF" : Qt.rgba(1, 1, 1, 0.6))
+                                ? Solid.danger
+                                : (modelData.isToday ? Solid.fg(1) : Solid.fg(0.6))
                         }
 
                         // Day Number
@@ -115,7 +115,7 @@ Item {
                             font.weight: modelData.isToday ? Font.Bold : Font.Normal
                             color: modelData.isToday
                                 ? Theme.colors.accent
-                                : (modelData.isSunday ? "#E05252" : Qt.rgba(1, 1, 1, 0.85))
+                                : (modelData.isSunday ? Solid.danger : Solid.fg(0.85))
                         }
                     }
                 }

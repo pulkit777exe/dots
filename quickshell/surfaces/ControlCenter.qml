@@ -19,19 +19,20 @@ Surface {
     readonly property color accent: Theme.colors.accent
     readonly property color accentText: Theme.colors.accentText
 
-    // Solid palette
-    readonly property color bgSurface: "#141414"
-    readonly property color bgCard: "#1f1f1f"
-    readonly property color bgCardHover: "#282828"
-    readonly property color bgCardActive: "#24332c"
-    readonly property color bgItem: "#242424"
-    readonly property color bgItemHover: "#2e2e2e"
-    readonly property color bgSliderTrack: "#2c2c2c"
+    // Solid palette — shared with every other surface via Solid.qml so the
+    // panel chrome has a single definition.
+    readonly property color bgSurface: Solid.bgSurface
+    readonly property color bgCard: Solid.bgCard
+    readonly property color bgCardHover: Solid.bgCardHover
+    readonly property color bgCardActive: Solid.bgCardActive
+    readonly property color bgItem: Solid.bgItem
+    readonly property color bgItemHover: Solid.bgItemHover
+    readonly property color bgSliderTrack: Solid.bgSliderTrack
 
     width: 460
-    cornerRadius: 24
+    cornerRadius: Solid.radiusPanel
     backgroundColor: root.bgSurface
-    borderColor: "#262626"
+    borderColor: Solid.borderSubtle
     borderWidth: 1
     shadow: true
 
