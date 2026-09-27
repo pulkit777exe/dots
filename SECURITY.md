@@ -61,9 +61,8 @@ a complete audit.
 ## No network access
 
 Nothing in this repo reaches the network at runtime. The Python helpers
-(`list-themes.py`, `publish-colors.py`, `iris-generate-themes.py`,
-`inotify-watch.py`, `list-apps.py`) read and write local files and shell out
-to local tools. `generate-theme-wallpapers.py` synthesises wallpapers locally
+(`list-themes.py`, `publish-colors.py`, `inotify-watch.py`, `list-apps.py`)
+read and write local files and shell out to local tools. `generate-theme-wallpapers.py` synthesises wallpapers locally
 with PIL. There is no `curl`/`wget`/`urllib` in any script, so installing this
 cannot phone home, and there is no update check that runs on its own.
 

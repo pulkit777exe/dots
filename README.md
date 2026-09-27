@@ -95,8 +95,6 @@ Fedora-first. `install.sh --check` reports what's missing.
 
 - `brightnessctl` — `XF86MonBrightness*`
 - `playerctl` — `XF86Audio*` media keys
-- `iris` — dynamic per-wallpaper colours (see Theming). Also usually not on
-  `PATH`; the shell probes `~/.local/bin/iris` itself.
 - `openwhispr` — only if you use `hypr/openwhispr-binds.lua`
 
 ## Keybinds
@@ -161,17 +159,22 @@ the raw binds in `hypr/modules/keybinds/media.lua`, or the keys will fire twice.
 
 Colours flow one direction:
 
+Palettes are static and picked by name — there is no wallpaper sampling. Colours
+flow one direction:
+
 ```
-iris (samples the wallpaper)
-  -> ~/.cache/iris/colors.json
-  -> quickshell/services/Iris.qml
+you pick a theme  (CLI arg -> $QUICKSHELL_THEME -> colors/index.json -> everforest)
   -> quickshell/scripts/publish-colors.py
-  -> ~/.config/colors/current.json + hyprland.conf, kitty.conf, gtk.css, colors.css, colors.sh
+  -> ~/.config/colors/current.json + hyprland.conf, colors.css, colors.sh, gtk.css, kitty.conf
   -> every app
 ```
 
-- **Static palettes** live in `colors/themes/<name>/colors.json`. These are
-  fallbacks used when `iris` is unavailable.
+- **Palettes** live in `colors/themes/<name>/colors.json`, one flat object of
+  18 colour keys. Add a theme by dropping a new directory in there and running
+  `quickshell/scripts/list-themes.py`; nothing else needs to change.
+- **`kitty.conf` is written but never applied.** The terminal stays on kitty's
+  own defaults, so switching themes must not repaint it. The file is emitted
+  only so you have a record of the palette.
 - **The active theme** is `colors/index.json`. Its `themes` key is an *object*
   mapping theme key → metadata, **not** a list. `quickshell/scripts/list-themes.py`
   reads it, fills in each theme's `wallpaperDir` by probing the usual locations,

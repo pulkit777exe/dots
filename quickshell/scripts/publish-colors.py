@@ -23,6 +23,9 @@ from pathlib import Path
 
 HOME = Path.home()
 COLORS_DIR = Path(os.environ.get("XDG_CONFIG_HOME", HOME / ".config")) / "colors"
+
+# Cached result of hyprland_uses_new_parsers(); None until first checked.
+_NEW_PARSERS: bool | None = None
 INDEX_JSON = COLORS_DIR / "index.json"
 THEME_ENV = "QUICKSHELL_THEME"
 DEFAULT_THEME = "everforest"
@@ -173,12 +176,52 @@ def ensure_gtk_import(gtk_css_path: Path) -> None:
     gtk_css_path.write_text(marker + "\n" + existing)
 
 
+def hyprland_uses_new_parsers() -> bool:
+    """True on Hyprland 0.56+, which refuses `hyprctl keyword`.
+
+    `hyprctl keyword` answers "keyword can't work with non-legacy parsers.
+    Use eval." and changes nothing. The suggested eval route is a dead end
+    too: on 0.56 eval takes Lua, exposes no keyword helper, and returns a
+    bare "ok" for everything, so it cannot be driven or verified. The path
+    that does work is to reload, because write_hypr has already written
+    colors/hyprland.conf and hypr/modules/general.lua re-reads it on load.
+
+    Cached: this runs on every theme switch.
+    """
+    global _NEW_PARSERS
+    if _NEW_PARSERS is not None:
+        return _NEW_PARSERS
+
+    version = ""
+    try:
+        proc = subprocess.run(["hyprctl", "version"], capture_output=True, text=True, timeout=3)
+        version = proc.stdout or ""
+    except Exception:
+        version = ""
+
+    parts: list[str] = []
+    for token in version.replace(",", " ").split():
+        if token[:1].isdigit() and "." in token:
+            parts = token.split(".")
+            break
+    try:
+        major = int(parts[0]) if parts else 0
+        minor = int(parts[1]) if len(parts) > 1 else 0
+    except ValueError:
+        major, minor = 0, 0
+
+    # 0.56 is the Lua-config/new-parser rewrite. Older Hyprland still takes
+    # `hyprctl keyword`. An unreadable version stays on the old path so we
+    # never reload Hyprland speculatively.
+    _NEW_PARSERS = (major, minor) >= (0, 56) if (major or minor) else False
+    return _NEW_PARSERS
+
+
 def apply_live(colors: dict) -> None:
     """Push the palette to things already running.
 
-    Hyprland's border colours are updated live. Kitty is deliberately NOT
-    pushed to: the terminal stays on its own defaults, so a theme switch
-    must not repaint it.
+    Kitty is deliberately NOT pushed to: the terminal stays on its own
+    defaults, so a theme switch must not repaint it.
     """
     acc = colors["accent"].lstrip("#")
     surf = colors["surface"].lstrip("#")
@@ -186,8 +229,14 @@ def apply_live(colors: dict) -> None:
         acc = acc[2:]
     if len(surf) == 8:
         surf = surf[2:]
-    run(["hyprctl", "keyword", "general:col.active_border", f"rgba({acc}ff)"])
-    run(["hyprctl", "keyword", "general:col.inactive_border", f"rgba({surf}aa)"])
+
+    if hyprland_uses_new_parsers():
+        # general.lua re-reads colors/hyprland.conf on load, so reloading is
+        # what actually applies the new border colours on 0.56+.
+        run(["hyprctl", "reload"])
+    else:
+        run(["hyprctl", "keyword", "general:col.active_border", f"rgba({acc}ff)"])
+        run(["hyprctl", "keyword", "general:col.inactive_border", f"rgba({surf}aa)"])
 
     gtk3_dir = HOME / ".config" / "gtk-3.0"
     gtk4_dir = HOME / ".config" / "gtk-4.0"

@@ -16,15 +16,5 @@
   "success": "#54b68d",
   "text": "#f7b088",
   "textMuted": "#5f5976",
-  "danger": "#bc604d",
-  "iris": {
-    "bg": "#2b273c",
-    "fg": "#f7b088",
-    "surface": "#3b3552",
-    "dim": "#5f5976",
-    "accent": "#f28446",
-    "red": "#bc604d",
-    "green": "#54b68d",
-    "yellow": "#f28446"
-  }
+  "danger": "#bc604d"
 }

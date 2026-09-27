@@ -309,8 +309,6 @@ main() {
     log "optional (features degrade without them)"
     check_bin brightnessctl "sudo dnf install brightnessctl — XF86MonBrightness* keys"
     check_bin playerctl "sudo dnf install playerctl — XF86Audio* media keys"
-    check_bin iris "dynamic per-wallpaper colours; see README.md > Theming" optional \
-        "$HOME/.local/bin/iris"
 
     check_session || true
 
