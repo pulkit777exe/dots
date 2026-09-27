@@ -1,5 +1,5 @@
 {
-  "default": "everforest",
+  "default": "teal",
   "themes": {
     "ariadne": {
       "name": "ariadne",
@@ -24,6 +24,10 @@
     "monochrome": {
       "name": "monochrome",
       "wallpaperDir": "/home/pulkit/Downloads/monochrome"
+    },
+    "teal": {
+      "name": "teal"
     }
-  }
+  },
+  "current": "teal"
 }
