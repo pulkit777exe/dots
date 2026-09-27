@@ -32,6 +32,15 @@ hl.on("hyprland.start", function()
     -- Clipboard history daemon
     hl.exec_cmd("wl-paste --type text --watch cliphist store")
 
+    -- Night Light / blue-light filter daemon. Optional, so it is started only
+    -- when the binary is actually installed. This daemon has to be running
+    -- before the toggle can do anything: NightLight.qml drives it with
+    -- `hyprctl hyprsunset`, which is a silent no-op if hyprsunset is not up,
+    -- and the service has no way to read back whether it is (see the
+    -- docstring in services/NightLight.qml). Without this line the moon
+    -- button in the control centre looks like it works and does nothing.
+    hl.exec_cmd("command -v hyprsunset >/dev/null && hyprsunset &")
+
     -- Authentication agent: Quickshell owns this via its in-process
     -- PolkitAgent (services/Auth.qml), so no separate agent process.
     -- Just make sure polkit is available.

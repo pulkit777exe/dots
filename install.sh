@@ -178,6 +178,10 @@ check_bin() {
     else
         err "$bin not found — $pkg_hint"
         MISSING+=("$bin")
+        # Tracked separately from the config checks so a missing required
+        # binary can fail the run's verdict. It shares MISSING with
+        # check_session's own findings purely so one summary lists them all.
+        MISSING_REQ_BIN+=("$bin")
     fi
     # Deliberately return 0. Callers are bare statements under `set -e`, and
     # a non-zero here would abort the whole run on the first missing
@@ -187,6 +191,7 @@ check_bin() {
 
 MISSING=()
 MISSING_OPTIONAL=()
+MISSING_REQ_BIN=()
 
 check_session() {
     local fail=0
@@ -242,6 +247,14 @@ check_session() {
     if [ "${#MISSING_OPTIONAL[@]}" -gt 0 ]; then
         echo
         warn "missing optional (features degrade): ${MISSING_OPTIONAL[*]}"
+    fi
+
+    # A missing required binary is part of the verdict even though the config
+    # checks are what this function owns. Without this the run printed
+    # "check passed" on a machine missing a required dependency, and exited 0,
+    # so bootstrap.sh read a broken install as a good one.
+    if [ "${#MISSING_REQ_BIN[@]}" -gt 0 ]; then
+        fail=1
     fi
 
     echo
@@ -309,8 +322,10 @@ main() {
     log "optional (features degrade without them)"
     check_bin brightnessctl "sudo dnf install brightnessctl — XF86MonBrightness* keys"
     check_bin playerctl "sudo dnf install playerctl — XF86Audio* media keys"
+    check_bin hyprsunset "blue-light filter; without it the control centre's Night Light toggle does nothing" optional
 
-    check_session || true
+    local cs=0
+    check_session || cs=$?
 
     echo
     if [ "$CHECK_ONLY" -eq 1 ]; then
@@ -318,6 +333,15 @@ main() {
     else
         log "done — log out, select the Hyprland session, and log back in"
     fi
+
+    # The links are in place either way, so a missing dependency is reported
+    # rather than fatal to the run itself. The exit code still reflects it so
+    # bootstrap.sh (and CI) do not read a broken machine as a clean install.
+    if [ "$cs" -ne 0 ]; then
+        err "finished with errors — see above"
+        return "$cs"
+    fi
+    return 0
 }
 
 main "$@"
