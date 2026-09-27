@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import json
 import os
-import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -257,7 +256,13 @@ def ensure_gtk_import(gtk_css_path: Path) -> None:
     gtk_css_path.write_text(marker + "\n" + existing)
 
 
-def apply_live(colors: dict, kitty_path: Path) -> None:
+def apply_live(colors: dict) -> None:
+    """Push the palette to things already running.
+
+    Hyprland's border colours are updated live. Kitty is deliberately NOT
+    pushed to: the terminal stays on its own defaults, so a theme switch
+    must not repaint it.
+    """
     acc = colors["accent"].lstrip("#")
     surf = colors["surface"].lstrip("#")
     if len(acc) == 8:
@@ -266,7 +271,6 @@ def apply_live(colors: dict, kitty_path: Path) -> None:
         surf = surf[2:]
     run(["hyprctl", "keyword", "general:col.active_border", f"rgba({acc}ff)"])
     run(["hyprctl", "keyword", "general:col.inactive_border", f"rgba({surf}aa)"])
-    run(["kitty", "@", "set-colors", "--all", "--configured", str(kitty_path)])
 
     gtk3_dir = HOME / ".config" / "gtk-3.0"
     gtk4_dir = HOME / ".config" / "gtk-4.0"
@@ -321,19 +325,18 @@ def main():
     write_css(COLORS_DIR / "colors.css", colors)
     write_sh(COLORS_DIR / "colors.sh", colors)
     write_hypr(COLORS_DIR / "hyprland.conf", colors)
-    write_kitty(COLORS_DIR / "kitty.conf", colors, palette)
     write_gtk(COLORS_DIR / "gtk.css", colors)
+    # Record the palette, but do not theme the terminal: kitty.conf does not
+    # include this file, and apply_live() no longer pushes set-colors. The
+    # terminal stays on kitty's own defaults.
+    write_kitty(COLORS_DIR / "kitty.conf", colors, palette)
 
     if theme_name:
         snap = COLORS_DIR / "themes" / theme_name
         snap.mkdir(parents=True, exist_ok=True)
         (snap / "colors.json").write_text(json.dumps(colors, indent=2))
 
-    # Keep kitty include in sync
-    kitty_include = HOME / ".config" / "kitty" / "current-theme.conf"
-    shutil.copyfile(COLORS_DIR / "kitty.conf", kitty_include)
-
-    apply_live(colors, COLORS_DIR / "kitty.conf")
+    apply_live(colors)
     print(json.dumps({"ok": True, "theme": theme_name, "accent": colors["accent"]}))
 
 
