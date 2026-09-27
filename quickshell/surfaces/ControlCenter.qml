@@ -136,7 +136,13 @@ Surface {
     //
     // A constant height means the drill-downs all open into the same box.
     // Long lists scroll inside it rather than growing the panel.
-    readonly property int panelHeight: 460
+    //
+    // 484 is measured off the reference capture, where the panel is exactly
+    // square: fill spans y 67..550, and x 719..1202 for the width. The old
+    // 460 paired with a 440 width made the panel taller than it was wide,
+    // which does not match. Island.qml's rightDotWrap uses 484 for the width
+    // so the two stay equal.
+    readonly property int panelHeight: 484
     implicitHeight: panelHeight
 
     // True while a sub-page is open. The drill card hides by collapsing its

@@ -378,7 +378,13 @@ Item {
         visible: BarConfig.statusCircleEnabled
 
         readonly property bool isExpanded: UiState.controlCenterOpen
-        property real targetW: isExpanded ? 440 : root.barHeight
+        // 484 measured off the reference capture, where the panel is exactly
+        // square: fill spans x 719..1202 and y 67..550, 484 x 484. The old 440
+        // made it 440 x 460, which read as visibly narrower than the
+        // reference. Height is not set here -- it comes from
+        // controlCenterContent.implicitHeight, i.e. ControlCenter's
+        // panelHeight, which is 484 to match.
+        property real targetW: isExpanded ? 484 : root.barHeight
         property real targetH: isExpanded ? controlCenterContent.implicitHeight : root.barHeight
 
         width: targetW
