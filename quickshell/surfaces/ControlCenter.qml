@@ -80,6 +80,42 @@ Surface {
         })
     }
 
+    // ── Connected network readout ────────────────────────────────
+    // The joined-network card shows the security type and signal beside the
+    // SSID. Wifi.strength is the connected network's own signal, but the
+    // security string only exists on the `networks` row that nmcli polling
+    // produced — Wifi._syncState() rewrites that list with a
+    // {ssid, strength, secured, active} shape and drops it. So the segment is
+    // omitted when it is genuinely not exposed instead of being guessed at.
+    readonly property var activeNetwork: {
+        const nets = Wifi.networks || []
+        // Prefer the active row matching the connected SSID; fall back to any
+        // active row in case nmcli reported a different SSID casing.
+        for (let i = 0; i < nets.length; i++) {
+            if (nets[i].active && nets[i].ssid === Wifi.ssid) return nets[i]
+        }
+        for (let i = 0; i < nets.length; i++) {
+            if (nets[i].active) return nets[i]
+        }
+        return null
+    }
+
+    readonly property string activeSecurity: {
+        const s = root.activeNetwork && root.activeNetwork.security
+            ? String(root.activeNetwork.security).trim()
+            : ""
+        // nmcli prints "--" for an open network.
+        if (!s || s === "--" || s === "NONE") return ""
+        return s
+    }
+
+    readonly property string activeMeta: {
+        const parts = ["Connected"]
+        if (root.activeSecurity.length > 0) parts.push(root.activeSecurity)
+        if (Wifi.strength > 0) parts.push(Wifi.strength + "% signal")
+        return parts.join(" · ")
+    }
+
     // ── Navigation state ─────────────────────────────────────────
     property string view: "home"
 
@@ -388,7 +424,7 @@ Surface {
 
                 Repeater {
                     model: Bluetooth.devices.filter(d => d.connected)
-                    BtDeviceRow {
+                    CcBtRow {
                         required property var modelData
                         Layout.fillWidth: true
                         device: modelData
@@ -418,7 +454,7 @@ Surface {
 
                 Repeater {
                     model: Bluetooth.devices.filter(d => d.paired && !d.connected)
-                    BtDeviceRow {
+                    CcBtRow {
                         required property var modelData
                         Layout.fillWidth: true
                         device: modelData
@@ -452,7 +488,7 @@ Surface {
 
             Repeater {
                 model: Bluetooth.devices.filter(d => !d.paired)
-                BtDeviceRow {
+                CcBtRow {
                     required property var modelData
                     Layout.fillWidth: true
                     device: modelData
@@ -744,19 +780,107 @@ Surface {
 
         Item { Layout.preferredHeight: 14 }
 
+        // ── Connected network ──────────────────────────────────────
+        // The joined network gets its own card rather than sitting at the top
+        // of a flat list: accent badge + SSID + "Connected · WPA2 · 78%
+        // signal" readout, with a BORDERED Disconnect pill on the right.
+        Rectangle {
+            Layout.fillWidth: true
+            Layout.preferredHeight: 60
+            radius: 13
+            color: root.bgItem
+            border.color: root.accent
+            border.width: 1
+            visible: Wifi.connected
+
+            RowLayout {
+                anchors { fill: parent; leftMargin: 12; rightMargin: 12 }
+                spacing: 12
+
+                Rectangle {
+                    Layout.preferredWidth: 40; Layout.preferredHeight: 40; radius: width / 2
+                    color: root.accent
+
+                    Icon {
+                        anchors.centerIn: parent
+                        icon: "wifi"
+                        size: 20
+                        iconColor: root.accentText
+                    }
+                }
+
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    spacing: 1
+                    StyledText {
+                        text: Wifi.ssid
+                        font.pixelSize: 13; font.weight: Font.DemiBold; color: "#FFFFFF"
+                        elide: Text.ElideRight; Layout.fillWidth: true
+                    }
+                    StyledText {
+                        text: root.activeMeta
+                        font.pixelSize: 11; color: "#777777"
+                        elide: Text.ElideRight; Layout.fillWidth: true
+                    }
+                }
+
+                // Hairline pill, not a filled button — the reference's
+                // Disconnect is accent text inside a rounded outline.
+                Rectangle {
+                    Layout.preferredHeight: 30
+                    Layout.preferredWidth: wifiDisconnectLabel.implicitWidth + 24
+                    radius: height / 2
+                    color: "transparent"
+                    border.color: "#282828"
+                    border.width: 1
+                    HoverHandler { cursorShape: Qt.PointingHandCursor }
+                    TapHandler { onTapped: { Wifi.disconnect() } }
+
+                    StyledText {
+                        id: wifiDisconnectLabel
+                        anchors.centerIn: parent
+                        text: "Disconnect"
+                        font.pixelSize: 11
+                        color: root.accent
+                    }
+                }
+            }
+        }
+
+        Item { Layout.preferredHeight: 14 }
+
+        // ── Networks header ────────────────────────────────────────
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: 8
+
+            StyledText { text: "Networks"; font.pixelSize: 11; color: "#777777" }
+            Item { Layout.fillWidth: true }
+            RowLayout {
+                spacing: 6
+                visible: Wifi.scanning
+                Rectangle { Layout.preferredWidth: 6; Layout.preferredHeight: 6; radius: 3; color: root.accent }
+                StyledText { text: "Scanning"; font.pixelSize: 11; color: "#777777" }
+            }
+        }
+
+        Item { Layout.preferredHeight: 6 }
+
         ColumnLayout {
             Layout.fillWidth: true
             spacing: 6
 
             Repeater {
-                model: Wifi.networks
+                // The joined network lives in the card above, so it is not
+                // repeated in this list.
+                model: Wifi.networks.filter(n => !n.active)
                 Rectangle {
                     required property var modelData
                     Layout.fillWidth: true
                     height: 48
                     radius: 12
-                    color: modelData.active ? root.bgCardActive : (wifiRowHover.hovered ? root.bgItemHover : root.bgItem)
-                    border.color: modelData.active ? root.accent : "#2c2c2c"
+                    color: wifiRowHover.hovered ? root.bgItemHover : root.bgItem
+                    border.color: "#2c2c2c"
                     border.width: 1
                     Behavior on color { ColorAnimation { duration: MotionConfig.hover() } }
 
@@ -766,7 +890,7 @@ Surface {
                     RowLayout {
                         anchors { fill: parent; leftMargin: 12; rightMargin: 12 }
                         spacing: 10
-                        Icon { icon: "wifi"; size: 16; iconColor: modelData.active ? root.accent : "#AAAAAA" }
+                        Icon { icon: "wifi"; size: 16; iconColor: "#AAAAAA" }
                         StyledText { Layout.fillWidth: true; text: modelData.ssid; font.pixelSize: 13; color: "#FFFFFF"; elide: Text.ElideRight }
                         StyledText { text: modelData.strength + "%"; font.pixelSize: 11; color: "#888888" }
                     }
@@ -1227,33 +1351,50 @@ Surface {
         color: "#888888"
     }
 
-    // ── BtDeviceRow — solid Bluetooth row ─────────────────────────
-    component BtDeviceRow: Rectangle {
-        id: bdr
-        height: 54; radius: 13
+    // ── CcBtRow — solid two-line Bluetooth row ───────────────────
+    // The reference row is a circular badge, a two-line block (name over
+    // state) and a PLAIN-TEXT action in the accent colour — not a filled
+    // button. Shared by the Connected / Saved / Nearby sections rather than
+    // inlined three times.
+    component CcBtRow: Rectangle {
+        id: cbr
         property var device: ({})
         signal connect()
         signal disconnect()
         signal pair()
 
-        color: bdrHover.hovered ? root.bgItemHover : root.bgItem
-        border.color: bdr.device.connected ? root.accent : "#282828"
+        Layout.preferredHeight: 46
+        radius: 12
+        color: cbrHover.hovered ? root.bgItemHover : root.bgItem
+        border.color: cbr.device.connected ? root.accent : "#282828"
         border.width: 1
         Behavior on color { ColorAnimation { duration: MotionConfig.hover() } }
-        HoverHandler { id: bdrHover }
+
+        HoverHandler { id: cbrHover; cursorShape: Qt.PointingHandCursor }
+        TapHandler {
+            onTapped: {
+                if (cbr.device.connected) cbr.disconnect()
+                else if (cbr.device.paired) cbr.connect()
+                else cbr.pair()
+            }
+        }
 
         RowLayout {
-            anchors { fill: parent; leftMargin: 12; rightMargin: 12 }
-            spacing: 12
+            anchors { fill: parent; leftMargin: 10; rightMargin: 12 }
+            spacing: 10
 
             Rectangle {
-                Layout.preferredWidth: 36; Layout.preferredHeight: 36; radius: 10
-                color: bdr.device.connected ? root.accent : "#2e2e2e"
+                Layout.preferredWidth: 28; Layout.preferredHeight: 28; radius: width / 2
+                color: cbr.device.connected ? root.accent : "#2c2c2c"
+                Behavior on color { ColorAnimation { duration: MotionConfig.hover() } }
+
                 Icon {
                     anchors.centerIn: parent
-                    icon: bdr.device.connected ? "headphones" : "bluetooth"
-                    size: 18
-                    iconColor: bdr.device.connected ? root.accentText : "#AAAAAA"
+                    // A paired device is (in the reference) audio; an
+                    // unpaired one only ever has the bluetooth rune.
+                    icon: cbr.device.paired ? "headphones" : "bluetooth"
+                    size: 15
+                    iconColor: cbr.device.connected ? root.accentText : "#AAAAAA"
                 }
             }
 
@@ -1261,40 +1402,22 @@ Surface {
                 Layout.fillWidth: true
                 spacing: 1
                 StyledText {
-                    text: bdr.device.name || bdr.device.mac
-                    font.pixelSize: 13; font.weight: Font.DemiBold; color: "#FFFFFF"
+                    text: cbr.device.name || cbr.device.mac
+                    font.pixelSize: 12; color: "#FFFFFF"
                     elide: Text.ElideRight; Layout.fillWidth: true
                 }
                 StyledText {
-                    text: bdr.device.connected ? "Connected" : (bdr.device.paired ? "Saved" : "Not paired")
-                    font.pixelSize: 11; color: bdr.device.connected ? root.accent : "#777777"
+                    text: cbr.device.connected ? "Connected" : (cbr.device.paired ? "Saved" : "Not paired")
+                    font.pixelSize: 11; color: "#777777"
                 }
             }
 
-            Rectangle {
-                Layout.preferredHeight: 30
-                Layout.preferredWidth: actionLabel.implicitWidth + 22
-                radius: 8
-                color: bdr.device.connected ? "#2a2a2a" : root.accent
-
-                Behavior on color { ColorAnimation { duration: MotionConfig.hover() } }
-                HoverHandler { cursorShape: Qt.PointingHandCursor }
-                TapHandler {
-                    onTapped: {
-                        if (bdr.device.connected) bdr.disconnect()
-                        else if (bdr.device.paired) bdr.connect()
-                        else bdr.pair()
-                    }
-                }
-
-                StyledText {
-                    id: actionLabel
-                    anchors.centerIn: parent
-                    text: bdr.device.connected ? "Disconnect"
-                        : (bdr.device.paired ? "Connect" : "Pair")
-                    font.pixelSize: 12; font.weight: Font.DemiBold
-                    color: bdr.device.connected ? "#DDDDDD" : root.accentText
-                }
+            // Text action, deliberately not a button: the reference draws no
+            // background or border behind it.
+            StyledText {
+                text: cbr.device.connected ? "Disconnect" : (cbr.device.paired ? "Connect" : "Pair")
+                font.pixelSize: 11
+                color: root.accent
             }
         }
     }
@@ -1358,6 +1481,15 @@ Surface {
             "  ·  " + Math.round(monitorModel.modelData.refreshRate) + " Hz"
         ) : ""
 
+        // There is no Hyprland focused-output feed wired into this config, so
+        // "focused" is the service's own active monitor — getMonitor("active")
+        // is what global brightness changes, the OSD and BrightnessMonitor's
+        // own activity check all resolve to. Matched by output name, which is
+        // how Brightness.getMonitor() identifies monitors itself.
+        readonly property var activeMonitor: Brightness.getMonitor("active")
+        readonly property bool focused: !!monitorModel && !!activeMonitor
+            && activeMonitor.modelData.name === monitorModel.modelData.name
+
         ColumnLayout {
             id: mcCol
             anchors { fill: parent; margins: 14 }
@@ -1378,6 +1510,13 @@ Surface {
                     spacing: 1
                     StyledText { text: mc.monName; font.pixelSize: 13; font.weight: Font.DemiBold; color: "#FFFFFF" }
                     StyledText { text: mc.monDesc; font.pixelSize: 11; color: "#777777" }
+                }
+
+                StyledText {
+                    visible: mc.focused
+                    text: "focused"
+                    font.pixelSize: 10
+                    color: root.accent
                 }
             }
 
