@@ -138,17 +138,55 @@ link_unit() {
     fi
 }
 
+# check_bin <name> <hint> [required|optional] [abs-path ...]
+#
+# Several of these daemons are not on PATH even when installed: polkitd
+# lives at /usr/lib/polkit-1/polkitd and is never symlinked into /usr/bin,
+# so `command -v polkit` reported a working system as broken. Allow
+# absolute-path fallbacks.
+#
+# The kind argument separates a dependency this config cannot run without
+# from a nicety — "3 things missing" is only useful if you know which of
+# them matter.
 check_bin() {
-    local bin="$1" pkg_hint="$2"
+    local bin="$1" pkg_hint="$2" kind="${3:-required}"
+    shift 3 2>/dev/null || shift $#
+    local extra=("$@")
+
+    local found=0 via=""
     if command -v "$bin" >/dev/null 2>&1; then
-        log "found $bin"
+        found=1
     else
-        warn "$bin not found — $pkg_hint"
+        local p
+        for p in ${extra+"${extra[@]}"}; do
+            if [ -x "$p" ]; then found=1; via="$p"; break; fi
+        done
+    fi
+
+    if [ "$found" -eq 1 ]; then
+        if [ -n "$via" ]; then
+            log "found $bin (not on PATH: $via)"
+        else
+            log "found $bin"
+        fi
+        return 0
+    fi
+
+    if [ "$kind" = "optional" ]; then
+        warn "$bin not found (optional) — $pkg_hint"
+        MISSING_OPTIONAL+=("$bin")
+    else
+        err "$bin not found — $pkg_hint"
         MISSING+=("$bin")
     fi
+    # Deliberately return 0. Callers are bare statements under `set -e`, and
+    # a non-zero here would abort the whole run on the first missing
+    # dependency. The MISSING arrays are what carry the result.
+    return 0
 }
 
 MISSING=()
+MISSING_OPTIONAL=()
 
 check_session() {
     local fail=0
@@ -198,7 +236,12 @@ check_session() {
 
     if [ "${#MISSING[@]}" -gt 0 ]; then
         echo
-        warn "missing binaries (desktop still usable, some features degraded): ${MISSING[*]}"
+        err "missing REQUIRED: ${MISSING[*]}"
+        err "the desktop will not be whole until these are installed"
+    fi
+    if [ "${#MISSING_OPTIONAL[@]}" -gt 0 ]; then
+        echo
+        warn "missing optional (features degrade): ${MISSING_OPTIONAL[*]}"
     fi
 
     echo
@@ -233,17 +276,29 @@ main() {
 
     echo
     log "checking runtime dependencies (see README.md > Requirements)"
-    check_bin hyprland "sudo dnf copr enable solopasha/hyprland && sudo dnf install hyprland hyprlock hypridle hyprpaper"
-    check_bin quickshell "Quickshell isn't in Fedora's official repos — needs a COPR build (status moves fast) or a source build; must match this machine's Qt6 minor version, see README.md"
+    echo
+    log "required runtime"
+    check_bin hyprland "sudo dnf copr enable solopasha/hyprland && sudo dnf install hyprland"
+    check_bin quickshell "not in Fedora's official repos — COPR build (status moves fast) or source build; must match this machine's Qt6 minor version, see README.md"
     check_bin kitty "sudo dnf install kitty"
     check_bin python3 "sudo dnf install python3"
     check_bin cliphist "sudo dnf install cliphist   (or: go install github.com/sentriz/cliphist@latest)"
     check_bin wl-copy "sudo dnf install wl-clipboard"
-    check_bin polkit "sudo dnf install polkit"
-    check_bin hyprpaper "sudo dnf install hyprpaper"
-    check_bin brightnessctl "sudo dnf install brightnessctl"
-    check_bin playerctl "sudo dnf install playerctl"
-    check_bin iris "optional — dynamic wallpaper colors; see README.md > Theming"
+    # Referenced by modules/startup.lua and services/Theme.qml.
+    check_bin hyprpaper "sudo dnf install hyprpaper — without it the wallpaper daemon never starts"
+    # Referenced by hypr/hyprlock.lua and the SUPER+L bind.
+    check_bin hyprlock "sudo dnf install hyprlock — without it SUPER+L does nothing"
+    # Referenced by hypr/hypridle.toml.
+    check_bin hypridle "sudo dnf install hypridle — without it idleDPMS/idle actions never fire"
+    # Not a bare `polkit` binary: the daemon is polkitd and ships outside PATH.
+    check_bin polkitd "sudo dnf install polkit" required /usr/lib/polkit-1/polkitd /usr/libexec/polkitd
+
+    echo
+    log "optional (features degrade without them)"
+    check_bin brightnessctl "sudo dnf install brightnessctl — XF86MonBrightness* keys"
+    check_bin playerctl "sudo dnf install playerctl — XF86Audio* media keys"
+    check_bin iris "dynamic per-wallpaper colours; see README.md > Theming" optional \
+        "$HOME/.local/bin/iris"
 
     check_session || true
 

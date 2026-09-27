@@ -73,16 +73,24 @@ Fedora-first. `install.sh --check` reports what's missing.
 
 **Required**
 
-- `hyprland` — `sudo dnf copr enable solopasha/hyprland && sudo dnf install hyprland hyprlock hypridle hyprpaper`
+- `hyprland` — `sudo dnf copr enable solopasha/hyprland && sudo dnf install hyprland`
 - `quickshell` — not in Fedora's official repos. Needs a COPR build (availability
   moves fast) or a source build, and **must match your Qt6 minor version**.
-- `kitty`, `python3`, `cliphist`, `wl-clipboard`, `polkit`, `hyprpaper`
+- `kitty`, `python3`, `cliphist`, `wl-clipboard`
+- `hyprpaper` — `modules/startup.lua` starts it and `Theme.qml` drives it. No
+  wallpaper without it.
+- `hyprlock` — `hypr/hyprlock.lua` is the lock screen; `SUPER + L` calls it.
+- `hypridle` — `hypr/hypridle.toml` drives display sleep and idle actions.
+- `polkitd` — the auth daemon. Note it is **not on `PATH`**; it lives at
+  `/usr/lib/polkit-1/polkitd`. `install.sh` looks there explicitly, because a
+  plain `command -v polkit` check reports a working system as broken.
 
 **Optional** — the desktop runs without these, but the matching feature is degraded
 
 - `brightnessctl` — `XF86MonBrightness*`
 - `playerctl` — `XF86Audio*` media keys
-- `iris` — dynamic per-wallpaper colours (see Theming)
+- `iris` — dynamic per-wallpaper colours (see Theming). Also usually not on
+  `PATH`; the shell probes `~/.local/bin/iris` itself.
 - `openwhispr` — only if you use `hypr/openwhispr-binds.lua`
 
 ## Keybinds
