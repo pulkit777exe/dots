@@ -18,8 +18,6 @@ services/     One Singleton per subsystem (Theme, Wifi, Bluetooth,
                BarConfig, MotionConfig, UiState). Each wraps a real
                system interface — dbus, a CLI tool, a config file — and
                exposes flat, bindable properties plus an IpcHandler.
-               Solid is the odd one out: it owns no system interface, it
-               is the shared surface-chrome token set (see below).
 surfaces/      The UI layer. Panels/popups built from components,
                reading services, never polling them.
   settings/    Settings-app-specific pages and their own slider style
@@ -31,45 +29,6 @@ scripts/       Python helpers services shell out to (app indexing,
                polkit agent, wallpaper generation).
 shell.qml      Entry point. Creates the PanelWindows, mounts surfaces.
 ```
-
-## Two colour systems, on purpose
-
-Wiring a new surface means picking the right one of these. Getting it wrong
-is the most visible way to make the shell look inconsistent.
-
-**1. `Theme.colors` — the palette.** `background`, `surface`, `surfaceAlt`,
-`surfaceElevated`, `foreground`, `muted`, `accent`, `accentVariant`,
-`accentText`, `error`, `warning`, `success`. This changes when the user
-switches theme. Use it for anything that should *recolour*: accent fills,
-selected states, icon highlights, semantic colours (a Sunday marker should be
-`Solid.danger`, which is `Theme.colors.error` — not a literal red).
-
-**2. `Solid` — the surface chrome.** The near-black layering system
-(`bgSurface`, `bgCard`, `bgCardHover`, `bgItem`, `bgSliderTrack`,
-`borderSubtle`) plus the radii (`radiusPanel` 24, `radiusCard` 14,
-`radiusRow` 10).
-
-This one is deliberately **fixed** and does not follow the theme. Switching
-theme recolours the highlights; it does not repaint the furniture. Every
-panel, card and row in every theme sits on the same near-black stack, and
-that consistency is the design.
-
-`Solid` also carries the text helpers:
-
-- `Solid.fg(a)` — foreground at an opacity, following the palette
-- `Solid.muted(a)` — the same for secondary labels
-- `Solid.onAccent()` — readable text on an accent-filled element
-
-Prefer these to `Qt.rgba(1, 1, 1, a)`. Over the dark chrome a white overlay
-is fine and several primitives still use one, but the moment text sits on a
-theme-coloured fill, a hardcoded white is the wrong colour and `fg()` is right.
-
-**Do not write hex literals in a surface.** They were the reason three
-surfaces drifted apart: `ControlCenter.qml` kept a private copy of the
-chrome palette, `MediaPlayerSurface.qml` invented a slightly different set,
-and `Island.qml`/`Calendar.qml` hardcoded a Catppuccin Latte cream
-(`#F7EFE1`) for the clock text that looked wrong under every other theme.
-All four now read from `Solid`. `qmllint` is clean across the tree.
 
 ## Event-driven, with one honest caveat
 

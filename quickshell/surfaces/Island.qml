@@ -41,10 +41,13 @@ Item {
     Item {
         id: leftDotWrap
         y: root.topOffset
-        // "Album art circle while a player is open" — no player, no
-        // circle, rather than a lone music-note icon sitting there
-        // with nothing to show.
-        visible: BarConfig.albumArtCircleEnabled && Media.hasPlayer
+        // Album-art circle. Not gated on Media.hasPlayer: the collapsed dot
+        // already handles the no-player case (it falls back to a music_note
+        // glyph when Media.artUrl is empty), and MediaPlayerSurface has a
+        // real empty state — "No media playing" with transport disabled.
+        // Gating on hasPlayer hid the dot whenever nothing was playing,
+        // which left the media surface unreachable by mouse.
+        visible: BarConfig.albumArtCircleEnabled
 
         // When expanded as Media Player: width 440, height 160
         // When collapsed: circular dot (barHeight × barHeight)
@@ -246,7 +249,7 @@ Item {
                     text: root.currentTime
                     font.pixelSize: 14
                     font.weight: Font.DemiBold
-                    color: Solid.fg(1)
+                    color: "#F7EFE1"
                 }
 
                 MouseArea {

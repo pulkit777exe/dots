@@ -41,8 +41,18 @@ qs_global("S", "toggleSettings")        -- settings app
 qs_global("C", "toggleClipboard")       -- clipboard history (SUPER+C per user, C not P/V)
 qs_global("T", "toggleThemePicker")     -- theme picker (Island morph)
 qs_global("W", "toggleWallpaperPicker") -- wallpaper picker
+-- Media card. Keybinds.qml exposed toggleMedia (GlobalShortcut + IPC) and
+-- Island.qml mounts MediaPlayerSurface when UiState.mediaOpen, but nothing
+-- bound it — the surface was implemented and completely unreachable except
+-- by typing `quickshell ipc call shell toggleMedia`. M is free.
+qs_global("M", "toggleMedia")
 
--- Calendar — SHIFT+C (plain C is clipboard)
+-- Key choices avoid existing binds in applications.lua/navigation.lua/
+-- window.lua/mouse.lua/resize.lua/workspaces.lua/screenshots.lua:
+--   - L is `hyprlock` in applications.lua → power menu on SUPER+SHIFT+L
+--   - V is `toggle floating` in window.lua → clipboard on SUPER+C (was P)
+--   - M was free → media card on SUPER+M
+--
 hl.bind(
     mod .. " + SHIFT + C",
     hl.dsp.global("quickshell:toggleCalendar")

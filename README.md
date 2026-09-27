@@ -230,7 +230,7 @@ the shell restarted (log out/in, or restart the `quickshell -p` process).
 | Path | Role |
 | --- | --- |
 | `shell.qml` | Entrypoint. Loads surfaces, imports `qs.modules` for the keybind hub. |
-| `services/` | QML singletons, one per concern, declared in `services/qmldir`. `Theme` is the palette, `Solid` is the shared surface chrome. |
+| `services/` | QML singletons, one per concern, declared in `services/qmldir`. `Theme` holds the palette. |
 | `surfaces/` | Windows: launcher, control centre, OSD, pickers. |
 | `components/` | Reusable UI primitives. Nothing else lives here. |
 | `modules/Keybinds.qml` | Single place mapping shortcut names → actions. |
@@ -239,21 +239,28 @@ the shell restarted (log out/in, or restart the `quickshell -p` process).
 
 ### Adding a surface
 
-Two colour systems, and picking the wrong one is the fastest way to make the
-shell look inconsistent:
+The panel and card chrome is deliberately **not** themed: it stays a near-black
+layering system (`#141414` surface, `#1f1f1f` card, `#2c2c2c` slider track) in
+every theme, and only the accent moves. Central surfaces like `ControlCenter.qml`
+declare that palette inline as `readonly property color` — follow the local
+file's convention rather than inventing a new one.
 
-- **`Theme.colors`** — the palette. Recolours when the theme changes. Use for
-  accent fills, selected states, and anything semantic.
-- **`Solid`** — the surface chrome: a fixed near-black layering system plus the
-  radii. Deliberately *not* themed; switching theme recolours the highlights,
-  not the furniture.
+Use `Theme.colors` only for things that should recolour with the theme: accent
+fills, selected states, and semantic colours.
 
-Take colours from those, never from hex literals, and use `Solid.fg(a)` /
-`Solid.muted(a)` rather than `Qt.rgba(1, 1, 1, a)` for anything sitting on a
-theme-coloured fill. Check the result with:
+Check the result with:
 
 ```bash
 qmllint -I . -I services -I components -I surfaces $(find . -name '*.qml')
+```
+
+Note that `qmllint` passing does not mean the config loads. It does not resolve
+Quickshell's `Singleton` base type, so a service can lint clean and still fail
+at runtime with "Type X unavailable". When you add a service, actually start
+the shell and read the log:
+
+```bash
+quickshell -c ~/.config/quickshell
 ```
 
 See `quickshell/ARCHITECTURE.md` for the longer version.
