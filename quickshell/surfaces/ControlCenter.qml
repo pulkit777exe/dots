@@ -103,10 +103,6 @@ Surface {
     readonly property int panelHeight: 460
     implicitHeight: panelHeight
 
-    // Vertical space a drill-down gets: it starts below both pill rows and
-    // ends at the panel's bottom margin.
-    readonly property int popoverTop: 142
-    readonly property int popoverHeight: panelHeight - popoverTop - 14
 
     // ═══════════════════════════════════════════════════════════════
     // HOME PAGE  (Reference 1)
@@ -324,13 +320,17 @@ Surface {
     // and under the sub-page content.
     Rectangle {
         id: drillCard
-        anchors {
-            top: parent.top; bottom: parent.bottom
-            left: parent.left; right: parent.right
-            leftMargin: 10; rightMargin: 10
-            topMargin: root.popoverTop
-            bottomMargin: 14
-        }
+        anchors { left: parent.left; right: parent.right; leftMargin: 10; rightMargin: 10 }
+        // Matches whichever page is open, so the card is exactly the page's
+        // box. Both hang off the panel's bottom edge and grow upward in
+        // proportion to content: a short page sits low, a tall one reaches
+        // higher.
+        height: root.view === "bluetooth" ? btPage.height
+               : root.view === "display"   ? dispPage.height
+               : root.view === "wifi"      ? wifiPage.height
+               : root.view === "sound"     ? soundPage.height
+               : 0
+        y: root.panelHeight - 14 - height
         radius: 18
         color: root.bgSurface
         border.color: "#282828"
@@ -346,13 +346,12 @@ Surface {
         // Inset overlay card, not a full-page replacement: the reference keeps
         // the home visible behind the drill-down, starting below its first
         // pill row.
-        anchors {
-            top: parent.top; bottom: parent.bottom
-            left: parent.left; right: parent.right
-            leftMargin: 10; rightMargin: 10
-            topMargin: root.popoverTop
-            bottomMargin: 14
-        }
+        anchors { left: parent.left; right: parent.right; leftMargin: 10; rightMargin: 10 }
+        // Bottom-anchored: the popover hangs off the panel's bottom edge
+        // and grows upward in proportion to its content, so a short page
+        // sits low and a tall one reaches higher.
+        height: Math.min(implicitHeight, root.panelHeight - 14)
+        y: root.panelHeight - 14 - height
         spacing: 0
         visible: root.view === "bluetooth"
 
@@ -481,13 +480,12 @@ Surface {
         // Inset overlay card, not a full-page replacement: the reference keeps
         // the home visible behind the drill-down, starting below its first
         // pill row.
-        anchors {
-            top: parent.top; bottom: parent.bottom
-            left: parent.left; right: parent.right
-            leftMargin: 10; rightMargin: 10
-            topMargin: root.popoverTop
-            bottomMargin: 14
-        }
+        anchors { left: parent.left; right: parent.right; leftMargin: 10; rightMargin: 10 }
+        // Bottom-anchored: the popover hangs off the panel's bottom edge
+        // and grows upward in proportion to its content, so a short page
+        // sits low and a tall one reaches higher.
+        height: Math.min(implicitHeight, root.panelHeight - 14)
+        y: root.panelHeight - 14 - height
         spacing: 0
         visible: root.view === "sound"
 
@@ -629,13 +627,12 @@ Surface {
         // Inset overlay card, not a full-page replacement: the reference keeps
         // the home visible behind the drill-down, starting below its first
         // pill row.
-        anchors {
-            top: parent.top; bottom: parent.bottom
-            left: parent.left; right: parent.right
-            leftMargin: 10; rightMargin: 10
-            topMargin: root.popoverTop
-            bottomMargin: 14
-        }
+        anchors { left: parent.left; right: parent.right; leftMargin: 10; rightMargin: 10 }
+        // Bottom-anchored: the popover hangs off the panel's bottom edge
+        // and grows upward in proportion to its content, so a short page
+        // sits low and a tall one reaches higher.
+        height: Math.min(implicitHeight, root.panelHeight - 14)
+        y: root.panelHeight - 14 - height
         spacing: 0
         visible: root.view === "display"
 
@@ -722,13 +719,12 @@ Surface {
         // Inset overlay card, not a full-page replacement: the reference keeps
         // the home visible behind the drill-down, starting below its first
         // pill row.
-        anchors {
-            top: parent.top; bottom: parent.bottom
-            left: parent.left; right: parent.right
-            leftMargin: 10; rightMargin: 10
-            topMargin: root.popoverTop
-            bottomMargin: 14
-        }
+        anchors { left: parent.left; right: parent.right; leftMargin: 10; rightMargin: 10 }
+        // Bottom-anchored: the popover hangs off the panel's bottom edge
+        // and grows upward in proportion to its content, so a short page
+        // sits low and a tall one reaches higher.
+        height: Math.min(implicitHeight, root.panelHeight - 14)
+        y: root.panelHeight - 14 - height
         spacing: 0
         visible: root.view === "wifi"
 
