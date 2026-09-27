@@ -1,8 +1,17 @@
 #!/usr/bin/env python3
-"""Publish Iris palettes into ~/.config/colors for the whole desktop.
+"""Publish a theme's static palette into ~/.config/colors for the whole desktop.
 
-Iris remains the generator (~/.cache/iris). This script is the shared
-desktop layer: semantic colors + live apply for Hyprland/Kitty/GTK.
+The palette is hand-authored and lives at
+~/.config/colors/themes/<name>/colors.json — there is no generator and no
+sampling. This script is the shared desktop layer: it copies that palette
+out to the files Hyprland/GTK/CSS consumers read, and pushes the border
+colours live.
+
+Active theme resolution, highest priority first:
+  1. CLI argument:      publish-colors.py <theme>
+  2. $QUICKSHELL_THEME
+  3. `current` in ~/.config/colors/index.json (falls back to `default`)
+  4. "everforest"
 """
 from __future__ import annotations
 
@@ -14,7 +23,9 @@ from pathlib import Path
 
 HOME = Path.home()
 COLORS_DIR = Path(os.environ.get("XDG_CONFIG_HOME", HOME / ".config")) / "colors"
-IRIS_CACHE = HOME / ".cache" / "iris"
+INDEX_JSON = COLORS_DIR / "index.json"
+THEME_ENV = "QUICKSHELL_THEME"
+DEFAULT_THEME = "everforest"
 FALLBACK = {
     "background": "#202020",
     "surface": "#282828",
@@ -48,104 +59,10 @@ def hex_to_rgb(h: str):
     return (n >> 16) & 255, (n >> 8) & 255, n & 255
 
 
-def to_hex(r, g, b):
-    clamp = lambda v: max(0, min(255, round(v)))
-    return f"#{clamp(r):02x}{clamp(g):02x}{clamp(b):02x}"
-
-
 def hex_lightness(h: str) -> float:
     r, g, b = hex_to_rgb(h)
     r, g, b = r / 255, g / 255, b / 255
     return (max(r, g, b) + min(r, g, b)) / 2
-
-
-def hex_sat(h: str) -> float:
-    r, g, b = [x / 255 for x in hex_to_rgb(h)]
-    mx, mn = max(r, g, b), min(r, g, b)
-    if mx == mn:
-        return 0
-    l = (mx + mn) / 2
-    return (mx - mn) / (1 - abs(2 * l - 1))
-
-
-def darken(h: str, factor: float) -> str:
-    r, g, b = hex_to_rgb(h)
-    f = max(0, min(1, factor))
-    return to_hex(r * (1 - f), g * (1 - f), b * (1 - f))
-
-
-def shift_further(a: str, b: str, amount: float) -> str:
-    ar, ag, ab = hex_to_rgb(a)
-    br, bg, bb = hex_to_rgb(b)
-    return to_hex(br + (br - ar) * amount, bg + (bg - ag) * amount, bb + (bb - ab) * amount)
-
-
-def with_alpha(h: str, a: float) -> str:
-    hx = h.lstrip("#")
-    if len(hx) == 8:
-        hx = hx[2:]
-    alpha = max(0, min(255, round(a * 255)))
-    return f"#{alpha:02x}{hx}"
-
-
-def luminance(h: str) -> float:
-    r, g, b = hex_to_rgb(h)
-    return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255
-
-
-def remap_iris(p: dict) -> dict:
-    surface = p.get("surface") or p.get("bg")
-    bg = p.get("bg", FALLBACK["background"])
-    surf = surface or FALLBACK["surface"]
-    if hex_lightness(bg) > 0.28:
-        bg = darken(bg, 0.22)
-    elif hex_lightness(bg) > 0.22:
-        bg = darken(bg, 0.10)
-    if hex_lightness(surf) > 0.32:
-        surf = darken(surf, 0.18)
-
-    accent = p.get("accent", FALLBACK["accent"])
-    is_mono = hex_sat(accent) < 0.15 and hex_sat(bg) < 0.12
-    if is_mono:
-        bg, surf, accent = "#111111", "#1c1c1c", "#c8c8c8"
-
-    surf_alt = shift_further(bg, surf, 1.0)
-    fg = p.get("fg", FALLBACK["foreground"])
-    dim = p.get("dim", fg)
-    danger = p.get("red", FALLBACK["error"])
-    warning = p.get("yellow", FALLBACK["warning"])
-    success = p.get("green", FALLBACK["success"])
-    accent_text = "#101010" if luminance(accent) > 0.5 else "#f5f5f5"
-    return {
-        "background": bg,
-        "surface": surf,
-        "surfaceAlt": surf_alt,
-        "surfaceElevated": shift_further(surf, surf_alt, 0.8),
-        "surfaceMuted": with_alpha(surf, 0.7),
-        "border": with_alpha(fg, 0.10),
-        "divider": with_alpha(fg, 0.07),
-        "foreground": fg,
-        "muted": dim,
-        "accent": accent,
-        "accentVariant": shift_further(bg, accent, 0.65),
-        "accentText": accent_text,
-        "error": danger,
-        "warning": warning,
-        "success": success,
-        "text": fg,
-        "textMuted": dim,
-        "danger": danger,
-        "iris": {
-            "bg": p.get("bg"),
-            "fg": p.get("fg"),
-            "surface": p.get("surface"),
-            "dim": p.get("dim"),
-            "accent": p.get("accent"),
-            "red": p.get("red"),
-            "green": p.get("green"),
-            "yellow": p.get("yellow"),
-        },
-    }
 
 
 def write_css(path: Path, colors: dict):
@@ -189,7 +106,7 @@ def write_hypr(path: Path, colors: dict):
     )
 
 
-def write_kitty(path: Path, colors: dict, iris: dict | None):
+def write_kitty(path: Path, colors: dict):
     bg = colors["background"]
     fg = colors["foreground"]
     acc = colors["accent"]
@@ -294,32 +211,47 @@ def apply_live(colors: dict) -> None:
     ])
 
 
-def load_iris_palette(src: Path | None) -> dict:
-    if src and src.is_file():
-        return json.loads(src.read_text())
-    cache = IRIS_CACHE / "colors.json"
-    if cache.is_file():
-        return json.loads(cache.read_text())
-    raise FileNotFoundError("no iris palette found")
+def resolve_theme(cli_theme: str | None) -> str:
+    """Which theme to publish. CLI beats env beats index.json beats default."""
+    if cli_theme:
+        return cli_theme
+    env = os.environ.get(THEME_ENV)
+    if env:
+        return env
+    if INDEX_JSON.is_file():
+        try:
+            data = json.loads(INDEX_JSON.read_text())
+            named = data.get("current") or data.get("default")
+            if named:
+                return str(named)
+        except Exception:
+            pass
+    return DEFAULT_THEME
 
 
-def is_already_semantic(palette: dict) -> bool:
-    """True if `palette` is already remap_iris()'s output shape (a
-    preset theme's own colors/themes/<name>/colors.json snapshot)
-    rather than a raw Iris palette (bg/fg/surface/accent/...). Lets
-    main() publish a preset theme directly without corrupting it by
-    running it back through remap_iris(), which expects the raw shape
-    and would silently fall back to FALLBACK for every key a semantic
-    palette doesn't have under those raw names."""
-    return "background" in palette and "accentText" in palette
+def load_theme_palette(theme: str) -> dict:
+    """Read a theme's own hand-authored colors.json.
+
+    Missing keys are filled from FALLBACK (same defaulting list-themes.py
+    applies) so a partially hand-edited palette can't break the writers
+    below or leave current.json out of step with what the shell renders.
+    """
+    path = COLORS_DIR / "themes" / theme / "colors.json"
+    if not path.is_file():
+        raise FileNotFoundError(f"no colors.json for theme {theme!r} ({path})")
+    palette = json.loads(path.read_text())
+    if not isinstance(palette, dict):
+        raise ValueError(f"{path} is not a color palette object")
+    colors = {k: v for k, v in palette.items() if isinstance(v, str)}
+    for k, v in FALLBACK.items():
+        colors.setdefault(k, v)
+    return colors
 
 
 def main():
-    src = Path(sys.argv[1]) if len(sys.argv) > 1 else None
-    theme_name = sys.argv[2] if len(sys.argv) > 2 else None
-    palette = load_iris_palette(src)
+    theme = resolve_theme(sys.argv[1] if len(sys.argv) > 1 else None)
+    colors = load_theme_palette(theme)
     COLORS_DIR.mkdir(parents=True, exist_ok=True)
-    colors = palette if is_already_semantic(palette) else remap_iris(palette)
 
     (COLORS_DIR / "current.json").write_text(json.dumps(colors, indent=2))
     write_css(COLORS_DIR / "colors.css", colors)
@@ -327,17 +259,12 @@ def main():
     write_hypr(COLORS_DIR / "hyprland.conf", colors)
     write_gtk(COLORS_DIR / "gtk.css", colors)
     # Record the palette, but do not theme the terminal: kitty.conf does not
-    # include this file, and apply_live() no longer pushes set-colors. The
+    # include this file, and apply_live() does not push set-colors. The
     # terminal stays on kitty's own defaults.
-    write_kitty(COLORS_DIR / "kitty.conf", colors, palette)
-
-    if theme_name:
-        snap = COLORS_DIR / "themes" / theme_name
-        snap.mkdir(parents=True, exist_ok=True)
-        (snap / "colors.json").write_text(json.dumps(colors, indent=2))
+    write_kitty(COLORS_DIR / "kitty.conf", colors)
 
     apply_live(colors)
-    print(json.dumps({"ok": True, "theme": theme_name, "accent": colors["accent"]}))
+    print(json.dumps({"ok": True, "theme": theme, "accent": colors["accent"]}))
 
 
 if __name__ == "__main__":

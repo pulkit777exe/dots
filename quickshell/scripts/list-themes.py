@@ -2,8 +2,9 @@
 """Discover themes from ~/.config/colors — never from the Quickshell tree.
 
 index.json maps theme keys to wallpaper directories (usually outside
-this repo). Per-theme colors.json under ~/.config/colors/themes/<key>/
-is an Iris-generated snapshot used only as a picker fallback.
+this repo) and names the active theme (`current`, seeded from `default`).
+Per-theme colors/themes/<key>/colors.json is the hand-authored static
+palette — the single source of truth for both the shell and the desktop.
 """
 import json
 import os
@@ -34,6 +35,7 @@ KNOWN_DIRS = {
 }
 
 EXTS = {".jpg", ".jpeg", ".png", ".webp", ".bmp"}
+DEFAULT_THEME = "everforest"
 
 
 def discover_images(root: pathlib.Path):
@@ -118,22 +120,25 @@ def ensure_index():
             default = key
 
     # Preserve any extra top-level keys the index carries (scheme/accent/etc.)
-    # instead of clobbering the whole file, and keep `current` in step with
-    # `default` so older readers still see the active theme.
+    # instead of clobbering the whole file. `current` is the declarative
+    # active-theme knob and is kept as-is once set — only seeded from
+    # `default` when absent — so editing index.json is a supported way to
+    # change the active theme. (`default` stays what a fresh install picks.)
     out = dict(data) if isinstance(data, dict) else {}
-    out["default"] = default or "everforest"
-    out["current"] = out["default"]
+    out["default"] = default or DEFAULT_THEME
+    out["current"] = out.get("current") or out["default"]
     out["themes"] = themes
 
     if changed or not INDEX.is_file() or isinstance(raw, list):
         INDEX.write_text(json.dumps(out, indent=2) + "\n")
-    return {"default": out["default"], "themes": themes}
+    return {"default": out["default"], "current": out["current"], "themes": themes}
 
 
 def main():
     idx = ensure_index()
     themes = {}
     default = idx.get("default")
+    current = idx.get("current") or default
     for key, meta in idx.get("themes", {}).items():
         name = meta.get("name", key)
         wdir = pathlib.Path(meta.get("wallpaperDir", ""))
@@ -154,9 +159,19 @@ def main():
             "wallpapers": unique,
             "colors": load_colors(key),
         }
-        if default not in themes:
-            default = key
-    json.dump({"default": default or "everforest", "themes": themes}, sys.stdout, indent=2)
+    # Validate the named themes *after* the loop. While these checks sat
+    # inside it, `themes` was still missing the key being tested, so
+    # `default` (and `current`) always collapsed to the first theme key
+    # rather than the one index.json actually named.
+    if default not in themes:
+        default = next(iter(themes), DEFAULT_THEME)
+    if current not in themes:
+        current = default
+    json.dump(
+        {"default": default, "current": current, "themes": themes},
+        sys.stdout,
+        indent=2,
+    )
     sys.stdout.write("\n")
 
 

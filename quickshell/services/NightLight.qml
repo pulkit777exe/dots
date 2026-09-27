@@ -28,10 +28,10 @@ import Quickshell.Io
       to know that. `available` is only a binary-presence check
       (`command -v hyprsunset`), not proof the daemon is live.
 
-  On why this exists instead of wiring in "Iris": IrisTech's own docs
-  state Iris does not support Wayland ("the needed API are still not
-  created") — it's an X11-only tool, so it cannot run under Hyprland at
-  all. hyprsunset is the actual Wayland/Hyprland-native equivalent.
+  On why this exists instead of a wallpaper-colour extractor: those tools
+  are either X11-only or need an external daemon we don't want in the
+  loop, and colours are now purely static anyway. hyprsunset is the
+  Wayland/Hyprland-native equivalent.
 */
 
 Singleton {

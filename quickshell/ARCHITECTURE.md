@@ -14,7 +14,7 @@ components/   17 reusable UI primitives (Surface, StyledText, Slider,
                project's first design pass.
 services/     One Singleton per subsystem (Theme, Wifi, Bluetooth,
                Volume, Brightness, Battery, PowerProfile, Notifications,
-               AppLauncher, Auth, NightLight, Iris, Media, Clipboard,
+               AppLauncher, Auth, NightLight, Media, Clipboard,
                BarConfig, MotionConfig, UiState). Each wraps a real
                system interface — dbus, a CLI tool, a config file — and
                exposes flat, bindable properties plus an IpcHandler.
@@ -26,9 +26,36 @@ surfaces/      The UI layer. Panels/popups built from components,
 themes/        themes.json (6 presets) + one generated, palette-matched
                wallpaper per theme.
 scripts/       Python helpers services shell out to (app indexing,
-               polkit agent, wallpaper generation).
+               polkit agent, wallpaper generation, theme discovery and
+               palette publishing).
 shell.qml      Entry point. Creates the PanelWindows, mounts surfaces.
 ```
+
+## Colours: static palettes, published outward
+
+`Theme.qml` has no colour generator and no wallpaper sampling. The active
+theme's own hand-authored `~/.config/colors/themes/<name>/colors.json` is
+the palette, in-shell and on disk alike:
+
+```
+colors/themes/<name>/colors.json          (hand-authored, source of truth)
+  ├─ scripts/list-themes.py ──────────► Theme.presets ──► in-shell colours
+  └─ scripts/publish-colors.py ───────► ~/.config/colors/{current.json,
+                                       colors.css, colors.sh, hyprland.conf,
+                                       gtk.css, kitty.conf} + live
+                                       hyprctl border push
+```
+
+`Theme.qml` runs `publish-colors.py <theme>` on startup (once presets and
+saved state have both resolved, so the name is final) and again on every
+theme switch, so the desktop never lags the shell. Which theme that is:
+
+| Knob | Scope |
+|---|---|
+| ThemePicker in the island, `qs ipc call theme set <name>`, `nextTheme` keybind | what the shell shows |
+| `~/.config/quickshell/shell-state/theme-state.json` (`{"theme": ...}`) | the shell's saved selection — wins over the index when present |
+| `current` in `~/.config/colors/index.json` | the active theme used by `list-themes.py` when there's no saved state, and by `publish-colors.py` when run standalone |
+| `QUICKSHELL_THEME=gruvbox publish-colors.py` | one-off override, beats `index.json` |
 
 ## Event-driven, with one honest caveat
 
@@ -88,7 +115,7 @@ extracted directly from source:
 |---|---|---|
 | `shell` | `toggleLauncher` `toggleControlCenter` `togglePowerMenu` `toggleSettings` `toggleClipboard` `closeAll` `nextTheme` `nextWallpaper` `toggleThemePicker` | |
 | `uis` | `isLauncherOpen` `isControlCenterOpen` `isPowerMenuOpen` `isSettingsOpen` `isClipboardOpen` | read-only state queries |
-| `theme` | `get` `set <name>` `cycle` `list` `getWallpaper` `cycleWallpaper` `toggleDynamic` | |
+| `theme` | `get` `set <name>` `cycle` `list` `getWallpaper` `cycleWallpaper` `publish <name>` | `publish` re-runs `scripts/publish-colors.py` — use it after hand-editing a theme's `colors.json`, the inotify watcher doesn't re-publish |
 | `audio` | `getVolume` `setVolume <0-100>` `toggleMute` `cycleOutput` `getSinks` `getSources` `listStreams` | |
 | `brightness` | `get` `getFor <query>` `set <0-100>` `setFor <query> <0-100>` | |
 | `battery` | `getStatus` `getPercentage` `isCharging` | read-only |

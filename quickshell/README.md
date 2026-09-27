@@ -1,8 +1,8 @@
 # Quickshell desktop config
 
 A Hyprland + Quickshell shell: notch/pill bar (`Island.qml`), control
-center, settings app, launcher, power menu, lock screen, and a
-theme+wallpaper system shared with Kitty and Hyprland itself. Built and
+center, settings app, launcher, power menu, lock screen, and a static
+theme+wallpaper system shared with Hyprland itself. Built and
 tested against **Quickshell 0.3.1**.
 
 For "what was actually broken and how it got fixed," see
@@ -20,8 +20,8 @@ This was built and is used on **Fedora**. Package names below are
 | Hyprland (+ `hyprlock`, `hypridle`, `hyprpaper`) | compositor + lock/idle/wallpaper daemons | **not in Fedora's official repos.** Needs a COPR — `solopasha/hyprland` is the long-standing community one; a few newer ones exist too (e.g. `ashbuk/Hyprland-Fedora`). Check what's current before installing, this changes. |
 | Quickshell **0.3.1** | the shell itself | **also not official.** COPR/AUR/source build only. The sharp edge: Quickshell's COPR builds are pinned to a specific Qt6 minor version, and Fedora's shipped Qt6 moves faster — a Quickshell build against Qt 6.9 will refuse to run against a system on 6.10+. Match versions before filing a "shell won't start" bug against this config. |
 | Qt6 (Declarative/QML, at minimum) | Quickshell runs on it | `qt6-qtdeclarative`, `qt6-qtquickcontrols2`, `qt6-qt5compat` is **not** needed — see the note below |
-| Kitty | terminal, theme-integrated | `kitty` |
-| Python 3 | powers `quickshell/scripts/*.py` (theme generation, publish-colors, list-themes, polkit agent, inotify-watch) | `python3` |
+| Kitty | terminal (**not** theme-integrated — see Theming) | `kitty` |
+| Python 3 | powers `quickshell/scripts/*.py` (theme discovery, publish-colors, list-apps, polkit agent, inotify-watch) | `python3` |
 | `cliphist` + `wl-clipboard` | clipboard history | `cliphist`, `wl-clipboard` |
 | `polkit` | auth prompts (`Auth.qml` wraps `Quickshell.Services.Polkit`) | `polkit` |
 | `inotify-tools` | live theme-file watching (optional — degrades to poll-on-open if missing, doesn't crash) | `inotify-tools` |
@@ -66,13 +66,71 @@ qs -c quickshell
   Appearance, Motion, Launcher, Notifications, Media, Control Center,
   Lock Screen, System
 - Theme system — `colors/themes/<name>/colors.json` is the single
-  source of truth; wallpapers are generated *from* each theme's
-  palette (`scripts/generate-theme-wallpapers.py`), never the other
-  way around; Kitty and Hyprland border colors follow the active
-  theme both live (on switch) and after a reboot (seeded from the
-  generated `colors/hyprland.conf` / `kitty/current-theme.conf` at
-  config-load time)
+  source of truth: **static, hand-authored palettes, no generator and no
+  wallpaper sampling**; wallpapers are generated *from* each theme's
+  palette (`scripts/generate-theme-wallpapers.py`), never the other way
+  around. Hyprland border colors follow the active theme both live (on
+  switch) and after a reboot (seeded from the generated
+  `colors/hyprland.conf` at config-load time). Kitty is deliberately
+  **not** themed — it stays on its own defaults.
 - App launcher, power menu, lock screen
+
+## Theming
+
+Colours are static. There is no per-wallpaper extraction step and no
+cache to go stale: whichever theme is active, its
+`colors/themes/<name>/colors.json` *is* the palette, both in-shell and
+on disk. To change theme, either use the UI (island theme picker) or
+edit config — no code changes either way.
+
+**In the shell** (applies immediately, publishes to the desktop):
+
+```sh
+qs -p ~/.config/quickshell ipc call theme set gruvbox   # by name
+qs -p ~/.config/quickshell ipc call theme cycle         # next theme
+qs -p ~/.config/quickshell ipc call theme list          # available names
+```
+
+The choice is saved to
+`~/.config/quickshell/shell-state/theme-state.json` and wins over
+`index.json` on the next start.
+
+**By editing config** — set the active theme in
+`colors/index.json` (this is the knob `list-themes.py` and
+`publish-colors.py` read):
+
+```sh
+# current: the active theme. default: what a fresh install picks.
+$EDITOR ~/.config/colors/index.json
+```
+
+The shell picks up a changed `index.json` live (it watches the file);
+if a saved `theme-state.json` exists, delete the `theme` key from it or
+remove the file to let `current` take effect on next start.
+
+**Publishing only**, without the shell — handy from a Hyprland
+`exec-once` or a manual test. `publish-colors.py` resolves the theme
+first-wins: CLI argument, then `$QUICKSHELL_THEME`, then `current` in
+`index.json`, then `everforest`.
+
+```sh
+python3 quickshell/scripts/publish-colors.py gruvbox          # explicit
+QUICKSHELL_THEME=horizon python3 quickshell/scripts/publish-colors.py
+python3 quickshell/scripts/publish-colors.py                  # from index.json
+qs -p ~/.config/quickshell ipc call theme publish gruvbox     # same, from a running shell
+```
+
+It writes `colors/{current.json,colors.css,colors.sh,hyprland.conf,gtk.css,kitty.conf}`
+and pushes Hyprland's active/inactive border colors live. Editing a
+theme's `colors.json` re-renders the shell (it's watched) but does
+**not** re-publish to the desktop — use `theme publish <name>` for that.
+
+To author a new theme: drop a `colors/themes/<name>/colors.json` with
+at least `background`, `surface`, `surfaceAlt`, `foreground`, `accent`,
+`accentText`, `error`, `warning`, `success`, add the key to `themes` in
+`index.json` with a `wallpaperDir`, and it shows up in the picker
+immediately. Missing keys fall back to the built-in defaults rather
+than breaking.
 
 ## Known gaps
 

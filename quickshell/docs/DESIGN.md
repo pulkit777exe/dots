@@ -36,7 +36,7 @@ A shell is not a destination — it **appears when needed, gets out of the way i
 
 **Why single Island?** Container-transform: one `Surface` (`mainSurface`) morphs `width/height/radius/y` via `Spring 5.2/0.88`, content crossfades `110ms`. Same physical pill becomes Launcher (550px), Control Center (380px), etc. — shared-element, not new window.
 
-**Wallpaper**: `WlrLayer.Background` per-screen `PanelWindow` + two `Image { opacity: 1-progress / progress }` crossfade 380ms `InOutCubic` + subtle scale `0.015`. Colors from `Iris` (harman1307) drive `Theme`, not hardcoded.
+**Wallpaper**: `WlrLayer.Background` per-screen `PanelWindow` + two `Image { opacity: 1-progress / progress }` crossfade 380ms `InOutCubic` + subtle scale `0.015`. Colors come from the active theme's static palette in `colors/themes/<name>/colors.json`, not hardcoded.
 
 **When to skip sidebar:** Shell has no persistent sidebar — popovers (Control Center, Launcher) are transient. Settings app (`surfaces/SettingsApp.qml`) *does* use sidebar (200-260px, `Bar & Island | Media | Appearance | Motion...`) inside its own `Surface` — follows Apple formula only there.
 
@@ -44,10 +44,11 @@ A shell is not a destination — it **appears when needed, gets out of the way i
 
 ## 3. Visual Design — System-Driven, Not Hardcoded
 
-### Color — Iris + Theme
-- **Source:** `themes/<theme>/wallpapers/*` discovered via `scripts/list-themes.py` (no `wallpapers[]` in JSON), `themes/<theme>/themes.json` only `{"name":...}`. At startup `scripts/iris-generate-themes.py` runs `iris <wallpaper> --json-only --dark -1` per theme → remapped to `{background,surface,surfaceAlt,border,text,textMuted,accent,accentText,danger,warning,success}`.
-- **Runtime:** `Theme.qml` `colors = _displayedColors` lerped `220ms OutCubic` from `_targetColors` (iris) → fallback preset. ` pickerModel` accent/cardColor derived live.
-- **Light/Dark:** Not inverted — iris chooses `dark` via `_isDarkPreset()` (lightness <0.5). `border: #1ffcf8d0` (alpha), `accentText` by luminance.
+### Color — static themes
+- **Source:** `colors/themes/<name>/colors.json` — hand-authored, `{background,surface,surfaceAlt,border,text,textMuted,accent,accentText,danger,warning,success,...}`. Wallpapers are *generated from* these palettes (`scripts/generate-theme-wallpapers.py`), never the other way around; wallpapers are discovered by `scripts/list-themes.py` from each theme's `wallpaperDir` (no sampling, no generator at runtime). `current` in `colors/index.json` names the active theme.
+- **Runtime:** `Theme.qml` `colors = _displayedColors` lerped `220ms OutCubic` toward `_targetColors` (the active theme's `colors`). `pickerModel` accent/cardColor derived live. No dynamic/wallpaper-derived override exists.
+- **Published outward:** `scripts/publish-colors.py <theme>` writes the same palette to `colors/{current.json,colors.css,colors.sh,hyprland.conf,gtk.css,kitty.conf}` and pushes Hyprland's border colours live. Run on startup and on every theme switch. Kitty is recorded but deliberately never applied.
+- **Light/Dark:** Not inverted — `_isDarkPreset()` on the static background (lightness <0.5). `border` carries alpha, `accentText` by luminance.
 
 ### Typography
 - Stack: `-apple-system, "SF Pro Display/Text", Inter` (bundled `Inter`/`Inter Display` via `Appearance` page).
@@ -128,4 +129,4 @@ All components `Theme.colors.*` reactive, no polling, `Behavior` disabled when `
 4. Provide empty state (`Search Settings` placeholder) and `Esc` to dismiss.
 5. Test `notchMode` toggle + `collapsedWidth` live, and `DeviceProfile.lowSpec` (force `QUICKSHELL_LOW_SPEC=1`).
 
-*No hardcoding: wallpapers/colors from `iris` + filesystem, everything reloads on `themes/` change.*
+*No hardcoding: wallpapers from the filesystem, colors from each theme's hand-authored `colors.json`, everything reloads on `themes/` change.*

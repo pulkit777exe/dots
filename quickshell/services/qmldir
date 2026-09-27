@@ -12,7 +12,6 @@ singleton Notifications 1.0 Notifications.qml
 singleton AppLauncher 1.0 AppLauncher.qml
 singleton Auth 1.0 Auth.qml
 singleton NightLight 1.0 NightLight.qml
-singleton Iris 1.0 Iris.qml
 singleton Media 1.0 Media.qml
 singleton BarConfig 1.0 BarConfig.qml
 singleton MotionConfig 1.0 MotionConfig.qml

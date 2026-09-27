@@ -9,15 +9,19 @@ import Quickshell.Io
 /*
   Theme service — v0.3.0 + KISS + system-driven.
 
-  Color/theme data lives in ~/.config/colors (Iris + wallpaper catalogs).
-  Nothing in this Quickshell tree is a palette source of truth.
+  Color/theme data lives in ~/.config/colors (hand-authored palettes +
+  wallpaper catalogs). Nothing in this Quickshell tree is a palette source
+  of truth.
 
   Discovery via scripts/list-themes.py (no hardcoded names). The script outputs
   the same shape as the old central themes.json but generated live:
-    { "default": "everforest", "themes": { "ariadne": { "name": "...", "wallpapers": [...], "colors": {...} } } }
+    { "default": "everforest", "current": "everforest", "themes": { "ariadne": { "name": "...", "wallpapers": [...], "colors": {...} } } }
 
-  Colors: primary source is iris palette for the active wallpaper.
-  Preset colors in themes.json are only fallback when iris unavailable or fails.
+  Colors: purely static. The active theme's own
+  colors/themes/<name>/colors.json *is* the palette — there is no wallpaper
+  sampling, no generator, and no dynamic override. ThemePicker/settings/IPC
+  pick a name; that file's colors are applied in-shell and published out to
+  ~/.config/colors for the rest of the desktop by scripts/publish-colors.py.
 */
 
 Singleton {
@@ -32,14 +36,11 @@ Singleton {
     property var presets: ({})
     property string currentName: "everforest"
     property var wallpaperIndex: ({})
-    // Dynamic mode now means "prefer iris when available". Keep toggle for UI compat but default true.
-    property bool dynamicMode: true
-    property var _dynamicColors: null
-    property var _lastIrisPalette: null
 
     readonly property var current: presets[currentName] ? presets[currentName] : null
-    // Colors: iris primary, preset fallback — with macOS-like smooth transition
-    readonly property var _targetColors: _dynamicColors ? _dynamicColors : (current ? current.colors : _fallbackColors)
+    // Colors: the active theme's own static palette, with a last-resort
+    // fallback if discovery hasn't landed (or the theme has no colors.json).
+    readonly property var _targetColors: (current && current.colors) ? current.colors : _fallbackColors
     property var _fromColors: _fallbackColors
     property var _displayedColors: _targetColors
     property real _colorProgress: 1
@@ -155,11 +156,6 @@ Singleton {
         if (!source) return;
         const path = source.replace("file://", "");
         root._applyWallpaper(path);
-        if (Iris.available && source) {
-            Iris.generate(source, true);
-        } else if (!Iris.available) {
-            _dynamicColors = null;
-        }
     }
 
     function _applyWallpaper(path) {
@@ -266,23 +262,12 @@ Singleton {
             _wallpaperFrom = "";
             wallpaperProgress = 1;
         }
-        // Dynamic mode means colors track the wallpaper, not just the
-        // theme — so picking a *different* wallpaper within the same
-        // theme needs to re-extract too, not only the initial toggle
-        // of dynamic mode itself. Gated on _initialWallpaperApplied so
-        // this doesn't also double up with onAvailableChanged's own
-        // generate() call on startup.
-        if (_initialWallpaperApplied && root.dynamicMode && currentWallpaper && Iris.available) {
-            Iris.generate(currentWallpaper, true);
-        }
     }
 
     function _isDarkPreset() {
-        // Prefer target bg for iris dark detection
+        // Static palette only — no dynamic override to consult.
         let bg = "#202020";
         if (_targetColors && _targetColors.background) bg = _targetColors.background;
-        else if (_dynamicColors && _dynamicColors.background) bg = _dynamicColors.background;
-        else if (root.current && root.current.colors && root.current.colors.background) bg = root.current.colors.background;
         return _hexLightness(bg) < 0.5;
     }
     function _hexToRgb(hex) {
@@ -301,13 +286,6 @@ Singleton {
         const pad = (v) => clamp(v).toString(16).padStart(2, "0");
         return "#" + pad(r) + pad(g) + pad(b);
     }
-    function _shiftFurther(hexA, hexB, amount) {
-        const a = _hexToRgb(hexA), b = _hexToRgb(hexB);
-        return _toHex(b.r + (b.r - a.r) * amount, b.g + (b.g - a.g) * amount, b.b + (b.b - a.b) * amount);
-    }
-    function _withAlpha(hex, alpha01) {
-        return withAlpha(hex, alpha01);
-    }
     // Public: translucent variant of any theme color. Accepts "#RRGGBB",
     // "#AARRGGBB" (alpha replaced), or a color object. Surfaces use this
     // for icon washes and near-opaque panel backgrounds.
@@ -317,114 +295,26 @@ Singleton {
         const a = Math.max(0, Math.min(255, Math.round(alpha01 * 255)));
         return "#" + a.toString(16).padStart(2, "0") + h;
     }
-    function _luminance(hex) {
-        const c = _hexToRgb(hex);
-        return (0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b) / 255;
+
+    // ---- Publish the active theme's static palette to the rest of the
+    // desktop (~/.config/colors: hyprland.conf, colors.css/.sh, gtk.css).
+    // This is the whole "apply theme" story now: the hand-authored
+    // colors/themes/<name>/colors.json is both what the shell renders and
+    // what gets written out for Hyprland/GTK. ----
+    readonly property string publishScript: Quickshell.shellDir + "/scripts/publish-colors.py"
+
+    function publish(themeName) {
+        const name = themeName || currentName;
+        if (!name) return;
+        publisher.command = ["python3", publishScript, name];
+        publisher.running = true;
     }
-    // Compute the HSL saturation (chroma level) of a hex color.
-    // Returns 0 (gray) to 1 (fully saturated).
-    function _hexSaturation(hex) {
-        const c = _hexToRgb(hex);
-        const r = c.r / 255, g = c.g / 255, b = c.b / 255;
-        const max = Math.max(r, g, b), min = Math.min(r, g, b);
-        if (max === min) return 0;
-        const l = (max + min) / 2;
-        return (max - min) / (1 - Math.abs(2 * l - 1));
-    }
-    // Darker tone helper — blend toward black by factor 0-1 (0=no change, 1=black)
-    function _darken(hex, factor) {
-        const c = _hexToRgb(hex);
-        const f = Math.max(0, Math.min(1, factor));
-        return _toHex(c.r * (1 - f), c.g * (1 - f), c.b * (1 - f));
-    }
-
-    function _remapIrisPalette(p) {
-        const surface = p.surface ?? p.bg;
-
-        // Force darker tone: ensure background is at most 0.22 lightness
-        // so bright wallpapers don't produce washed light themes.
-        let bg = p.bg;
-        let surf = surface;
-        if (_hexLightness(bg) > 0.28) bg = _darken(bg, 0.22);
-        else if (_hexLightness(bg) > 0.22) bg = _darken(bg, 0.10);
-        if (_hexLightness(surf) > 0.32) surf = _darken(surf, 0.18);
-
-        // Chroma/saturation detection for monochrome restraint.
-        // Check the saturation of the generated accent color from iris.
-        // If the palette is low-chroma (monochrome/grayscale wallpaper),
-        // clamp surfaces to near-black and accent to neutral silver.
-        // This prevents a gray wallpaper from producing a randomly colored island.
-        const accentSat = _hexSaturation(p.accent ? p.accent : "#888888");
-        const bgSat = _hexSaturation(bg);
-        const isMonochrome = accentSat < 0.15 && bgSat < 0.12;
-
-        let finalBg, finalSurf, finalAccent;
-        if (isMonochrome) {
-            // Monochrome/grayscale: deep near-black surfaces, neutral silver accent
-            finalBg = "#111111";
-            finalSurf = "#1c1c1c";
-            // Use the iris accent lightness to pick a restrained silver shade
-            const accentL = _hexLightness(p.accent ? p.accent : "#888888");
-            const silverL = Math.max(0.55, Math.min(0.82, accentL * 1.2));
-            finalAccent = Qt.hsla(0, 0, silverL, 1).toString();
-        } else {
-            // Colorful wallpaper: use iris-derived colors normally
-            finalBg = bg;
-            finalSurf = surf;
-            finalAccent = p.accent;
-        }
-
-        const surfAlt = _shiftFurther(finalBg, finalSurf, 1.0);
-
-        return {
-            background:     finalBg,
-            surface:        finalSurf,
-            surfaceAlt:     surfAlt,
-            surfaceElevated: _shiftFurther(finalSurf, surfAlt, 0.8),
-            surfaceMuted:   _withAlpha(finalSurf, 0.7),
-            border:         _withAlpha(p.fg, 0.10),
-            divider:        _withAlpha(p.fg, 0.07),
-            text:           p.fg,
-            textMuted:      p.dim ? p.dim : p.fg,
-            accent:         finalAccent,
-            accentText:     _luminance(finalAccent) > 0.5 ? "#101010" : "#f5f5f5",
-            danger:         p.red ? p.red : "#e06060",
-            warning:        p.yellow ? p.yellow : "#e0c060",
-            success:        p.green ? p.green : "#60c080"
-        };
-    }
-
-
-    Connections {
-        target: Iris
-        function onPaletteGenerated(palette) {
-            root._lastIrisPalette = palette;
-            root._dynamicColors = _remapIrisPalette(palette);
-            Iris.publish(root.currentName);
-        }
-        function onGenerationFailed(reason) {
-            console.warn("Theme: Iris generation failed, using preset fallback:", reason);
-            root._dynamicColors = null;
-        }
-        function onAvailableChanged() {
-            if (Iris.available && root.currentWallpaper) {
-                Iris.generate(root.currentWallpaper, true);
-            } else if (!Iris.available) {
-                root._dynamicColors = null;
-            }
-        }
-    }
-
-    function setDynamicMode(value) {
-        root.dynamicMode = value;
-        root._persist();
-        if (value && root.currentWallpaper && Iris.available) {
-            Iris.generate(root.currentWallpaper, true);
-        } else if (!value) {
-            // If user disables, keep preset colors. Don't clear iris cache so re-enable is instant.
-            // But respect request: colors from iris is primary, so even if disabled we keep iris if available?
-            // For now, honor toggle: false -> use preset
-            root._dynamicColors = null;
+    Process {
+        id: publisher
+        stdout: StdioCollector {}
+        stderr: StdioCollector { id: pubErr }
+        onExited: (code) => {
+            if (code !== 0) console.warn("Theme: publish-colors failed for", currentName, pubErr.text);
         }
     }
 
@@ -432,16 +322,20 @@ Singleton {
         if (!presets[name] || name === currentName) return;
 
         currentName = name;
+        // Keep _pendingTheme in step. It is what _applyPresetsData() treats
+        // as the authoritative selection, and discovery re-runs whenever
+        // anything under colors/ changes — including this theme's own
+        // publish-colors.py output. Left stale, the next re-run would snap
+        // the shell back to the theme it booted with.
+        _pendingTheme = name;
         _rebuildWallpaperPickerModel();
         _persist();
 
-        // Push this preset's own colors out to Hyprland/Kitty/GTK —
+        // Push this theme's own static colors out to Hyprland/GTK/CSS —
         // without this, only Theme.qml's own in-shell `colors` binding
-        // ever changed, and border colors, terminal palette, and GTK
-        // apps kept whatever theme was last actually published (which
-        // only ever happened via Iris's dynamic wallpaper-color path,
-        // never from picking a preset here).
-        Iris.publishPreset(name, root.colorsRoot + "/themes/" + name + "/colors.json");
+        // ever changed, and border colors and GTK apps kept whatever
+        // theme was last actually published.
+        publish(name);
 
         themeChanged(name);
         wallpaperChanged(currentWallpaper);
@@ -543,20 +437,29 @@ Singleton {
         _initialWallpaperApplied = true;
         if (currentWallpaper) wallpaperChanged(currentWallpaper);
         else if (_wallpapers.length === 0) console.warn("Theme: no wallpapers discovered for", currentName);
+        // currentName is final here (state + presets both resolved), so this
+        // is the one place that knows which theme the desktop should be on
+        // at startup. Without it the shell would render the saved theme
+        // while hyprland.conf/gtk/css still held the last published one.
+        publish(currentName);
     }
 
     function _applyPresetsData(data) {
         try {
             const themes = (data && data.themes) ? data.themes : {};
             root.presets = themes;
+            // index.json's `current` is the declarative active-theme knob;
+            // `default` is only its seed. Both are overridable by the
+            // shell's own saved state, which wins whenever it exists.
+            const preferred = (data && data.current) || (data && data.default);
             // Honor saved theme even if state loaded before presets (fixes last wallpaper not remembered)
             if (_pendingTheme && themes[_pendingTheme]) {
                 root.currentName = _pendingTheme;
-            } else if (data.default && themes[data.default] && !stateLoader.loaded && !_pendingTheme) {
-                root.currentName = data.default;
+            } else if (preferred && themes[preferred] && !stateLoader.loaded && !_pendingTheme) {
+                root.currentName = preferred;
             } else if (!themes[currentName] && Object.keys(themes).length > 0) {
                 // currentName not in discovered list (e.g., after rename) -> pick default or first
-                if (data.default && themes[data.default]) root.currentName = data.default;
+                if (preferred && themes[preferred]) root.currentName = preferred;
                 else root.currentName = Object.keys(themes)[0];
             } else if (_pendingTheme && themes[_pendingTheme] && currentName !== _pendingTheme) {
                 // State arrived after presets but before _maybeApplyInitialWallpaper
@@ -581,7 +484,6 @@ Singleton {
                 currentName = data.theme;
             }
             if (data.wallpaperIndex) wallpaperIndex = data.wallpaperIndex;
-            if (typeof data.dynamicMode === "boolean") dynamicMode = data.dynamicMode;
             _rebuildWallpaperPickerModel();
         } catch (e) {
             console.warn("Theme: failed to parse state", root.statePath, e);
@@ -590,19 +492,24 @@ Singleton {
     function _persist() {
         stateWriter.setText(JSON.stringify({
             theme: currentName,
-            wallpaperIndex: wallpaperIndex,
-            dynamicMode: dynamicMode
+            wallpaperIndex: wallpaperIndex
         }));
     }
 
     IpcHandler {
         target: "theme"
-        function get(): string { return currentName; }
+        // Every read goes through `root.` on purpose. Qualified reads return
+        // live values; unqualified ones inside IpcHandler resolve against a
+        // context that doesn't see later assignments, so `get` reported the
+        // startup theme forever. Likewise a handler must not call a
+        // same-named function unqualified — `cycleWallpaper` recursed into
+        // itself until RangeError. Don't undo either.
+        function get(): string { return root.currentName; }
         function set(name: string): void { setTheme(name); }
         function cycle(): void { cycleTheme(); }
-        function list(): string { return Object.keys(presets).join("\n"); }
-        function getWallpaper(): string { return currentWallpaper; }
-        function cycleWallpaper(): void { cycleWallpaper(); }
-        function toggleDynamic(): void { setDynamicMode(!dynamicMode); }
+        function list(): string { return Object.keys(root.presets).join("\n"); }
+        function getWallpaper(): string { return root.currentWallpaper; }
+        function cycleWallpaper(): void { root.cycleWallpaper(); }
+        function publish(theme: string): void { root.publish(theme); }
     }
 }
