@@ -139,6 +139,12 @@ Surface {
     readonly property int panelHeight: 460
     implicitHeight: panelHeight
 
+    // Where a drill-down grows out of, in root coordinates. The Wi-Fi and
+    // Bluetooth cells set this to their own centre when clicked, so the
+    // popover unfolds from the cell you actually pressed rather than
+    // appearing from nowhere. Defaults to just under the pill rows.
+    property point popoverOrigin: Qt.point(width / 2, 150)
+
 
     // ═══════════════════════════════════════════════════════════════
     // HOME PAGE  (Reference 1)
@@ -159,6 +165,7 @@ Surface {
 
             // ── Wi-Fi pill ──────────────────────────────────────
             CcPill {
+                id: wifiPill
                 Layout.fillWidth: true
                 active: Wifi.enabled && Wifi.connected
                 icon: Wifi.enabled && Wifi.connected
@@ -169,6 +176,8 @@ Surface {
                 sublabel: Wifi.enabled ? (Wifi.connected ? Wifi.ssid : "Not connected") : "Off"
                 onClicked: {
                     Wifi.refreshStatus(); Wifi.scan()
+                    // Grow the drill-down out of this cell.
+                    root.popoverOrigin = wifiPill.originInRoot();
                     root.view = "wifi"
                 }
             }
@@ -203,6 +212,7 @@ Surface {
 
             // ── Bluetooth pill ──────────────────────────────────
             CcPill {
+                id: btPill
                 Layout.fillWidth: true
                 active: Bluetooth.enabled
                 icon: Bluetooth.enabled
@@ -216,6 +226,8 @@ Surface {
                 }
                 onClicked: {
                     Bluetooth.refresh(); Bluetooth.scan()
+                    // Grow the drill-down out of this cell.
+                    root.popoverOrigin = btPill.originInRoot();
                     root.view = "bluetooth"
                 }
             }
@@ -368,6 +380,26 @@ Surface {
                : root.view === "sound"     ? soundFlick.height
                : 0
         y: root.panelHeight - 14 - height
+
+        // Grow out of the cell that was clicked. The origin is stored in
+        // root coordinates by the pill, so shift it into this item's own
+        // space. setTransformOrigin() is used rather than the
+        // transformOriginX/Y properties, which this Qt build does not
+        // expose.
+        function applyPopoverOrigin() {
+            setTransformOrigin(Item.TopLeft,
+                Math.max(0, Math.min(width, root.popoverOrigin.x - x)),
+                Math.max(0, Math.min(height, root.popoverOrigin.y - y)));
+        }
+        onVisibleChanged: if (visible) applyPopoverOrigin()
+        Component.onCompleted: applyPopoverOrigin()
+        scale: visible ? 1 : 0.82
+        opacity: visible ? 1 : 0
+        Behavior on scale {
+            enabled: !MotionConfig.reduceMotion
+            SpringAnimation { spring: 6.5; damping: MotionConfig.springDamping; mass: 0.75 }
+        }
+        Behavior on opacity { NumberAnimation { duration: MotionConfig.fade(); easing.type: Easing.OutCubic } }
         radius: 18
         color: root.bgSurface
         border.color: "#282828"
@@ -399,6 +431,26 @@ Surface {
         interactive: contentHeight > height
         flickableDirection: Flickable.VerticalFlick
         visible: root.view === "bluetooth"
+
+        // Grow out of the cell that was clicked. The origin is stored in
+        // root coordinates by the pill, so shift it into this item's own
+        // space. setTransformOrigin() is used rather than the
+        // transformOriginX/Y properties, which this Qt build does not
+        // expose.
+        function applyPopoverOrigin() {
+            setTransformOrigin(Item.TopLeft,
+                Math.max(0, Math.min(width, root.popoverOrigin.x - x)),
+                Math.max(0, Math.min(height, root.popoverOrigin.y - y)));
+        }
+        onVisibleChanged: if (visible) applyPopoverOrigin()
+        Component.onCompleted: applyPopoverOrigin()
+        scale: visible ? 1 : 0.82
+        opacity: visible ? 1 : 0
+        Behavior on scale {
+            enabled: !MotionConfig.reduceMotion
+            SpringAnimation { spring: 6.5; damping: MotionConfig.springDamping; mass: 0.75 }
+        }
+        Behavior on opacity { NumberAnimation { duration: MotionConfig.fade(); easing.type: Easing.OutCubic } }
 
         ColumnLayout {
             id: btFlickContent
@@ -545,6 +597,26 @@ Surface {
         interactive: contentHeight > height
         flickableDirection: Flickable.VerticalFlick
         visible: root.view === "sound"
+
+        // Grow out of the cell that was clicked. The origin is stored in
+        // root coordinates by the pill, so shift it into this item's own
+        // space. setTransformOrigin() is used rather than the
+        // transformOriginX/Y properties, which this Qt build does not
+        // expose.
+        function applyPopoverOrigin() {
+            setTransformOrigin(Item.TopLeft,
+                Math.max(0, Math.min(width, root.popoverOrigin.x - x)),
+                Math.max(0, Math.min(height, root.popoverOrigin.y - y)));
+        }
+        onVisibleChanged: if (visible) applyPopoverOrigin()
+        Component.onCompleted: applyPopoverOrigin()
+        scale: visible ? 1 : 0.82
+        opacity: visible ? 1 : 0
+        Behavior on scale {
+            enabled: !MotionConfig.reduceMotion
+            SpringAnimation { spring: 6.5; damping: MotionConfig.springDamping; mass: 0.75 }
+        }
+        Behavior on opacity { NumberAnimation { duration: MotionConfig.fade(); easing.type: Easing.OutCubic } }
 
         ColumnLayout {
             id: soundFlickContent
@@ -705,6 +777,26 @@ Surface {
         flickableDirection: Flickable.VerticalFlick
         visible: root.view === "display"
 
+        // Grow out of the cell that was clicked. The origin is stored in
+        // root coordinates by the pill, so shift it into this item's own
+        // space. setTransformOrigin() is used rather than the
+        // transformOriginX/Y properties, which this Qt build does not
+        // expose.
+        function applyPopoverOrigin() {
+            setTransformOrigin(Item.TopLeft,
+                Math.max(0, Math.min(width, root.popoverOrigin.x - x)),
+                Math.max(0, Math.min(height, root.popoverOrigin.y - y)));
+        }
+        onVisibleChanged: if (visible) applyPopoverOrigin()
+        Component.onCompleted: applyPopoverOrigin()
+        scale: visible ? 1 : 0.82
+        opacity: visible ? 1 : 0
+        Behavior on scale {
+            enabled: !MotionConfig.reduceMotion
+            SpringAnimation { spring: 6.5; damping: MotionConfig.springDamping; mass: 0.75 }
+        }
+        Behavior on opacity { NumberAnimation { duration: MotionConfig.fade(); easing.type: Easing.OutCubic } }
+
         ColumnLayout {
             id: dispFlickContent
             width: dispFlick.width
@@ -808,6 +900,26 @@ Surface {
         interactive: contentHeight > height
         flickableDirection: Flickable.VerticalFlick
         visible: root.view === "wifi"
+
+        // Grow out of the cell that was clicked. The origin is stored in
+        // root coordinates by the pill, so shift it into this item's own
+        // space. setTransformOrigin() is used rather than the
+        // transformOriginX/Y properties, which this Qt build does not
+        // expose.
+        function applyPopoverOrigin() {
+            setTransformOrigin(Item.TopLeft,
+                Math.max(0, Math.min(width, root.popoverOrigin.x - x)),
+                Math.max(0, Math.min(height, root.popoverOrigin.y - y)));
+        }
+        onVisibleChanged: if (visible) applyPopoverOrigin()
+        Component.onCompleted: applyPopoverOrigin()
+        scale: visible ? 1 : 0.82
+        opacity: visible ? 1 : 0
+        Behavior on scale {
+            enabled: !MotionConfig.reduceMotion
+            SpringAnimation { spring: 6.5; damping: MotionConfig.springDamping; mass: 0.75 }
+        }
+        Behavior on opacity { NumberAnimation { duration: MotionConfig.fade(); easing.type: Easing.OutCubic } }
 
         ColumnLayout {
             id: wifiFlickContent
@@ -1005,6 +1117,12 @@ Surface {
         property string label: ""
         property string sublabel: ""
         signal clicked()
+
+        // This cell's centre in root coordinates, so a drill-down opened
+        // from here can animate out of exactly this cell.
+        function originInRoot() {
+            return mapToItem(root, width / 2, height / 2);
+        }
 
         // Every pill is the same near-black in the reference — the active
         // state is carried by the circular icon badge, not by tinting the
