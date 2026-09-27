@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Layouts
 import Quickshell.Io
+import Quickshell.Services.Pipewire
 import "../components"
 import "../services"
 import "settings"
@@ -19,14 +20,17 @@ Surface {
     readonly property color accent: Theme.colors.accent
     readonly property color accentText: Theme.colors.accentText
 
-    // Solid palette
-    readonly property color bgSurface: "#141414"
-    readonly property color bgCard: "#1f1f1f"
+    // Solid palette. Values sampled from the reference screenshot: the panel
+    // and the Sound/Display cards are the same warm near-black and are told
+    // apart only by their hairline border, and the unfilled part of a slider
+    // is markedly DARKER than the card it sits in, not lighter.
+    readonly property color bgSurface: "#181614"
+    readonly property color bgCard: "#181614"
     readonly property color bgCardHover: "#282828"
     readonly property color bgCardActive: "#24332c"
-    readonly property color bgItem: "#242424"
+    readonly property color bgItem: "#272221"
     readonly property color bgItemHover: "#2e2e2e"
-    readonly property color bgSliderTrack: "#2c2c2c"
+    readonly property color bgSliderTrack: "#0d0b0a"
 
     width: 460
     cornerRadius: 24
@@ -89,6 +93,7 @@ Surface {
         if (view === "bluetooth") return btPage.implicitHeight + 28
         if (view === "display")   return dispPage.implicitHeight + 28
         if (view === "wifi")      return wifiPage.implicitHeight + 28
+        if (view === "sound")     return soundPage.implicitHeight + 28
         return homePage.implicitHeight + 28
     }
     Behavior on implicitHeight {
@@ -108,7 +113,7 @@ Surface {
         // ── Row 1: Wi-Fi · Focus · Lock ─────────────────────────
         RowLayout {
             Layout.fillWidth: true
-            spacing: 8
+            spacing: 10
 
             // ── Wi-Fi pill ──────────────────────────────────────
             CcPill {
@@ -128,7 +133,10 @@ Surface {
 
             // ── Focus / DND pill ────────────────────────────────
             CcPill {
-                Layout.preferredWidth: 130
+                // Equal width to the Wi-Fi pill: the reference lays out two
+                // identical pills plus the circular button. A fixed 130 here
+                // made Focus visibly narrower than its neighbour.
+                Layout.fillWidth: true
                 active: Notifications.dnd
                 icon: "do_not_disturb_on"
                 label: "Focus"
@@ -149,7 +157,7 @@ Surface {
         // ── Row 2: Bluetooth · Game Mode · Night Light ──────────
         RowLayout {
             Layout.fillWidth: true
-            spacing: 8
+            spacing: 10
 
             // ── Bluetooth pill ──────────────────────────────────
             CcPill {
@@ -173,10 +181,10 @@ Surface {
             // ── Game Mode pill ──────────────────────────────────
             CcPill {
                 id: gamePill
-                Layout.preferredWidth: 130
+                Layout.fillWidth: true
                 property bool on: false
                 active: on
-                icon: "sports_esports"
+                icon: "toggle_off"
                 label: "Game Mode"
                 sublabel: on ? "On" : "Off"
                 onClicked: {
@@ -202,14 +210,15 @@ Surface {
             sliderValue: Volume.muted ? 0 : Volume.volumePercent / 100
             onSliderMoved: (f) => Volume.setVolume(f * 100)
             onSliderScrolled: (delta) => Volume.setVolume(Math.max(0, Math.min(100, Volume.volumePercent + delta * 5)))
-            chevronVisible: false
+            onChevronClicked: root.view = "sound"
+            chevronVisible: true
         }
 
         // ── Display slider card ──────────────────────────────────
         SliderCard {
             Layout.fillWidth: true
             cardLabel: "Display"
-            sliderIcon: "brightness_5"
+            sliderIcon: "brightness_7"
             sliderValue: Math.max(0.04, Brightness.level / 100)
             onSliderMoved: (f) => Brightness.setBrightness(Math.round(f * 100))
             onSliderScrolled: (delta) => Brightness.step(delta * 5)
@@ -220,8 +229,12 @@ Surface {
         // ── Notifications panel ──────────────────────────────────
         Rectangle {
             Layout.fillWidth: true
-            Layout.preferredHeight: Math.max(70, notifInner.implicitHeight + 28)
-            radius: 16
+            // The reference keeps a tall, fixed notifications area with
+            // slack below the last card, so the overall panel keeps its
+            // proportions whether or not anything has arrived. Minimum 176
+            // rather than the old 70.
+            Layout.preferredHeight: Math.max(176, notifInner.implicitHeight + 28)
+            radius: 14
             color: root.bgCard
             border.color: "#282828"
             border.width: 1
@@ -303,40 +316,16 @@ Surface {
         visible: root.view === "bluetooth"
 
         // ── Sticky mini-header ───────────────────────────────────
-        MiniHeader {
+        SubPageHeader {
             Layout.fillWidth: true
+            title: "Bluetooth"
+            toggleVisible: true
+            toggleOn: Bluetooth.enabled
             onBack: root.view = "home"
+            onToggled: { Bluetooth.toggle(); Bluetooth.refresh(); }
         }
 
         Item { Layout.preferredHeight: 12 }
-
-        // ── Bluetooth title row ──────────────────────────────────
-        RowLayout {
-            Layout.fillWidth: true
-
-            IconButton {
-                icon: "arrow_back"
-                size: 32
-                iconSize: 16
-                iconColor: "#CCCCCC"
-                onClicked: root.view = "home"
-            }
-
-            StyledText {
-                text: "Bluetooth"
-                font.pixelSize: 17
-                font.weight: Font.DemiBold
-                color: "#FFFFFF"
-            }
-
-            Item { Layout.fillWidth: true }
-
-            Toggle {
-                checked: Bluetooth.enabled
-                accentColor: root.accent
-                onToggled: Bluetooth.toggle()
-            }
-        }
 
         Item { Layout.preferredHeight: 14 }
 
@@ -436,6 +425,147 @@ Surface {
 
 
     // ═══════════════════════════════════════════════════════════════
+    // SOUND PAGE  (Reference 4)
+    //
+    // Output / Input / Apps, mirroring the reference. Device rows are
+    // circular-badge + name, with the active one carrying an accent badge
+    // and a check on the right. The page did not exist before: the Sound
+    // card had no chevron because there was nowhere to go.
+    // ═══════════════════════════════════════════════════════════════
+    ColumnLayout {
+        id: soundPage
+        anchors { top: parent.top; left: parent.left; right: parent.right; margins: 14 }
+        spacing: 0
+        visible: root.view === "sound"
+
+        // ── Sticky mini-header ───────────────────────────────────
+        SubPageHeader {
+            Layout.fillWidth: true
+            title: "Sound"
+            onBack: root.view = "home"
+        }
+
+        Item { Layout.preferredHeight: 10 }
+
+        // ── Output ───────────────────────────────────────────────
+        StyledText {
+            text: "Output"
+            font.pixelSize: 11
+            color: "#777777"
+        }
+        Item { Layout.preferredHeight: 6 }
+
+        Repeater {
+            model: Volume.sinks
+            delegate: CcDeviceRow {
+                required property var modelData
+                Layout.fillWidth: true
+                label: Volume.displayName(modelData)
+                icon: "speaker"
+                selected: Volume.isDefaultSink(modelData)
+                onPicked: Volume.setDefaultSink(modelData)
+            }
+        }
+
+        Item { Layout.preferredHeight: 8 }
+
+        // Output volume
+        CcDeviceSlider {
+            Layout.fillWidth: true
+            icon: Volume.muted ? "volume_off" : "volume_up"
+            value: Volume.muted ? 0 : Volume.volumePercent
+            onMoved: (f) => Volume.setVolume(f * 100)
+        }
+
+        Item { Layout.preferredHeight: 12 }
+
+        // ── Input ────────────────────────────────────────────────
+        StyledText {
+            text: "Input"
+            font.pixelSize: 11
+            color: "#777777"
+        }
+        Item { Layout.preferredHeight: 6 }
+
+        Repeater {
+            model: Volume.sources
+            delegate: CcDeviceRow {
+                required property var modelData
+                Layout.fillWidth: true
+                label: Volume.displayName(modelData)
+                icon: "mic"
+                selected: Volume.isDefaultSource(modelData)
+                onPicked: Volume.setDefaultSource(modelData)
+            }
+        }
+
+        Item { Layout.preferredHeight: 8 }
+
+        // Input volume
+        CcDeviceSlider {
+            Layout.fillWidth: true
+            icon: Volume.micMuted ? "mic_off" : "mic"
+            value: Volume.micMuted ? 0 : Volume.micVolumePercent
+            onMoved: (f) => Volume.setMicVolume(f * 100)
+        }
+
+        Item { Layout.preferredHeight: 12 }
+
+        // ── Apps ─────────────────────────────────────────────────
+        StyledText {
+            text: "Apps"
+            font.pixelSize: 11
+            color: "#777777"
+            visible: Volume.streams.length > 0
+        }
+        Item { Layout.preferredHeight: 6; visible: Volume.streams.length > 0 }
+
+        Repeater {
+            model: Volume.streams
+            delegate: ColumnLayout {
+                required property var modelData
+                Layout.fillWidth: true
+                spacing: 6
+
+                StyledText {
+                    text: Volume.displayName(modelData)
+                    font.pixelSize: 12
+                    font.weight: Font.Medium
+                    color: "#DDDDDD"
+                    elide: Text.ElideRight
+                    Layout.fillWidth: true
+                }
+
+                // Per-app stream volume. The node is tracked in the service
+                // (PwObjectTracker) so this stays live.
+                CcDeviceSlider {
+                    Layout.fillWidth: true
+                    icon: "volume_up"
+                    value: modelData.audio ? Math.round(modelData.audio.volume * 100) : 0
+                    onMoved: (f) => {
+                        if (!modelData.audio) return;
+                        modelData.audio.muted = false;
+                        modelData.audio.volume = Math.max(0, Math.min(1, f));
+                    }
+                }
+            }
+        }
+
+        // No PipeWire, or nothing enumerated yet.
+        StyledText {
+            Layout.fillWidth: true
+            visible: Volume.sinks.length === 0 && Volume.sources.length === 0
+            text: Pipewire.ready ? "No audio devices found" : "Waiting for PipeWire…"
+            font.pixelSize: 12
+            color: "#777777"
+            horizontalAlignment: Text.AlignHCenter
+        }
+
+        Item { Layout.preferredHeight: 4 }
+    }
+
+
+    // ═══════════════════════════════════════════════════════════════
     // DISPLAY PAGE  (Reference 3)
     // ═══════════════════════════════════════════════════════════════
     ColumnLayout {
@@ -445,34 +575,13 @@ Surface {
         visible: root.view === "display"
 
         // ── Sticky mini-header ───────────────────────────────────
-        MiniHeader {
+        SubPageHeader {
             Layout.fillWidth: true
+            title: "Display"
             onBack: root.view = "home"
         }
 
         Item { Layout.preferredHeight: 12 }
-
-        // ── Display title row ─────────────────────────────────────
-        RowLayout {
-            Layout.fillWidth: true
-
-            IconButton {
-                icon: "arrow_back"
-                size: 32
-                iconSize: 16
-                iconColor: "#CCCCCC"
-                onClicked: root.view = "home"
-            }
-
-            StyledText {
-                text: "Display"
-                font.pixelSize: 17
-                font.weight: Font.DemiBold
-                color: "#FFFFFF"
-            }
-
-            Item { Layout.fillWidth: true }
-        }
 
         Item { Layout.preferredHeight: 14 }
 
@@ -546,27 +655,16 @@ Surface {
         spacing: 0
         visible: root.view === "wifi"
 
-        MiniHeader {
+        SubPageHeader {
             Layout.fillWidth: true
+            title: "Wi-Fi"
+            toggleVisible: true
+            toggleOn: Wifi.enabled
             onBack: root.view = "home"
+            onToggled: Wifi.toggle()
         }
 
         Item { Layout.preferredHeight: 12 }
-
-        RowLayout {
-            Layout.fillWidth: true
-            IconButton {
-                icon: "arrow_back"; size: 32; iconSize: 16; iconColor: "#CCCCCC"
-                onClicked: root.view = "home"
-            }
-            StyledText { text: "Wi-Fi"; font.pixelSize: 17; font.weight: Font.DemiBold; color: "#FFFFFF" }
-            Item { Layout.fillWidth: true }
-            Toggle {
-                checked: Wifi.enabled
-                accentColor: root.accent
-                onToggled: Wifi.toggle()
-            }
-        }
 
         Item { Layout.preferredHeight: 14 }
 
@@ -651,18 +749,20 @@ Surface {
     // ── CcPill — solid pill toggle ────────────────────────────────
     component CcPill: Rectangle {
         id: pill
-        height: 58
-        radius: 16
+        height: 52
+        radius: 15
         property bool active: false
         property string icon: ""
         property string label: ""
         property string sublabel: ""
         signal clicked()
 
-        color: active
-            ? root.bgCardActive
-            : (pillHover.hovered ? root.bgCardHover : root.bgCard)
-        border.color: active ? root.accent : "#282828"
+        // Every pill is the same near-black in the reference — the active
+        // state is carried by the circular icon badge, not by tinting the
+        // whole pill. (CcIconBtn below keeps its accent fill, because the
+        // reference's active moon button really is a solid accent circle.)
+        color: pillHover.hovered ? root.bgCardHover : root.bgCard
+        border.color: "#282828"
         border.width: 1
         Behavior on color { ColorAnimation { duration: MotionConfig.hover() } }
 
@@ -673,18 +773,22 @@ Surface {
         TapHandler { id: pillTap; onTapped: pill.clicked() }
 
         RowLayout {
-            anchors { fill: parent; leftMargin: 10; rightMargin: 12 }
-            spacing: 10
+            anchors { fill: parent; leftMargin: 9; rightMargin: 11 }
+            spacing: 9
 
+            // Circular icon badge — measured off the reference at 36px with a
+            // symmetric width taper, so a circle, not a rounded square.
             Rectangle {
-                Layout.preferredWidth: 38; Layout.preferredHeight: 38; radius: 11
+                Layout.preferredWidth: 36
+                Layout.preferredHeight: 36
+                radius: width / 2
                 color: pill.active ? root.accent : "#2a2a2a"
                 Behavior on color { ColorAnimation { duration: MotionConfig.hover() } }
 
                 Icon {
                     anchors.centerIn: parent
                     icon: pill.icon
-                    size: 19
+                    size: 18
                     iconColor: pill.active ? root.accentText : "#DDDDDD"
                 }
             }
@@ -710,7 +814,9 @@ Surface {
     // ── CcIconBtn — solid small button (Lock, Night Light) ────────
     component CcIconBtn: Rectangle {
         id: iconBtn
-        width: 58; height: 58; radius: 16
+        // Circular, 52px — the reference's lock/moon buttons measure 52px
+        // across with the same symmetric taper as the badges.
+        width: 52; height: 52; radius: width / 2
         property string icon: ""
         property bool active: false
         signal clicked()
@@ -718,7 +824,7 @@ Surface {
         color: active
             ? root.bgCardActive
             : (iconBtnHover.hovered ? root.bgCardHover : root.bgCard)
-        border.color: active ? root.accent : "#282828"
+        border.color: "#282828"
         border.width: 1
         Behavior on color { ColorAnimation { duration: MotionConfig.hover() } }
 
@@ -731,15 +837,186 @@ Surface {
         Icon {
             anchors.centerIn: parent
             icon: iconBtn.icon
-            size: 20
+            size: 19
             iconColor: iconBtn.active ? root.accent : "#DDDDDD"
+        }
+    }
+
+    // ── SubPageHeader — back chevron + title (+ optional toggle) ──
+    // The reference sub-pages open with a "< Title" bar; the Wi-Fi and
+    // Bluetooth pages also carry a toggle on the right. This replaces
+    // MiniHeader, which was a hardcoded wifi/focus/lock status strip
+    // rather than a title bar, so sub-pages had no title at all.
+    component SubPageHeader: RowLayout {
+        id: sph
+        property string title: ""
+        property string icon: ""
+        property bool toggleVisible: false
+        property bool toggleOn: false
+        signal back()
+        signal toggled()
+
+        spacing: 10
+
+        // Back
+        Rectangle {
+            id: backBtn
+            Layout.preferredWidth: 34; Layout.preferredHeight: 34; radius: width / 2
+            color: backHover.hovered ? root.bgItemHover : root.bgItem
+            border.color: "#282828"
+            border.width: 1
+            HoverHandler { id: backHover; cursorShape: Qt.PointingHandCursor }
+            TapHandler { onTapped: sph.back() }
+            Icon {
+                anchors.centerIn: parent
+                icon: "chevron_left"
+                size: 18
+                iconColor: "#DDDDDD"
+            }
+        }
+
+        StyledText {
+            text: sph.title
+            font.pixelSize: 15
+            font.weight: Font.DemiBold
+            color: "#FFFFFF"
+            Layout.fillWidth: true
+            elide: Text.ElideRight
+        }
+
+        Toggle {
+            visible: sph.toggleVisible
+            checked: sph.toggleOn
+            onToggled: sph.toggled()
+        }
+    }
+
+    // ── CcDeviceRow — one selectable audio device ────────────────
+    // Circular badge + name, with the active device getting the accent
+    // badge and a check on the right.
+    component CcDeviceRow: Rectangle {
+        id: devRow
+        property string label: ""
+        property string icon: "speaker"
+        property bool selected: false
+        signal picked()
+
+        Layout.preferredHeight: 40
+        radius: 12
+        color: devHover.hovered ? root.bgItemHover : root.bgItem
+        border.color: "#282828"
+        border.width: 1
+
+        HoverHandler { id: devHover; cursorShape: Qt.PointingHandCursor }
+        TapHandler { onTapped: devRow.picked() }
+
+        RowLayout {
+            anchors { fill: parent; leftMargin: 10; rightMargin: 12 }
+            spacing: 10
+
+            Rectangle {
+                Layout.preferredWidth: 26
+                Layout.preferredHeight: 26
+                radius: width / 2
+                color: devRow.selected ? root.accent : "#2c2c2c"
+                Behavior on color { ColorAnimation { duration: MotionConfig.hover() } }
+
+                Icon {
+                    anchors.centerIn: parent
+                    icon: devRow.icon
+                    size: 14
+                    iconColor: devRow.selected ? root.accentText : "#AAAAAA"
+                }
+            }
+
+            StyledText {
+                text: devRow.label
+                font.pixelSize: 12
+                color: "#FFFFFF"
+                elide: Text.ElideRight
+                Layout.fillWidth: true
+            }
+
+            Icon {
+                visible: devRow.selected
+                icon: "check"
+                size: 15
+                iconColor: root.accent
+            }
+        }
+    }
+
+    // ── CcDeviceSlider — slider with a leading glyph and a % readout ─
+    component CcDeviceSlider: Rectangle {
+        id: devSlider
+        property string icon: "volume_up"
+        property real value: 0
+        signal moved(real fraction)
+
+        Layout.preferredHeight: 32
+        radius: 12
+        color: root.bgItem
+        border.color: "#282828"
+        border.width: 1
+
+        RowLayout {
+            anchors { fill: parent; leftMargin: 10; rightMargin: 12 }
+            spacing: 10
+
+            Icon {
+                icon: devSlider.icon
+                size: 15
+                iconColor: "#DDDDDD"
+            }
+
+            // Track
+            Item {
+                Layout.fillWidth: true
+                Layout.preferredHeight: 14
+
+                Rectangle {
+                    anchors.fill: parent
+                    radius: height / 2
+                    color: root.bgSliderTrack
+
+                    Rectangle {
+                        anchors { left: parent.left; top: parent.top; bottom: parent.bottom }
+                        width: Math.max(0, Math.min(1, devSlider.value / 100)) * parent.width
+                        radius: parent.radius
+                        color: root.accent
+                        Behavior on width {
+                            enabled: !devMouse.pressed && !MotionConfig.reduceMotion
+                            SpringAnimation { spring: 3.6; damping: MotionConfig.springDamping; mass: 0.9 }
+                        }
+                    }
+                }
+
+                MouseArea {
+                    id: devMouse
+                    anchors.fill: parent
+                    cursorShape: Qt.PointingHandCursor
+                    function set(mx) { devSlider.moved(Math.max(0, Math.min(1, mx / width))); }
+                    onPressed: (e) => set(e.x)
+                    onPositionChanged: (e) => { if (pressed) set(e.x); }
+                    onWheel: (e) => e.accept()
+                }
+            }
+
+            StyledText {
+                text: Math.round(devSlider.value) + "%"
+                font.pixelSize: 11
+                color: "#999999"
+                Layout.preferredWidth: 34
+                horizontalAlignment: Text.AlignRight
+            }
         }
     }
 
     // ── SliderCard — solid Sound / Display slider card ────────────
     component SliderCard: Rectangle {
         id: sc
-        height: 78; radius: 16
+        // Reference cards measure 52px tall with a 23px slider bar inside.
+        height: 52; radius: 14
         color: root.bgCard
         border.color: "#282828"
         border.width: 1
@@ -753,8 +1030,8 @@ Surface {
         signal chevronClicked()
 
         ColumnLayout {
-            anchors { fill: parent; leftMargin: 12; rightMargin: 12; topMargin: 8; bottomMargin: 8 }
-            spacing: 6
+            anchors { fill: parent; leftMargin: 12; rightMargin: 12; topMargin: 7; bottomMargin: 7 }
+            spacing: 4
 
             RowLayout {
                 Layout.fillWidth: true
@@ -762,7 +1039,7 @@ Surface {
                 Item { Layout.fillWidth: true }
                 Icon {
                     visible: sc.chevronVisible
-                    icon: "chevron_right"; size: 16; iconColor: "#888888"
+                    icon: "chevron_right"; size: 15; iconColor: "#888888"
                     HoverHandler { cursorShape: Qt.PointingHandCursor }
                     TapHandler { onTapped: sc.chevronClicked() }
                 }
@@ -770,7 +1047,7 @@ Surface {
 
             Item {
                 Layout.fillWidth: true
-                Layout.preferredHeight: 32
+                Layout.preferredHeight: 23
 
                 Rectangle {
                     anchors.fill: parent
@@ -791,7 +1068,7 @@ Surface {
 
                     Icon {
                         anchors { left: parent.left; leftMargin: 9; verticalCenter: parent.verticalCenter }
-                        icon: sc.sliderIcon; size: 16; iconColor: "#111111"
+                        icon: sc.sliderIcon; size: 14; iconColor: "#111111"
                     }
                 }
 
