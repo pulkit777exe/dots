@@ -479,6 +479,22 @@ Item {
                 shadow: false
                 borderWidth: 0
                 backgroundColor: "transparent"
+
+                // Originate from the dot. rightDotWrap already springs from
+                // the 33px dot out to the full panel, but the contents were
+                // simply faded in on top of it, so the panel read as a
+                // separate centred sheet that appeared rather than as
+                // something growing out of the dot.
+                //
+                // Scaling from Item.Left pins the origin to the edge the dot
+                // sits on, so the panel unfolds out of the dot instead of
+                // popping in at the top middle.
+                transformOrigin: Item.Left
+                scale: rightDotWrap.isExpanded ? 1 : 0.06
+                Behavior on scale {
+                    enabled: !MotionConfig.reduceMotion
+                    SpringAnimation { spring: 5; damping: MotionConfig.springDamping; mass: 0.7 }
+                }
             }
         }
     }
