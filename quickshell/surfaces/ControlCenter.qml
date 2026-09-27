@@ -139,10 +139,15 @@ Surface {
     readonly property int panelHeight: 460
     implicitHeight: panelHeight
 
+    // True while a sub-page is open. The drill card hides by collapsing its
+    // height to 0 rather than by setting visible, so its reveal needs this
+    // instead of `visible`.
+    readonly property bool drillOpen: view !== "home"
+
     // Where a drill-down grows out of, in root coordinates. The Wi-Fi and
     // Bluetooth cells set this to their own centre when clicked, so the
-    // popover unfolds from the cell you actually pressed rather than
-    // appearing from nowhere. Defaults to just under the pill rows.
+    // popover unfolds from the cell you actually pressed. Defaults to the
+    // middle of the panel, for when a page is opened without a cell.
     property point popoverOrigin: Qt.point(width / 2, 150)
 
 
@@ -368,7 +373,12 @@ Surface {
     // and under the sub-page content.
     Rectangle {
         id: drillCard
-        anchors { left: parent.left; right: parent.right; leftMargin: 10; rightMargin: 10 }
+        // Set explicitly rather than by anchors, so x stays writable and the
+        // reveal below can slide the box onto the clicked cell. Geometry is
+        // identical to the anchors this replaces.
+        readonly property real baseX: parent.x + 10
+        readonly property real baseY: root.panelHeight - 14 - height
+        width: parent.width - 20
         // Matches whichever page is open, so the card is exactly the page's
         // box. Both hang off the panel's bottom edge and grow upward in
         // proportion to content: a short page sits low, a tall one reaches
@@ -379,22 +389,27 @@ Surface {
                : root.view === "wifi"      ? wifiFlick.height
                : root.view === "sound"     ? soundFlick.height
                : 0
-        y: root.panelHeight - 14 - height
+        y: baseY + (1 - scale) * pivot.y
 
-        // Grow out of the cell that was clicked. The origin is stored in
-        // root coordinates by the pill, so shift it into this item's own
-        // space. setTransformOrigin() is used rather than the
-        // transformOriginX/Y properties, which this Qt build does not
-        // expose.
-        function applyPopoverOrigin() {
-            setTransformOrigin(Item.TopLeft,
-                Math.max(0, Math.min(width, root.popoverOrigin.x - x)),
-                Math.max(0, Math.min(height, root.popoverOrigin.y - y)));
-        }
-        onVisibleChanged: if (visible) applyPopoverOrigin()
-        Component.onCompleted: applyPopoverOrigin()
-        scale: visible ? 1 : 0.82
-        opacity: visible ? 1 : 0
+
+        // Grow out of the cell that was clicked.
+        //
+        // The pivot is done arithmetically because this Qt build exposes no
+        // pixel transform origin: there is no transformOriginX/Y, no callable
+        // setTransformOrigin(), and `transforms` is not assignable. Handing
+        // transformOrigin an Item is no help either -- measured against a
+        // forced scale of 0.5, the box still pivots on its own centre rather
+        // than on the cell. So the origin is pinned to the top-left and the
+        // pivot is applied by hand: scaling about a point P is identical to
+        // scaling about (0,0) and then translating by (1 - scale) * P, and
+        // that translation is folded into x and y.
+        readonly property point pivot: Qt.point(
+            Math.max(0, Math.min(width,  root.popoverOrigin.x - baseX)),
+            Math.max(0, Math.min(height, root.popoverOrigin.y - baseY)))
+        x: baseX + (1 - scale) * pivot.x
+        transformOrigin: Item.TopLeft
+        scale: root.drillOpen ? 1 : 0.82
+        opacity: root.drillOpen ? 1 : 0
         Behavior on scale {
             enabled: !MotionConfig.reduceMotion
             SpringAnimation { spring: 6.5; damping: MotionConfig.springDamping; mass: 0.75 }
@@ -415,14 +430,19 @@ Surface {
         // Inset overlay card, not a full-page replacement: the reference keeps
         // the home visible behind the drill-down, starting below its first
         // pill row.
-        anchors { left: parent.left; right: parent.right; leftMargin: 10; rightMargin: 10 }
+        // Set explicitly rather than by anchors, so x stays writable and the
+        // reveal below can slide the box onto the clicked cell. Geometry is
+        // identical to the anchors this replaces.
+        readonly property real baseX: parent.x + 10
+        readonly property real baseY: root.panelHeight - 14 - height
+        width: parent.width - 20
         // Bottom-anchored: the popover hangs off the panel's bottom edge and
         // grows upward in proportion to its content, so a short page sits low
         // and a tall one reaches higher. The BOX is still placed exactly that
         // way; only the content inside it scrolls, so a list longer than the
         // panel can be reached instead of being silently clipped.
         height: Math.min(btFlickContent.implicitHeight, root.panelHeight - 14)
-        y: root.panelHeight - 14 - height
+        y: baseY + (1 - scale) * pivot.y
         contentWidth: width
         contentHeight: btFlickContent.implicitHeight
         clip: true
@@ -432,20 +452,24 @@ Surface {
         flickableDirection: Flickable.VerticalFlick
         visible: root.view === "bluetooth"
 
-        // Grow out of the cell that was clicked. The origin is stored in
-        // root coordinates by the pill, so shift it into this item's own
-        // space. setTransformOrigin() is used rather than the
-        // transformOriginX/Y properties, which this Qt build does not
-        // expose.
-        function applyPopoverOrigin() {
-            setTransformOrigin(Item.TopLeft,
-                Math.max(0, Math.min(width, root.popoverOrigin.x - x)),
-                Math.max(0, Math.min(height, root.popoverOrigin.y - y)));
-        }
-        onVisibleChanged: if (visible) applyPopoverOrigin()
-        Component.onCompleted: applyPopoverOrigin()
-        scale: visible ? 1 : 0.82
-        opacity: visible ? 1 : 0
+        // Grow out of the cell that was clicked.
+        //
+        // The pivot is done arithmetically because this Qt build exposes no
+        // pixel transform origin: there is no transformOriginX/Y, no callable
+        // setTransformOrigin(), and `transforms` is not assignable. Handing
+        // transformOrigin an Item is no help either -- measured against a
+        // forced scale of 0.5, the box still pivots on its own centre rather
+        // than on the cell. So the origin is pinned to the top-left and the
+        // pivot is applied by hand: scaling about a point P is identical to
+        // scaling about (0,0) and then translating by (1 - scale) * P, and
+        // that translation is folded into x and y.
+        readonly property point pivot: Qt.point(
+            Math.max(0, Math.min(width,  root.popoverOrigin.x - baseX)),
+            Math.max(0, Math.min(height, root.popoverOrigin.y - baseY)))
+        x: baseX + (1 - scale) * pivot.x
+        transformOrigin: Item.TopLeft
+        scale: btFlick.visible ? 1 : 0.82
+        opacity: btFlick.visible ? 1 : 0
         Behavior on scale {
             enabled: !MotionConfig.reduceMotion
             SpringAnimation { spring: 6.5; damping: MotionConfig.springDamping; mass: 0.75 }
@@ -581,14 +605,19 @@ Surface {
         // Inset overlay card, not a full-page replacement: the reference keeps
         // the home visible behind the drill-down, starting below its first
         // pill row.
-        anchors { left: parent.left; right: parent.right; leftMargin: 10; rightMargin: 10 }
+        // Set explicitly rather than by anchors, so x stays writable and the
+        // reveal below can slide the box onto the clicked cell. Geometry is
+        // identical to the anchors this replaces.
+        readonly property real baseX: parent.x + 10
+        readonly property real baseY: root.panelHeight - 14 - height
+        width: parent.width - 20
         // Bottom-anchored: the popover hangs off the panel's bottom edge and
         // grows upward in proportion to its content, so a short page sits low
         // and a tall one reaches higher. The BOX is still placed exactly that
         // way; only the content inside it scrolls, so a list longer than the
         // panel can be reached instead of being silently clipped.
         height: Math.min(soundFlickContent.implicitHeight, root.panelHeight - 14)
-        y: root.panelHeight - 14 - height
+        y: baseY + (1 - scale) * pivot.y
         contentWidth: width
         contentHeight: soundFlickContent.implicitHeight
         clip: true
@@ -598,20 +627,24 @@ Surface {
         flickableDirection: Flickable.VerticalFlick
         visible: root.view === "sound"
 
-        // Grow out of the cell that was clicked. The origin is stored in
-        // root coordinates by the pill, so shift it into this item's own
-        // space. setTransformOrigin() is used rather than the
-        // transformOriginX/Y properties, which this Qt build does not
-        // expose.
-        function applyPopoverOrigin() {
-            setTransformOrigin(Item.TopLeft,
-                Math.max(0, Math.min(width, root.popoverOrigin.x - x)),
-                Math.max(0, Math.min(height, root.popoverOrigin.y - y)));
-        }
-        onVisibleChanged: if (visible) applyPopoverOrigin()
-        Component.onCompleted: applyPopoverOrigin()
-        scale: visible ? 1 : 0.82
-        opacity: visible ? 1 : 0
+        // Grow out of the cell that was clicked.
+        //
+        // The pivot is done arithmetically because this Qt build exposes no
+        // pixel transform origin: there is no transformOriginX/Y, no callable
+        // setTransformOrigin(), and `transforms` is not assignable. Handing
+        // transformOrigin an Item is no help either -- measured against a
+        // forced scale of 0.5, the box still pivots on its own centre rather
+        // than on the cell. So the origin is pinned to the top-left and the
+        // pivot is applied by hand: scaling about a point P is identical to
+        // scaling about (0,0) and then translating by (1 - scale) * P, and
+        // that translation is folded into x and y.
+        readonly property point pivot: Qt.point(
+            Math.max(0, Math.min(width,  root.popoverOrigin.x - baseX)),
+            Math.max(0, Math.min(height, root.popoverOrigin.y - baseY)))
+        x: baseX + (1 - scale) * pivot.x
+        transformOrigin: Item.TopLeft
+        scale: soundFlick.visible ? 1 : 0.82
+        opacity: soundFlick.visible ? 1 : 0
         Behavior on scale {
             enabled: !MotionConfig.reduceMotion
             SpringAnimation { spring: 6.5; damping: MotionConfig.springDamping; mass: 0.75 }
@@ -760,14 +793,19 @@ Surface {
         // Inset overlay card, not a full-page replacement: the reference keeps
         // the home visible behind the drill-down, starting below its first
         // pill row.
-        anchors { left: parent.left; right: parent.right; leftMargin: 10; rightMargin: 10 }
+        // Set explicitly rather than by anchors, so x stays writable and the
+        // reveal below can slide the box onto the clicked cell. Geometry is
+        // identical to the anchors this replaces.
+        readonly property real baseX: parent.x + 10
+        readonly property real baseY: root.panelHeight - 14 - height
+        width: parent.width - 20
         // Bottom-anchored: the popover hangs off the panel's bottom edge and
         // grows upward in proportion to its content, so a short page sits low
         // and a tall one reaches higher. The BOX is still placed exactly that
         // way; only the content inside it scrolls, so a list longer than the
         // panel can be reached instead of being silently clipped.
         height: Math.min(dispFlickContent.implicitHeight, root.panelHeight - 14)
-        y: root.panelHeight - 14 - height
+        y: baseY + (1 - scale) * pivot.y
         contentWidth: width
         contentHeight: dispFlickContent.implicitHeight
         clip: true
@@ -777,20 +815,24 @@ Surface {
         flickableDirection: Flickable.VerticalFlick
         visible: root.view === "display"
 
-        // Grow out of the cell that was clicked. The origin is stored in
-        // root coordinates by the pill, so shift it into this item's own
-        // space. setTransformOrigin() is used rather than the
-        // transformOriginX/Y properties, which this Qt build does not
-        // expose.
-        function applyPopoverOrigin() {
-            setTransformOrigin(Item.TopLeft,
-                Math.max(0, Math.min(width, root.popoverOrigin.x - x)),
-                Math.max(0, Math.min(height, root.popoverOrigin.y - y)));
-        }
-        onVisibleChanged: if (visible) applyPopoverOrigin()
-        Component.onCompleted: applyPopoverOrigin()
-        scale: visible ? 1 : 0.82
-        opacity: visible ? 1 : 0
+        // Grow out of the cell that was clicked.
+        //
+        // The pivot is done arithmetically because this Qt build exposes no
+        // pixel transform origin: there is no transformOriginX/Y, no callable
+        // setTransformOrigin(), and `transforms` is not assignable. Handing
+        // transformOrigin an Item is no help either -- measured against a
+        // forced scale of 0.5, the box still pivots on its own centre rather
+        // than on the cell. So the origin is pinned to the top-left and the
+        // pivot is applied by hand: scaling about a point P is identical to
+        // scaling about (0,0) and then translating by (1 - scale) * P, and
+        // that translation is folded into x and y.
+        readonly property point pivot: Qt.point(
+            Math.max(0, Math.min(width,  root.popoverOrigin.x - baseX)),
+            Math.max(0, Math.min(height, root.popoverOrigin.y - baseY)))
+        x: baseX + (1 - scale) * pivot.x
+        transformOrigin: Item.TopLeft
+        scale: dispFlick.visible ? 1 : 0.82
+        opacity: dispFlick.visible ? 1 : 0
         Behavior on scale {
             enabled: !MotionConfig.reduceMotion
             SpringAnimation { spring: 6.5; damping: MotionConfig.springDamping; mass: 0.75 }
@@ -884,14 +926,19 @@ Surface {
         // Inset overlay card, not a full-page replacement: the reference keeps
         // the home visible behind the drill-down, starting below its first
         // pill row.
-        anchors { left: parent.left; right: parent.right; leftMargin: 10; rightMargin: 10 }
+        // Set explicitly rather than by anchors, so x stays writable and the
+        // reveal below can slide the box onto the clicked cell. Geometry is
+        // identical to the anchors this replaces.
+        readonly property real baseX: parent.x + 10
+        readonly property real baseY: root.panelHeight - 14 - height
+        width: parent.width - 20
         // Bottom-anchored: the popover hangs off the panel's bottom edge and
         // grows upward in proportion to its content, so a short page sits low
         // and a tall one reaches higher. The BOX is still placed exactly that
         // way; only the content inside it scrolls, so a list longer than the
         // panel can be reached instead of being silently clipped.
         height: Math.min(wifiFlickContent.implicitHeight, root.panelHeight - 14)
-        y: root.panelHeight - 14 - height
+        y: baseY + (1 - scale) * pivot.y
         contentWidth: width
         contentHeight: wifiFlickContent.implicitHeight
         clip: true
@@ -901,20 +948,24 @@ Surface {
         flickableDirection: Flickable.VerticalFlick
         visible: root.view === "wifi"
 
-        // Grow out of the cell that was clicked. The origin is stored in
-        // root coordinates by the pill, so shift it into this item's own
-        // space. setTransformOrigin() is used rather than the
-        // transformOriginX/Y properties, which this Qt build does not
-        // expose.
-        function applyPopoverOrigin() {
-            setTransformOrigin(Item.TopLeft,
-                Math.max(0, Math.min(width, root.popoverOrigin.x - x)),
-                Math.max(0, Math.min(height, root.popoverOrigin.y - y)));
-        }
-        onVisibleChanged: if (visible) applyPopoverOrigin()
-        Component.onCompleted: applyPopoverOrigin()
-        scale: visible ? 1 : 0.82
-        opacity: visible ? 1 : 0
+        // Grow out of the cell that was clicked.
+        //
+        // The pivot is done arithmetically because this Qt build exposes no
+        // pixel transform origin: there is no transformOriginX/Y, no callable
+        // setTransformOrigin(), and `transforms` is not assignable. Handing
+        // transformOrigin an Item is no help either -- measured against a
+        // forced scale of 0.5, the box still pivots on its own centre rather
+        // than on the cell. So the origin is pinned to the top-left and the
+        // pivot is applied by hand: scaling about a point P is identical to
+        // scaling about (0,0) and then translating by (1 - scale) * P, and
+        // that translation is folded into x and y.
+        readonly property point pivot: Qt.point(
+            Math.max(0, Math.min(width,  root.popoverOrigin.x - baseX)),
+            Math.max(0, Math.min(height, root.popoverOrigin.y - baseY)))
+        x: baseX + (1 - scale) * pivot.x
+        transformOrigin: Item.TopLeft
+        scale: wifiFlick.visible ? 1 : 0.82
+        opacity: wifiFlick.visible ? 1 : 0
         Behavior on scale {
             enabled: !MotionConfig.reduceMotion
             SpringAnimation { spring: 6.5; damping: MotionConfig.springDamping; mass: 0.75 }
@@ -1118,8 +1169,8 @@ Surface {
         property string sublabel: ""
         signal clicked()
 
-        // This cell's centre in root coordinates, so a drill-down opened
-        // from here can animate out of exactly this cell.
+        // This cell's centre in root coordinates, so a drill-down opened from
+        // here can animate out of exactly this cell.
         function originInRoot() {
             return mapToItem(root, width / 2, height / 2);
         }
