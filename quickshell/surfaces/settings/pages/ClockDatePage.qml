@@ -4,27 +4,12 @@ import "../../../components"
 import "../../../services"
 ColumnLayout {
     id: root
-    spacing: 20
+    spacing: 12
 
-    RowLayout {
-        Layout.fillWidth: true
-        spacing: 14
-
-        Rectangle {
-            Layout.preferredWidth: 56
-            Layout.preferredHeight: 56
-            radius: 28
-            color: Qt.rgba(1, 1, 1, 0.06)
-            Icon { anchors.centerIn: parent; icon: "schedule"; size: 22; iconColor: Theme.colors.accent }
-        }
-        ColumnLayout {
-            spacing: 2
-            StyledText { variant: "mediaTitle"; font.pixelSize: 17; text: "Clock & Date" }
-            StyledText {
-                variant: "mediaSubtitle"
-                text: "Time formatting, calendar layout, and display preferences."
-            }
-        }
+    SettingsHeader {
+        icon: "schedule"
+        title: "Clock & Date"
+        subtitle: "Time formatting, calendar layout, and display preferences."
     }
 
     // Live Clock Preview Card

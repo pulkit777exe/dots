@@ -216,7 +216,12 @@ ShellRoot {
             focusable: Auth.pending === null && UiState.anyOpen
             WlrLayershell.keyboardFocus: Auth.pending !== null ? WlrKeyboardFocus.None : (UiState.anyOpen ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None)
 
-            implicitHeight: UiState.anyOpen ? 700 : (island.barHeight + (island.notchMode ? 0 : island.gapFromEdge) + 16)
+            // Settings is a full-height panel: the reference measures it
+            // 1346x971 sitting at y 75..1045. The generic 700 for "any
+            // surface open" clipped it, so settings gets its own height --
+            // 75 (its top offset) + 971 (its height).
+            implicitHeight: UiState.settingsOpen ? 1045
+                : (UiState.anyOpen ? 700 : (island.barHeight + (island.notchMode ? 0 : island.gapFromEdge) + 16))
 
             readonly property bool isFullscreen: Boolean(Hyprland.activeWindow && Hyprland.activeWindow.fullscreen) && !UiState.anyOpen
 
@@ -264,7 +269,8 @@ ShellRoot {
 
             mask: Region {
                 Region { item: Notifications.active.length > 0 ? notifWrap : null }
-                Region { item: osd.opacity > 0.01 ? osdWrap : null }
+                // No OSD region: the OSD lives in the island's own window now,
+                // so this overlay has nothing to punch through for it.
                 Region { item: Auth.pending !== null ? authWrap : null }
             }
 
@@ -280,26 +286,12 @@ ShellRoot {
                 NotificationStack { id: stack }
             }
 
-            // ---- OSD: bottom-center, transient ----
-            Item {
-                id: osdWrap
-                anchors.bottom: parent.bottom
-                anchors.horizontalCenter: parent.horizontalCenter
-                anchors.bottomMargin: 64
-                width: osd.width
-                height: osd.height
-
-                OSD { id: osd }
-
-                Connections {
-                    target: Volume
-                    function onOsdRequested(percent) { osd.showVolume(percent, Volume.muted) }
-                }
-                Connections {
-                    target: Brightness
-                    function onOsdRequested(percent) { osd.showBrightness(percent) }
-                }
-            }
+            // The volume/brightness OSD is NOT here. It is the island's
+            // centre notch morphed into a 275x43 bar -- see OSD.qml and
+            // centerNotchWrap in Island.qml. It used to be a window in this
+            // overlay, which put it on a different layer from the bar, so the
+            // bar's clock drew over it and it could not occlude the island
+            // the way 2026-09-20_22-28-44.png shows.
 
             // ---- Auth prompt: full-window scrim + centered dialog ----
             Item {

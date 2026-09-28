@@ -47,7 +47,9 @@ Singleton {
 
     // Volume/Brightness OSD
     property int osdOnScreenTimeMs: 1500
-    property real osdLevelBarThickness: 6
+    // 5, measured off 2026-09-20_22-28-44.png: the reference's track column
+    // reads y 37..41 at x 360. Was 6.
+    property real osdLevelBarThickness: 5
 
     // Lockscreen
     property int lockscreenTimeoutMins: 10

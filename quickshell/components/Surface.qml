@@ -23,7 +23,11 @@ Item {
     property real bottomLeftRadius: cornerRadius
     property real bottomRightRadius: cornerRadius
 
-    property color backgroundColor: Qt.rgba(Theme.colors.background.r, Theme.colors.background.g, Theme.colors.background.b, 0.94)
+    // Qt.alpha(), not Qt.rgba(Theme.colors.background.r, ...): Theme.colors is
+    // a plain JS object of hex *strings*, so `.r` / `.g` / `.b` are undefined
+    // and Qt.rgba() silently produced black-at-94% instead of the theme's
+    // background. Qt.alpha() takes the colour as-is and only sets alpha.
+    property color backgroundColor: Qt.alpha(Theme.colors.background, 0.94)
     property color borderColor: Qt.rgba(1, 1, 1, 0.07)
     property real borderWidth: 1
 

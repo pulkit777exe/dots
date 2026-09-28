@@ -5,7 +5,7 @@ import "../../../services"
 
 ColumnLayout {
     id: root
-    spacing: 20
+    spacing: 12
 
     RowLayout {
         Layout.fillWidth: true

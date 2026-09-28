@@ -4,53 +4,53 @@ import "../components"
 import "../services"
 
 // OSD
-// Transient on-screen display for volume/brightness changes. Purely
-// event-driven: Volume.osdRequested / Brightness.osdRequested fire it,
-// a Timer hides it again after `visibleDuration` — nothing polls this,
-// and nothing needs to poll it to know when to show it.
+// Transient volume/brightness readout for the island's CENTRE NOTCH.
+//
+// This used to be a standalone top-centre overlay window in its own layer.
+// That was wrong twice over: it sat on a different layer from the bar, so the
+// bar's clock drew over it, and it could not be occluded by, or occlude, the
+// rest of the island the way the reference shows. In
+// 2026-09-20_22-28-44.png the OSD is the centre notch itself, morphed from
+// the clock pill into a 275x43 black bar -- there is no clock visible behind
+// it, and the album-art and status circles either side sit at the same height.
+//
+// So this is now content embedded in Island.qml's centerNotchWrap, sized and
+// shaped by the notch's own Surface, the same way Calendar/SettingsApp/
+// Launcher are. The host passes shadow/borderWidth/backgroundColor overrides.
+//
+// Purely event-driven: Volume.osdRequested / Brightness.osdRequested push
+// into UiState, and UiState's timer hides it again. Nothing polls.
 Surface {
     id: root
 
-    property int visibleDuration: ConfigStore.osdOnScreenTimeMs
-    width: 250
-    height: 44
-    cornerRadius: 22
-    backgroundColor: Theme.withAlpha(Theme.colors.background, 0.96)
+    // Reference size, used when the host does not size us. The host sets
+    // anchors.fill: parent and drives the notch to 275 x 43.
+    implicitWidth: 275
+    implicitHeight: 43
 
-    property string kind: "volume"     // "volume" | "brightness"
-    property real level: 0
-    property bool muted: false
+    // Transparent: the notch's own Surface is the black pill, and the
+    // reference OSD is (0,0,0) -- not the ariadne teal that
+    // Theme.colors.background would give.
+    backgroundColor: "transparent"
+    borderWidth: 0
 
-    opacity: 0
-    scale: 0.94
-    visible: opacity > 0.01
+    readonly property string kind: UiState.osdKind
+    readonly property real level: UiState.osdLevel
+    readonly property bool muted: UiState.osdMuted
 
+    visible: UiState.osdVisible
+    opacity: UiState.osdVisible ? 1 : 0
     Behavior on opacity { NumberAnimation { duration: MotionConfig.fade(); easing.type: Easing.OutCubic } }
-    Behavior on scale { NumberAnimation { duration: MotionConfig.fade(); easing.type: Easing.OutCubic } }
 
-    function _present(newKind, newLevel, newMuted) {
-        kind = newKind;
-        level = typeof newLevel === "number" ? newLevel : 0;
-        muted = newMuted ?? false;
-        opacity = 1;
-        scale = 1;
-        hideTimer.restart();
-    }
-
-    function showVolume(level, muted) { _present("volume", level, muted) }
-    function showBrightness(level) { _present("brightness", level, false) }
-
-    Timer {
-        id: hideTimer
-        interval: root.visibleDuration
-        onTriggered: { root.opacity = 0; root.scale = 0.94 }
-    }
-
+    // Reference internal layout, from the same capture: pill x 174..448,
+    // icon x 187..198, track x 214..394, "58%" x 424..444. So 13px from the
+    // left edge to the icon, 16 between icon and track, and 30 between the
+    // track and the text.
     RowLayout {
         anchors.fill: parent
-        anchors.leftMargin: 18
-        anchors.rightMargin: 18
-        spacing: 14
+        anchors.leftMargin: 13
+        anchors.rightMargin: 10
+        spacing: 16
 
         Icon {
             icon: {
@@ -64,7 +64,8 @@ Surface {
                 if (root.level < 50) return "volume_down"
                 return "volume_up"
             }
-            size: 18
+            // The reference's speaker glyph measures 12px across.
+            size: 12
             iconColor: Qt.rgba(1, 1, 1, 0.95)
         }
 
@@ -74,7 +75,9 @@ Surface {
             Layout.fillWidth: true
             Layout.preferredHeight: ConfigStore.osdLevelBarThickness
             radius: ConfigStore.osdLevelBarThickness / 2
-            color: Qt.rgba(1, 1, 1, 0.15)
+            // The reference's unfilled track is (31,29,29), not a white
+            // overlay — a 15% white on black composites to about (38,38,38).
+            color: "#1f1d1d"
             clip: true
 
             Rectangle {
@@ -94,6 +97,8 @@ Surface {
             variant: "body"
             font.pixelSize: 13
             font.weight: Font.Medium
+            // 30px between the track and the label, on top of the 16 spacing.
+            Layout.leftMargin: 14
             textColor: Qt.rgba(1, 1, 1, 0.85)
             text: Math.round(root.muted ? 0 : root.level) + "%"
         }
@@ -106,13 +111,16 @@ Surface {
     // onLevelChanged), and Brightness's `levelChanged` auto-signal
     // carries no payload — using either as the handler slot would
     // receive `undefined` and then trigger
-    // `Cannot assign [undefined] to double` at line 33.
+    // `Cannot assign [undefined] to double`.
+    //
+    // These push into UiState rather than local state, because the notch
+    // geometry in Island.qml has to know the OSD is open in order to morph.
     Connections {
         target: Volume
-        function onOsdRequested(percent) { root.showVolume(percent, Volume.muted) }
+        function onOsdRequested(percent) { UiState.showOsd("volume", percent, Volume.muted) }
     }
     Connections {
         target: Brightness
-        function onOsdRequested(percent) { root.showBrightness(percent) }
+        function onOsdRequested(percent) { UiState.showOsd("brightness", percent, false) }
     }
 }

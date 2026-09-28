@@ -58,11 +58,22 @@ Item {
         width: targetW
         height: targetH
 
-        // Position: when collapsed, sits immediately to the left of center notch
-        // When expanded, anchors smoothly near top center-left
+        // Where this dot sits when collapsed, and the centre of that spot.
+        // Derived from barHeight rather than `width`, so it stays the
+        // collapsed position even while the dot is mid-expansion.
+        readonly property real collapsedX: centerNotchWrap.x - root.barHeight - root.dotSpacing
+        readonly property real collapsedCentre: collapsedX + root.barHeight / 2
+
+        // Position: collapsed, immediately left of the centre notch.
+        // Expanded, the panel is centred on THIS DOT's centre, then clamped to
+        // stay on screen. It used to be hardcoded to
+        // `root.width / 2 - width - 8`, which put the panel's right edge at
+        // the screen's top middle -- so the dot visibly flew to the middle and
+        // the panel grew from there instead of opening from where it sits.
         x: isExpanded
-            ? (root.width / 2 - width - 8)
-            : (centerNotchWrap.x - width - root.dotSpacing)
+            ? Math.max(root.gapFromScreenEdge,
+                Math.min(collapsedCentre - width / 2, root.width - width - root.gapFromScreenEdge))
+            : collapsedX
 
         Behavior on width {
             enabled: !MotionConfig.reduceMotion
@@ -72,16 +83,23 @@ Item {
             enabled: !MotionConfig.reduceMotion
             SpringAnimation { spring: 4.8; damping: MotionConfig.springDamping; mass: 0.8 }
         }
+        // Stiffer than the notch's 4.8 on purpose. This x is a *chained*
+        // binding: it depends on the notch's x and width, both of which are
+        // themselves animating. With the same soft spring on both links the
+        // dot chases a target that is still moving, which is what made the
+        // dots trail and then visibly catch up whenever the island grew.
+        // Tracking stiffer removes that lag. width/height stay soft, because
+        // those are the dot's own expansion.
         Behavior on x {
             enabled: !MotionConfig.reduceMotion
-            SpringAnimation { spring: 4.8; damping: MotionConfig.springDamping; mass: 0.8 }
+            SpringAnimation { spring: 9; damping: MotionConfig.springDamping; mass: 0.6 }
         }
 
         // Surface Card
         Surface {
             id: leftSurface
             anchors.fill: parent
-            cornerRadius: leftDotWrap.isExpanded ? BarConfig.expandedCornerRadius : (root.barHeight / 2)
+            cornerRadius: leftDotWrap.isExpanded ? BarConfig.expandedCornerRadius : BarConfig.effectiveCollapsedRadius
             topLeftRadius: (root.notchMode && !leftDotWrap.isExpanded) ? 0 : cornerRadius
             topRightRadius: (root.notchMode && !leftDotWrap.isExpanded) ? 0 : cornerRadius
             bottomLeftRadius: cornerRadius
@@ -104,10 +122,16 @@ Item {
                 Item {
                     id: dotArtContainer
                     anchors.centerIn: parent
-                    width: root.barHeight - 6
-                    height: root.barHeight - 6
+                    width: root.barHeight - 2 * BarConfig.innerPadding
+                    height: width
+                    // Centred arithmetically rather than with anchors.centerIn:
+                    // an explicit `y` on an anchored item silently wins over the
+                    // anchor, which put the artwork at the dot's top edge instead of
+                    // its middle. Doing the arithmetic inside the binding leaves no
+                    // anchor for the hover lift to fight.
+                    x: (parent.width - width) / 2
+                    y: (parent.height - height) / 2 - (leftDotHover.containsMouse ? BarConfig.stageLiftOnHover : 0)
                     scale: leftDotHover.containsMouse ? 1.05 : 1.0
-                    y: leftDotHover.containsMouse ? 1 : 0
 
                     Behavior on scale {
                         enabled: !MotionConfig.reduceMotion
@@ -174,7 +198,10 @@ Item {
     // ============================================================
     Item {
         id: centerNotchWrap
-        y: root.topOffset
+        // Settings drops below the bar. The reference's window spans y 75..1045
+        // on a 1080 screen; flush with the 11px bar gap it would start at y 11
+        // and run off the bottom.
+        y: isSettings ? 76 : root.topOffset
         anchors.horizontalCenter: parent.horizontalCenter
 
         readonly property bool isCalendar: UiState.calendarOpen
@@ -184,12 +211,21 @@ Item {
         readonly property bool isPowerMenu: UiState.powerMenuOpen
         readonly property bool isThemePicker: UiState.themePickerOpen
         readonly property bool isWallpaperPicker: UiState.wallpaperPickerOpen
+        // Volume/brightness OSD. The reference shows it as this notch
+        // morphed into a 275x43 bar (2026-09-20_22-28-44.png), not as a
+        // separate window floating over the desktop.
+        readonly property bool isOsd: UiState.osdVisible
 
+        // Deliberately does NOT include isOsd. This flag means "a real
+        // surface is open". The OSD is a transient readout, not a surface: it
+        // takes no focus, dismisses nothing, and must not cost the notch its
+        // click target. Its geometry and visuals are wired up separately.
         readonly property bool isCenterExpanded: isCalendar || isSettings || isLauncher || isClipboard || isPowerMenu || isThemePicker || isWallpaperPicker
 
         property real targetW: {
+            if (isOsd) return 275
             if (isCalendar) return 300
-            if (isSettings) return 820
+            if (isSettings) return 1320
             if (isLauncher) return 550
             if (isClipboard) return 480
             if (isPowerMenu) return powerInner.implicitWidth + 24
@@ -199,8 +235,9 @@ Item {
         }
 
         property real targetH: {
+            if (isOsd) return 43
             if (isCalendar) return 115
-            if (isSettings) return 580
+            if (isSettings) return 969
             if (isLauncher) return launcherContent.implicitHeight + 24
             if (isClipboard) return clipboardInner.implicitHeight + 24
             if (isPowerMenu) return powerInner.implicitHeight + 24
@@ -212,25 +249,48 @@ Item {
         width: targetW
         height: targetH
 
+        // The OSD is the one transient state: it is gone again in
+        // ConfigStore.osdOnScreenTimeMs (1500ms). The shared spring 4.8 is
+        // tuned for states that stay open until dismissed, and at that
+        // stiffness the notch would still be visibly travelling when the OSD
+        // expires. Snappier while the OSD drives the geometry.
+        //
+        // `isOsd` must be qualified as centerNotchWrap.isOsd: a Behavior
+        // block evaluates in the animation's scope, not the item's, so the
+        // bare name raises ReferenceError and the animation silently fails.
         Behavior on width {
             enabled: !MotionConfig.reduceMotion
-            SpringAnimation { spring: 4.8; damping: MotionConfig.springDamping; mass: 0.8 }
+            SpringAnimation {
+                spring: centerNotchWrap.isOsd ? 11 : 4.8
+                damping: MotionConfig.springDamping
+                mass: centerNotchWrap.isOsd ? 0.6 : 0.8
+            }
         }
         Behavior on height {
             enabled: !MotionConfig.reduceMotion
-            SpringAnimation { spring: 4.8; damping: MotionConfig.springDamping; mass: 0.8 }
+            SpringAnimation {
+                spring: centerNotchWrap.isOsd ? 11 : 4.8
+                damping: MotionConfig.springDamping
+                mass: centerNotchWrap.isOsd ? 0.6 : 0.8
+            }
         }
 
         Surface {
             id: centerSurface
             anchors.fill: parent
-            cornerRadius: centerNotchWrap.isCenterExpanded ? BarConfig.expandedCornerRadius : (root.barHeight / 2)
+            // The OSD is a fully-rounded pill -- its caps are semicircular in
+            // 2026-09-20_22-28-44.png, so radius is half its 43px height. The
+            // other expanded states keep the panel's 27, which is a different
+            // shape (a rounded rect, not a capsule).
+            cornerRadius: centerNotchWrap.isOsd
+                ? centerNotchWrap.height / 2
+                : (centerNotchWrap.isCenterExpanded ? BarConfig.expandedCornerRadius : BarConfig.effectiveCollapsedRadius)
             topLeftRadius: (root.notchMode && !centerNotchWrap.isCenterExpanded) ? 0 : cornerRadius
             topRightRadius: (root.notchMode && !centerNotchWrap.isCenterExpanded) ? 0 : cornerRadius
             bottomLeftRadius: cornerRadius
             bottomRightRadius: cornerRadius
             backgroundColor: "#000000"
-            shadow: centerNotchWrap.isCenterExpanded
+            shadow: centerNotchWrap.isCenterExpanded || centerNotchWrap.isOsd
 
             Behavior on cornerRadius {
                 enabled: !MotionConfig.reduceMotion
@@ -240,23 +300,47 @@ Item {
             // ---- Collapsed Pill Content (Reference 1) ----
             Item {
                 anchors.fill: parent
+                // Original click design, unchanged: the notch's click target
+                // exists only while no surface is open, so clicking it cannot
+                // re-toggle or fight a surface that is already up. The OSD is
+                // deliberately absent from isCenterExpanded, so a volume
+                // change no longer costs the notch this target -- that was
+                // the regression.
                 visible: !centerNotchWrap.isCenterExpanded
                 opacity: centerNotchWrap.isCenterExpanded ? 0 : 1
                 Behavior on opacity { NumberAnimation { duration: MotionConfig.fade(); easing.type: Easing.OutCubic } }
-
-                StyledText {
-                    anchors.centerIn: parent
-                    text: root.currentTime
-                    font.pixelSize: 14
-                    font.weight: Font.DemiBold
-                    color: "#F7EFE1"
-                }
 
                 MouseArea {
                     anchors.fill: parent
                     cursorShape: Qt.PointingHandCursor
                     onClicked: UiState.toggleCalendar()
                 }
+
+                // The clock is the one thing the OSD hides, and it is gated on
+                // isOsd alone rather than on this Item's visibility, so the
+                // OSD can take over the notch without taking the click
+                // target with it.
+                StyledText {
+                    anchors.centerIn: parent
+                    text: root.currentTime
+                    font.pixelSize: 14
+                    font.weight: Font.DemiBold
+                    color: "#F7EFE1"
+                    visible: !centerNotchWrap.isOsd
+                    opacity: visible ? 1 : 0
+                    Behavior on opacity { NumberAnimation { duration: MotionConfig.fade(); easing.type: Easing.OutCubic } }
+                }
+            }
+
+            // ---- OSD Content (Reference: 2026-09-20_22-28-44.png) ----
+            // The notch morphs into this rather than a separate window
+            // appearing over the desktop. Its own surface chrome is off:
+            // centerSurface above is the black pill.
+            OSD {
+                id: osdContent
+                anchors.fill: parent
+                visible: centerNotchWrap.isOsd
+                shadow: false
             }
 
             // ---- Expanded Calendar Content (Reference 4) ----
@@ -395,11 +479,20 @@ Item {
         width: targetW
         height: targetH
 
-        // Position: when collapsed, sits immediately to the right of center notch
-        // When expanded, anchors smoothly near top center-right
+        // Where this dot sits when collapsed, and the centre of that spot.
+        readonly property real collapsedX: centerNotchWrap.x + centerNotchWrap.width + root.dotSpacing
+        readonly property real collapsedCentre: collapsedX + root.barHeight / 2
+
+        // Position: collapsed, immediately right of the centre notch.
+        // Expanded, the panel is centred on THIS DOT's centre, then clamped to
+        // stay on screen. It used to be hardcoded to `root.width / 2 + 8`,
+        // which put the panel's left edge at the screen's top middle -- the
+        // dot flew to the middle and the panel grew from there instead of
+        // opening from where it sits.
         x: isExpanded
-            ? (root.width / 2 + 8)
-            : (centerNotchWrap.x + centerNotchWrap.width + root.dotSpacing)
+            ? Math.max(root.gapFromScreenEdge,
+                Math.min(collapsedCentre - width / 2, root.width - width - root.gapFromScreenEdge))
+            : collapsedX
 
         Behavior on width {
             enabled: !MotionConfig.reduceMotion
@@ -409,15 +502,22 @@ Item {
             enabled: !MotionConfig.reduceMotion
             SpringAnimation { spring: 4.8; damping: MotionConfig.springDamping; mass: 0.8 }
         }
+        // Stiffer than the notch's 4.8 on purpose. This x is a *chained*
+        // binding: it depends on the notch's x and width, both of which are
+        // themselves animating. With the same soft spring on both links the
+        // dot chases a target that is still moving, which is what made the
+        // dots trail and then visibly catch up whenever the island grew.
+        // Tracking stiffer removes that lag. width/height stay soft, because
+        // those are the dot's own expansion.
         Behavior on x {
             enabled: !MotionConfig.reduceMotion
-            SpringAnimation { spring: 4.8; damping: MotionConfig.springDamping; mass: 0.8 }
+            SpringAnimation { spring: 9; damping: MotionConfig.springDamping; mass: 0.6 }
         }
 
         Surface {
             id: rightSurface
             anchors.fill: parent
-            cornerRadius: rightDotWrap.isExpanded ? BarConfig.expandedCornerRadius : (root.barHeight / 2)
+            cornerRadius: rightDotWrap.isExpanded ? BarConfig.expandedCornerRadius : BarConfig.effectiveCollapsedRadius
             topLeftRadius: (root.notchMode && !rightDotWrap.isExpanded) ? 0 : cornerRadius
             topRightRadius: (root.notchMode && !rightDotWrap.isExpanded) ? 0 : cornerRadius
             bottomLeftRadius: cornerRadius
@@ -446,10 +546,16 @@ Item {
                 Item {
                     id: rightDotArtContainer
                     anchors.centerIn: parent
-                    width: root.barHeight - 2
-                    height: root.barHeight - 2
+                    width: root.barHeight - 2 * BarConfig.innerPadding
+                    height: width
+                    // Centred arithmetically rather than with anchors.centerIn:
+                    // an explicit `y` on an anchored item silently wins over the
+                    // anchor, which put the artwork at the dot's top edge instead of
+                    // its middle. Doing the arithmetic inside the binding leaves no
+                    // anchor for the hover lift to fight.
+                    x: (parent.width - width) / 2
+                    y: (parent.height - height) / 2 - (rightDotHover.containsMouse ? BarConfig.stageLiftOnHover : 0)
                     scale: rightDotHover.containsMouse ? 1.05 : 1.0
-                    y: rightDotHover.containsMouse ? 1 : 0
 
                     Behavior on scale {
                         enabled: !MotionConfig.reduceMotion

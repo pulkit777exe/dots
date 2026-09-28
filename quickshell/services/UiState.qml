@@ -47,6 +47,31 @@ Singleton {
     readonly property bool mediaOpen: mode === UiState.Mode.Media
     property bool lockVisible: false
 
+    // ── Island OSD (volume / brightness) ──────────────────────────────
+    //
+    // Deliberately NOT a Mode. The OSD is the island's centre notch
+    // morphed into the pill, so it has to coexist with whatever is already
+    // open (you can drag volume while the calendar is up), and it hides on
+    // its own timer rather than on a toggle.
+    property bool osdVisible: false
+    property string osdKind: "volume"   // "volume" | "brightness"
+    property int osdLevel: 0
+    property bool osdMuted: false
+
+    function showOsd(kind, level, muted) {
+        osdKind = kind;
+        osdLevel = level;
+        osdMuted = muted === true;
+        osdVisible = true;
+        osdHideTimer.restart();
+    }
+
+    Timer {
+        id: osdHideTimer
+        interval: ConfigStore.osdOnScreenTimeMs
+        onTriggered: root.osdVisible = false
+    }
+
     property rect islandRect: Qt.rect(0, 0, 0, 0)
 
     // ── Mode operations ─────────────────────────────────────────────

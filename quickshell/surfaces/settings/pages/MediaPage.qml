@@ -5,27 +5,12 @@ import "../../../services"
 
 ColumnLayout {
     id: root
-    spacing: 20
+    spacing: 12
 
-    RowLayout {
-        Layout.fillWidth: true
-        spacing: 14
-
-        Rectangle {
-            Layout.preferredWidth: 56
-            Layout.preferredHeight: 56
-            radius: 28
-            color: Qt.rgba(1, 1, 1, 0.06)
-            Icon { anchors.centerIn: parent; icon: "music_note"; size: 22; iconColor: Theme.colors.accent }
-        }
-        ColumnLayout {
-            spacing: 2
-            StyledText { variant: "mediaTitle"; font.pixelSize: 17; text: "Media & Playback" }
-            StyledText {
-                variant: "mediaSubtitle"
-                text: "Player controls, background visualizer, and mini-pill behaviors."
-            }
-        }
+    SettingsHeader {
+        icon: "music_note"
+        title: "Media & Playback"
+        subtitle: "Player controls, background visualizer, and mini-pill behaviors."
     }
 
     // Live Player Preview Card

@@ -3,217 +3,122 @@ import QtQuick.Layouts
 import "../../../components"
 import "../../../services"
 
+// BarIslandPage
+// The reference's row set, in its order, with nothing added:
+//   Notch mode, Bar height, Collapsed width, Expanded height, Gap from screen
+//   edge, Inner padding, Corner radius, Corner radius (expanded), Status
+//   circle, Album art circle, Stage lift on hover.
+//
+// Every row is separated by a SettingsDivider -- that is the reference's own
+// rhythm, not a fence around just the toggles.
+//
+// "Notch flare" used to sit second. It is a real BarConfig setting and still
+// one, but the reference has no row for it, so the page no longer shows it.
 ColumnLayout {
     id: root
-    spacing: 24
+    spacing: 12
 
-    // ---- Page Header (Reference 5) ----
-    ColumnLayout {
-        Layout.fillWidth: true
-        Layout.alignment: Qt.AlignHCenter
-        spacing: 8
-
-        Rectangle {
-            Layout.alignment: Qt.AlignHCenter
-            Layout.preferredWidth: 48
-            Layout.preferredHeight: 48
-            radius: 12
-            color: Qt.rgba(Theme.colors.accent.r, Theme.colors.accent.g, Theme.colors.accent.b, 0.18)
-
-            Icon {
-                anchors.centerIn: parent
-                icon: "crop_landscape"
-                size: 24
-                iconColor: Theme.colors.accent
-            }
-        }
-
-        StyledText {
-            Layout.alignment: Qt.AlignHCenter
-            font.pixelSize: 18
-            font.weight: Font.DemiBold
-            text: "Bar & Island"
-            color: "#FFFFFF"
-        }
-
-        StyledText {
-            Layout.alignment: Qt.AlignHCenter
-            font.pixelSize: 13
-            text: "Shape and size of the island, the notch, and the Game Mode bar."
-            color: Qt.rgba(1, 1, 1, 0.5)
-        }
+    SettingsHeader {
+        icon: "crop_landscape"
+        title: "Bar & Island"
+        subtitle: "Shape and size of the island, the notch, and the Game Mode bar."
     }
 
-    // ---- Settings Card (Reference 5) ----
-    Rectangle {
-        Layout.fillWidth: true
-        radius: 16
-        color: Qt.rgba(1, 1, 1, 0.04)
-        border.color: Qt.rgba(1, 1, 1, 0.06)
-        border.width: 1
-        implicitHeight: settingsCol.implicitHeight + 28
+    SettingsCard {
+        SettingsToggleRow {
+            label: "Notch mode"
+            checked: BarConfig.notchMode
+            onToggled: (v) => BarConfig.setNotchMode(v)
+        }
 
-        ColumnLayout {
-            id: settingsCol
-            anchors.fill: parent
-            anchors.margins: 14
-            spacing: 16
+        SettingsDivider {}
 
-            // Notch mode Toggle Row
-            RowLayout {
-                Layout.fillWidth: true
+        SettingsSliderRow {
+            label: "Bar height"
+            value: BarConfig.barHeight
+            from: 24; to: 56; suffix: " px"
+            onMoved: (v) => BarConfig.setBarHeight(Math.round(v))
+        }
 
-                StyledText {
-                    font.pixelSize: 13
-                    font.weight: Font.Medium
-                    text: "Notch mode"
-                    color: "#FFFFFF"
-                }
+        SettingsDivider {}
 
-                Item { Layout.fillWidth: true }
+        SettingsSliderRow {
+            label: "Collapsed width"
+            value: BarConfig.collapsedWidth
+            from: 60; to: 240; suffix: " px"
+            onMoved: (v) => BarConfig.setCollapsedWidth(Math.round(v))
+        }
 
-                Toggle {
-                    checked: BarConfig.notchMode
-                    accentColor: Theme.colors.accent
-                    onToggled: (v) => BarConfig.setNotchMode(v)
-                }
-            }
+        SettingsDivider {}
 
-            Rectangle {
-                Layout.fillWidth: true
-                Layout.preferredHeight: 1
-                color: Qt.rgba(1, 1, 1, 0.06)
-            }
+        SettingsSliderRow {
+            label: "Expanded height"
+            value: BarConfig.expandedHeight
+            from: 80; to: 220; suffix: " px"
+            onMoved: (v) => BarConfig.setExpandedHeight(Math.round(v))
+        }
 
-            // Notch flare (visible when notch mode is active or always)
-            SettingsSliderRow {
-                label: "Notch flare"
-                value: BarConfig.notchFlare
-                from: 0; to: 30; suffix: " px"
-                onMoved: (v) => BarConfig.setNotchFlare(v)
-            }
+        SettingsDivider {}
 
-            Rectangle {
-                Layout.fillWidth: true
-                Layout.preferredHeight: 1
-                color: Qt.rgba(1, 1, 1, 0.06)
-            }
+        SettingsSliderRow {
+            label: "Gap from screen edge"
+            value: BarConfig.gapFromScreenEdge
+            from: 0; to: 40; suffix: " px"
+            onMoved: (v) => BarConfig.setGapFromScreenEdge(Math.round(v))
+        }
 
-            // Bar height
-            SettingsSliderRow {
-                label: "Bar height"
-                value: BarConfig.barHeight
-                from: 24; to: 56; suffix: " px"
-                onMoved: (v) => BarConfig.setBarHeight(v)
-            }
+        SettingsDivider {}
 
-            Rectangle {
-                Layout.fillWidth: true
-                Layout.preferredHeight: 1
-                color: Qt.rgba(1, 1, 1, 0.06)
-            }
+        SettingsSliderRow {
+            label: "Inner padding"
+            value: BarConfig.innerPadding
+            from: 0; to: 12; suffix: " px"
+            onMoved: (v) => BarConfig.setInnerPadding(Math.round(v))
+        }
 
-            // Collapsed width
-            SettingsSliderRow {
-                label: "Collapsed width"
-                value: BarConfig.collapsedWidth
-                from: 60; to: 240; suffix: " px"
-                onMoved: (v) => BarConfig.setCollapsedWidth(v)
-            }
+        SettingsDivider {}
 
-            Rectangle {
-                Layout.fillWidth: true
-                Layout.preferredHeight: 1
-                color: Qt.rgba(1, 1, 1, 0.06)
-            }
+        SettingsSliderRow {
+            // Clamped to barHeight / 2 downstream (effectiveCollapsedRadius),
+            // so the dot can't be given a radius larger than its own half-height.
+            label: "Corner radius"
+            value: BarConfig.collapsedCornerRadius
+            from: 0; to: 40; suffix: " px"
+            onMoved: (v) => BarConfig.setCollapsedCornerRadius(Math.round(v))
+        }
 
-            // Expanded height
-            SettingsSliderRow {
-                label: "Expanded height"
-                value: BarConfig.expandedHeight
-                from: 80; to: 220; suffix: " px"
-                onMoved: (v) => BarConfig.setExpandedHeight(v)
-            }
+        SettingsDivider {}
 
-            Rectangle {
-                Layout.fillWidth: true
-                Layout.preferredHeight: 1
-                color: Qt.rgba(1, 1, 1, 0.06)
-            }
+        SettingsSliderRow {
+            label: "Corner radius (expanded)"
+            value: BarConfig.expandedCornerRadius
+            from: 12; to: 40; suffix: " px"
+            onMoved: (v) => BarConfig.setExpandedCornerRadius(Math.round(v))
+        }
 
-            // Gap from screen edge
-            SettingsSliderRow {
-                label: "Gap from screen edge"
-                value: BarConfig.gapFromScreenEdge
-                from: 0; to: 40; suffix: " px"
-                onMoved: (v) => BarConfig.setGapFromScreenEdge(v)
-            }
+        SettingsDivider {}
 
-            Rectangle {
-                Layout.fillWidth: true
-                Layout.preferredHeight: 1
-                color: Qt.rgba(1, 1, 1, 0.06)
-            }
+        SettingsToggleRow {
+            label: "Status circle (battery and Wi-Fi)"
+            checked: BarConfig.statusCircleEnabled
+            onToggled: (v) => BarConfig.setStatusCircleEnabled(v)
+        }
 
-            // Corner radius (expanded)
-            SettingsSliderRow {
-                label: "Corner radius (expanded)"
-                value: BarConfig.expandedCornerRadius
-                from: 12; to: 40; suffix: " px"
-                onMoved: (v) => BarConfig.setExpandedCornerRadius(v)
-            }
+        SettingsDivider {}
 
-            Rectangle {
-                Layout.fillWidth: true
-                Layout.preferredHeight: 1
-                color: Qt.rgba(1, 1, 1, 0.06)
-            }
+        SettingsToggleRow {
+            label: "Album art circle while a player is open"
+            checked: BarConfig.albumArtCircleEnabled
+            onToggled: (v) => BarConfig.setAlbumArtCircleEnabled(v)
+        }
 
-            // Status circle Toggle Row
-            RowLayout {
-                Layout.fillWidth: true
+        SettingsDivider {}
 
-                StyledText {
-                    font.pixelSize: 13
-                    font.weight: Font.Medium
-                    text: "Status circle (battery and Wi-Fi)"
-                    color: "#FFFFFF"
-                }
-
-                Item { Layout.fillWidth: true }
-
-                Toggle {
-                    checked: BarConfig.statusCircleEnabled
-                    accentColor: Theme.colors.accent
-                    onToggled: (v) => BarConfig.setStatusCircleEnabled(v)
-                }
-            }
-
-            Rectangle {
-                Layout.fillWidth: true
-                Layout.preferredHeight: 1
-                color: Qt.rgba(1, 1, 1, 0.06)
-            }
-
-            // Album art circle Toggle Row
-            RowLayout {
-                Layout.fillWidth: true
-
-                StyledText {
-                    font.pixelSize: 13
-                    font.weight: Font.Medium
-                    text: "Album art circle while a player is open"
-                    color: "#FFFFFF"
-                }
-
-                Item { Layout.fillWidth: true }
-
-                Toggle {
-                    checked: BarConfig.albumArtCircleEnabled
-                    accentColor: Theme.colors.accent
-                    onToggled: (v) => BarConfig.setAlbumArtCircleEnabled(v)
-                }
-            }
+        SettingsSliderRow {
+            label: "Stage lift on hover"
+            value: BarConfig.stageLiftOnHover
+            from: 0; to: 20; suffix: " px"
+            onMoved: (v) => BarConfig.setStageLiftOnHover(Math.round(v))
         }
     }
 }

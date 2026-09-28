@@ -22,7 +22,11 @@ Item {
 
     signal moved(real value)
 
-    implicitHeight: 56
+    // 61, not 56. Measured off 2026-09-20_22-30-18: consecutive slider-row
+    // label centres sit 62px apart and a divider takes 1 of those, so the row
+    // is 61. Not a guess -- 8 slider rows x 61 + 3 toggle rows x 44 + 10
+    // dividers = 630, which is exactly the reference card's height.
+    implicitHeight: 61
     Layout.fillWidth: true
 
     readonly property real _fraction: (value - from) / (to - from)
@@ -33,11 +37,23 @@ Item {
 
         RowLayout {
             Layout.fillWidth: true
-            StyledText { variant: "mediaTitle"; font.pixelSize: 13; text: root.label }
+            StyledText {
+                variant: "mediaTitle"
+                font.pixelSize: 13
+                text: root.label
+                // Warm off-white -- (239,232,221) in the reference. The
+                // mediaTitle variant's own rgba(1,1,1,0.95) is neutral and
+                // reads a touch cold against it.
+                textColor: Qt.rgba(1, 0.97, 0.925, 0.95)
+            }
             Item { Layout.fillWidth: true }
             StyledText {
-                variant: "mediaSubtitle"
+                // Same size as the label, not the mediaSubtitle 11 this used
+                // to be: the reference's "33 px" stands 12px tall against the
+                // label's 13. Muted to ~(149,145,139).
+                font.pixelSize: 13
                 text: root.value.toFixed(root.decimals) + root.suffix
+                textColor: Qt.rgba(1, 0.98, 0.95, 0.55)
             }
         }
 
@@ -51,7 +67,9 @@ Item {
                 width: parent.width
                 height: 4
                 radius: 2
-                color: Qt.rgba(1, 1, 1, 0.12)
+                // (44,40,37) over the card's (16,14,12) -- a warm white at
+                // ~11%, the same value Toggle's off-track uses.
+                color: Qt.rgba(1, 0.93, 0.88, 0.11)
             }
 
             Rectangle {
@@ -69,9 +87,11 @@ Item {
 
             Rectangle {
                 id: thumb
-                width: 16; height: 16
-                radius: 8
-                color: "#FFFFFF"
+                // 14px, the reference's knob diameter (2026-09-20_22-30-18
+                // measures x 787..800), in the same cream as Toggle's.
+                width: 14; height: 14
+                radius: 7
+                color: "#F6E2CB"
                 anchors.verticalCenter: parent.verticalCenter
                 x: Math.max(0, Math.min(track.width - width, fill.width - width / 2))
                 scale: dragArea.pressed ? 1.15 : 1.0

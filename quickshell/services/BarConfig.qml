@@ -46,6 +46,28 @@ Singleton {
     property bool statusCircleEnabled: true
     property bool albumArtCircleEnabled: true
 
+    // ---- The Bar & Island page's three remaining rows -------------------
+    // These existed in the reference settings UI with no property behind
+    // them, so the rows were either faked or omitted. They are now real.
+    //
+    // Defaults are the reference's own values (2026-09-20_22-30-18).
+
+    // Insets the collapsed dot's artwork from the dot's edge. 3 reproduces
+    // what Island.qml hardcoded as `barHeight - 6`, so nothing moves on
+    // first load; the slider just makes the number reachable.
+    property real innerPadding: 3
+
+    // Corner radius of the *collapsed* dot, clamped to barHeight / 2 so the
+    // dot can never turn inside-out. The reference shows 20 against a 33px
+    // bar, which is already past the capsule limit (16.5) -- so at its
+    // default this is a full capsule, exactly as before.
+    property real collapsedCornerRadius: 20
+
+    // How far the dot lifts on hover, in px, moving up and out of the bar.
+    // Island.qml used a fixed 1px nudge *down* instead, which read as a
+    // press rather than a lift.
+    property real stageLiftOnHover: 7
+
     function setNotchMode(v) { notchMode = v; _persist(); }
     function setNotchFlare(v) { notchFlare = v; _persist(); }
     function setBarHeight(v) { barHeight = v; _persist(); }
@@ -56,6 +78,14 @@ Singleton {
     function setExpandedCornerRadius(v) { expandedCornerRadius = v; _persist(); }
     function setStatusCircleEnabled(v) { statusCircleEnabled = v; _persist(); }
     function setAlbumArtCircleEnabled(v) { albumArtCircleEnabled = v; _persist(); }
+    function setInnerPadding(v) { innerPadding = v; _persist(); }
+    function setCollapsedCornerRadius(v) { collapsedCornerRadius = v; _persist(); }
+    function setStageLiftOnHover(v) { stageLiftOnHover = v; _persist(); }
+
+    // The single clamped radius the Island actually applies. Exposed as a
+    // readonly so the three call sites can't each re-derive (and mis-clamp)
+    // it.
+    readonly property real effectiveCollapsedRadius: Math.min(collapsedCornerRadius, barHeight / 2)
 
     readonly property string statePath: Quickshell.statePath("bar-config.json")
 
@@ -89,6 +119,9 @@ Singleton {
             if (typeof d.expandedCornerRadius === "number") root.expandedCornerRadius = d.expandedCornerRadius;
             if (typeof d.statusCircleEnabled === "boolean") root.statusCircleEnabled = d.statusCircleEnabled;
             if (typeof d.albumArtCircleEnabled === "boolean") root.albumArtCircleEnabled = d.albumArtCircleEnabled;
+            if (typeof d.innerPadding === "number") root.innerPadding = d.innerPadding;
+            if (typeof d.collapsedCornerRadius === "number") root.collapsedCornerRadius = d.collapsedCornerRadius;
+            if (typeof d.stageLiftOnHover === "number") root.stageLiftOnHover = d.stageLiftOnHover;
         } catch (e) {
             // corrupt/empty state file, ignore — keep defaults
         }
@@ -105,7 +138,10 @@ Singleton {
             gapFromScreenEdge: root.gapFromScreenEdge,
             expandedCornerRadius: root.expandedCornerRadius,
             statusCircleEnabled: root.statusCircleEnabled,
-            albumArtCircleEnabled: root.albumArtCircleEnabled
+            albumArtCircleEnabled: root.albumArtCircleEnabled,
+            innerPadding: root.innerPadding,
+            collapsedCornerRadius: root.collapsedCornerRadius,
+            stageLiftOnHover: root.stageLiftOnHover
         }));
     }
 }
