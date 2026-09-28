@@ -185,220 +185,108 @@ Surface {
 
 
     // ═══════════════════════════════════════════════════════════════
-    // HOME PAGE  (Reference 1)
+    // HOME PAGE  (Reference 1) -- laid out from ControlCenterLayout
     // ═══════════════════════════════════════════════════════════════
-    ColumnLayout {
+    //
+    // This was a hand-written ColumnLayout: two fixed rows of pills, then
+    // Sound, Display and Notifications, in that order, with no notion of a
+    // position or a size. That cannot express what the Control Center arranger
+    // (settings/pages/ControlCenterArranger.qml) edits, so the arranger was a
+    // mock. The home now reads the same model the arranger writes.
+    //
+    // Rows are not a uniform height -- the reference's own numbers are 57 for a
+    // pill, 60 for a disc and 52 for a slider card -- so each grid row takes
+    // the tallest control that lands in it. Controls are absolutely positioned
+    // rather than laid out by a Layout, because a placed control's cell is a
+    // function of its col/row/colSpan, not of its neighbours.
+    Item {
         id: homePage
         anchors { top: parent.top; left: parent.left; right: parent.right; margins: 14 }
-        spacing: 10
-        // Stays visible while a drill-down is open: the reference keeps the
-        // first pill row showing above the inset card, which then covers the
-        // rest of the home.
-        visible: true
 
-        // ── Row 1: Wi-Fi · Focus · Lock ─────────────────────────
-        RowLayout {
-            Layout.fillWidth: true
-            spacing: 10
+        readonly property var layoutItems: ControlCenterLayout.items
+        readonly property int cols: ControlCenterLayout.columns
 
-            // ── Wi-Fi pill ──────────────────────────────────────
-            CcPill {
-                id: wifiPill
-                Layout.fillWidth: true
-                active: Wifi.enabled && Wifi.connected
-                icon: Wifi.enabled && Wifi.connected
-                    ? (Wifi.strength >= 75 ? "wifi"
-                     : Wifi.strength >= 40 ? "wifi_2_bar" : "wifi_1_bar")
-                    : "wifi_off"
-                label: "Wi-Fi"
-                sublabel: Wifi.enabled ? (Wifi.connected ? Wifi.ssid : "Not connected") : "Off"
-                onClicked: {
-                    Wifi.refreshStatus(); Wifi.scan()
-                    // Grow the drill-down out of this cell.
-                    root.popoverOrigin = wifiPill.originInRoot();
-                    root.view = "wifi"
+        // A control's own column pitch, so cells land where the arranger's
+        // grid says they do.
+        readonly property real cellW: (width - (cols - 1) * 10) / cols
+        // A function, not a property: `property real colX: (c) => ...` binds a
+        // number to a function object, and every call then fails with
+        // "Property 'colX' of object QQuickItem is not a function".
+        function colX(c) { return c * (cellW + 10) }
+
+        // Row tops, accumulated from each row's tallest control.
+        //
+        // A function rather than a `readonly property var` holding the array:
+        // during initialisation that property is undefined, and every delegate
+        // binding that read rowTops[row] threw "Cannot read property '4' of
+        // undefined" before the array was ever built.
+        function rowTops() {
+            const tops = []
+            let y = 0
+            for (let r = 0; r < 64; r++) {
+                tops.push(y)
+                let tallest = 0
+                for (const it of ControlCenterLayout.items) {
+                    if (it.row !== r) continue
+                    const h = rowHeightFor(it)
+                    if (h > tallest) tallest = h
                 }
+                if (tallest === 0) break
+                y += tallest + 10
             }
+            return tops
+        }
 
-            // ── Focus / DND pill ────────────────────────────────
-            CcPill {
-                // Equal width to the Wi-Fi pill: the reference lays out two
-                // identical pills plus the circular button. A fixed 130 here
-                // made Focus visibly narrower than its neighbour.
-                Layout.fillWidth: true
-                active: Notifications.dnd
-                icon: "do_not_disturb_on"
-                label: "Focus"
-                sublabel: Notifications.dnd ? "On" : "Off"
-                onClicked: Notifications.dnd = !Notifications.dnd
-            }
+        function rowTop(r) {
+            const t = rowTops()
+            return t[r] !== undefined ? t[r] : 0
+        }
 
-            // ── Lock icon button ────────────────────────────────
-            CcIconBtn {
-                icon: "lock"
-                onClicked: {
-                    Quickshell.execDetached(["hyprlock"])
-                    UiState.closeAll()
-                }
+        // The height a single placed control wants, in px. Kept in step with
+        // CcControl.cellHeight by construction -- both switch on the same list.
+        function rowHeightFor(it) {
+            switch (it.type) {
+            case "lock": case "nightLight": case "idleInhibit": case "battery":
+                return 60
+            case "sound": case "display":
+                return 52
+            case "notifications":
+                return homePage.notifHomeHeight
+            default:
+                return 57
             }
         }
 
-        // ── Row 2: Bluetooth · Game Mode · Night Light ──────────
-        RowLayout {
-            Layout.fillWidth: true
-            spacing: 10
+        // Notifications keeps the reference's slack below the last card so the
+        // panel keeps its proportions whether or not anything has arrived.
+        readonly property int notifHomeHeight: Math.max(
+            176, 14 * 2 + 8 * 2 + (Notifications.active.length > 0
+                ? Math.min(64 * Notifications.active.length, ConfigStore.notifHistoryHeight)
+                : 18))
 
-            // ── Bluetooth pill ──────────────────────────────────
-            CcPill {
-                id: btPill
-                Layout.fillWidth: true
-                active: Bluetooth.enabled
-                icon: Bluetooth.enabled
-                    ? (Bluetooth.connectedName ? "bluetooth_connected" : "bluetooth")
-                    : "bluetooth_disabled"
-                label: "Bluetooth"
-                sublabel: {
-                    if (!Bluetooth.enabled) return "Off"
-                    if (Bluetooth.connectedName) return Bluetooth.connectedName
-                    return "On"
-                }
-                onClicked: {
-                    Bluetooth.refresh(); Bluetooth.scan()
-                    // Grow the drill-down out of this cell.
-                    root.popoverOrigin = btPill.originInRoot();
-                    root.view = "bluetooth"
-                }
-            }
+        Repeater {
+            model: homePage.layoutItems
 
-            // ── Game Mode pill ──────────────────────────────────
-            CcPill {
-                id: gamePill
-                Layout.fillWidth: true
-                property bool on: false
-                active: on
-                icon: "toggle_off"
-                label: "Game Mode"
-                sublabel: on ? "On" : "Off"
-                onClicked: {
-                    on = !on
-                    if (on) PowerProfile.setProfile("performance")
-                    else PowerProfile.setProfile("balanced")
-                }
-            }
+            delegate: CcControl {
+                id: placed
+                required property var modelData
 
-            // ── Night Light icon button ─────────────────────────
-            CcIconBtn {
-                icon: NightLight.enabled ? "dark_mode" : "nightlight"
-                active: NightLight.enabled
-                onClicked: NightLight.toggle()
-            }
-        }
+                readonly property real w: homePage.colX(modelData.colSpan) - 10
+                readonly property real yTop: homePage.rowTop(modelData.row)
 
-        // ── Sound slider card ────────────────────────────────────
-        SliderCard {
-            Layout.fillWidth: true
-            cardLabel: "Sound"
-            sliderIcon: Volume.muted ? "volume_off" : (Volume.volumePercent > 50 ? "volume_up" : "volume_down")
-            sliderValue: Volume.muted ? 0 : Volume.volumePercent / 100
-            onSliderMoved: (f) => Volume.setVolume(f * 100)
-            onSliderScrolled: (delta) => Volume.setVolume(Math.max(0, Math.min(100, Volume.volumePercent + delta * 5)))
-            onChevronClicked: root.view = "sound"
-            chevronVisible: true
-        }
+                controlType: modelData.type
+                x: homePage.colX(modelData.col)
+                y: yTop
+                width: w
+                height: placed.cellHeight
 
-        // ── Display slider card ──────────────────────────────────
-        SliderCard {
-            Layout.fillWidth: true
-            cardLabel: "Display"
-            // The home capture's Display slider carries the same ring-and-dots
-            // sun as the drill-down one, not brightness_7's filled gear.
-            sliderIcon: "wb_sunny"
-            sliderValue: Math.max(0.04, Brightness.level / 100)
-            onSliderMoved: (f) => Brightness.setBrightness(Math.round(f * 100))
-            onSliderScrolled: (delta) => Brightness.step(delta * 5)
-            onChevronClicked: root.view = "display"
-            chevronVisible: true
-        }
-
-        // ── Notifications panel ──────────────────────────────────
-        Rectangle {
-            Layout.fillWidth: true
-            // The reference keeps a tall, fixed notifications area with
-            // slack below the last card, so the overall panel keeps its
-            // proportions whether or not anything has arrived. Minimum 176
-            // rather than the old 70.
-            Layout.preferredHeight: Math.max(176, notifInner.implicitHeight + 28)
-            radius: 14
-            color: root.bgCard
-            border.color: "#282828"
-            border.width: 1
-
-            ColumnLayout {
-                id: notifInner
-                anchors { top: parent.top; left: parent.left; right: parent.right; margins: 14 }
-                spacing: 8
-
-                // ── Header row ──────────────────────────────────
-                RowLayout {
-                    Layout.fillWidth: true
-                    StyledText {
-                        text: "Notifications"
-                        font.pixelSize: 12
-                        font.weight: Font.Medium
-                        color: "#999999"
-                    }
-                    Item { Layout.fillWidth: true }
-                    StyledText {
-                        visible: Notifications.active.length > 0
-                        text: "Clear all"
-                        font.pixelSize: 12
-                        color: root.accent
-                        HoverHandler { cursorShape: Qt.PointingHandCursor }
-                        TapHandler { onTapped: Notifications.clearAll() }
-                    }
-                }
-
-                // ── Empty state ──────────────────────────────────
-                StyledText {
-                    visible: Notifications.active.length === 0
-                    text: "No notifications"
-                    font.pixelSize: 13
-                    color: "#555555"
-                }
-
-                // ── Notification list ────────────────────────────
-                // Capped at `notifHistoryHeight` and scrollable beyond
-                // that, rather than growing (and pushing everything
-                // below it down) without limit.
-                Flickable {
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: Math.min(notifListInner.implicitHeight, ConfigStore.notifHistoryHeight)
-                    visible: Notifications.active.length > 0
-                    contentWidth: width
-                    contentHeight: notifListInner.implicitHeight
-                    clip: true
-                    boundsBehavior: Flickable.StopAtBounds
-
-                    ColumnLayout {
-                        id: notifListInner
-                        width: parent.width
-                        spacing: 8
-
-                        Repeater {
-                            model: Notifications.active
-                            delegate: NotifRow {
-                                required property var modelData
-                                Layout.fillWidth: true
-                                notif: modelData
-                                onDismissed: Notifications.dismiss(modelData.id)
-                            }
-                        }
-                    }
+                onDrillRequested: (view, origin) => {
+                    if (origin) root.popoverOrigin = origin;
+                    root.view = view;
                 }
             }
         }
     }
-
 
     // ── Drill-down card ────────────────────────────────────────────
     // The sub-pages are inset cards that float over the home page rather
@@ -1680,6 +1568,253 @@ Surface {
                     onPressed: (e) => set(e.x)
                     onPositionChanged: (e) => { if (pressed) set(e.x) }
                     onWheel: (e) => sc.sliderScrolled(e.angleDelta.y > 0 ? 1 : -1)
+                }
+            }
+        }
+    }
+
+    // ── CcControl — one placed control, dispatched on its type ─────
+    //
+    // Wraps the existing CcPill / CcIconBtn / SliderCard / notifications
+    // block so the home page can be built from ControlCenterLayout's list of
+    // {type, col, row, colSpan, rowSpan} instead of a hand-written
+    // ColumnLayout. It has to live here rather than in components/ because
+    // CcPill, CcIconBtn and SliderCard are inline components scoped to this
+    // file.
+    //
+    // It is the *same* components, not copies: the drill-down origin, the
+    // Wi-Fi scan, Volume.setVolume, Brightness.setBrightness and
+    // Notifications.dismiss all still run from the originals. The arranger
+    // therefore edits the real panel rather than a picture of it.
+    component CcControl: Item {
+        id: cc
+
+        property string controlType: ""
+        // Set by the parent grid so a drill-down opened from here animates out
+        // of *this* cell.
+        signal drillRequested(string view, point origin)
+
+        // Row height this control asks for, in grid rows. Discs are 60, pills
+        // 57, slider cards 52 -- the reference's own numbers, which is why the
+        // grid cannot use one uniform row height.
+        readonly property real cellHeight: {
+            switch (controlType) {
+            case "lock": case "nightLight": case "idleInhibit": case "battery":
+                return 60
+            case "sound": case "display":
+                return 52
+            case "notifications":
+                return Math.max(176, notifGridInner.implicitHeight + 28)
+            default:
+                return 57
+            }
+        }
+
+        // Discs keep their fixed 60px and centre in whatever cell they land
+        // in; everything else stretches to fill its span.
+        readonly property bool isDisc: cellHeight === 60
+
+        CcPill {
+            id: pWifi
+            visible: cc.controlType === "wifi"
+            width: cc.isDisc ? 60 : cc.width
+            height: 57
+            x: cc.isDisc ? (cc.width - 60) / 2 : 0
+            active: Wifi.enabled && Wifi.connected
+            icon: Wifi.enabled && Wifi.connected
+                ? (Wifi.strength >= 75 ? "wifi"
+                 : Wifi.strength >= 40 ? "wifi_2_bar" : "wifi_1_bar")
+                : "wifi_off"
+            label: "Wi-Fi"
+            sublabel: Wifi.enabled ? (Wifi.connected ? Wifi.ssid : "Not connected") : "Off"
+            onClicked: {
+                Wifi.refreshStatus(); Wifi.scan()
+                cc.drillRequested("wifi", pWifi.originInRoot())
+            }
+        }
+
+        CcPill {
+            visible: cc.controlType === "bluetooth"
+            width: cc.isDisc ? 60 : cc.width
+            height: 57
+            x: cc.isDisc ? (cc.width - 60) / 2 : 0
+            active: Bluetooth.enabled
+            icon: Bluetooth.enabled
+                ? (Bluetooth.connectedName ? "bluetooth_connected" : "bluetooth")
+                : "bluetooth_disabled"
+            label: "Bluetooth"
+            sublabel: {
+                if (!Bluetooth.enabled) return "Off"
+                if (Bluetooth.connectedName) return Bluetooth.connectedName
+                return "On"
+            }
+            onClicked: {
+                Bluetooth.refresh(); Bluetooth.scan()
+                cc.drillRequested("bluetooth", mapToItem(root, width / 2, height / 2))
+            }
+        }
+
+        CcPill {
+            visible: cc.controlType === "focus"
+            width: cc.isDisc ? 60 : cc.width
+            height: 57
+            x: cc.isDisc ? (cc.width - 60) / 2 : 0
+            active: Notifications.dnd
+            icon: "do_not_disturb_on"
+            label: "Focus"
+            sublabel: Notifications.dnd ? "On" : "Off"
+            onClicked: Notifications.dnd = !Notifications.dnd
+        }
+
+        CcPill {
+            id: pGame
+            property bool on: false
+            visible: cc.controlType === "gameMode"
+            width: cc.isDisc ? 60 : cc.width
+            height: 57
+            x: cc.isDisc ? (cc.width - 60) / 2 : 0
+            active: on
+            icon: "toggle_off"
+            label: "Game Mode"
+            sublabel: on ? "On" : "Off"
+            onClicked: {
+                on = !on
+                if (on) PowerProfile.setProfile("performance")
+                else PowerProfile.setProfile("balanced")
+            }
+        }
+
+        CcIconBtn {
+            visible: cc.controlType === "lock"
+            width: 60; height: 60
+            x: cc.isDisc ? (cc.width - 60) / 2 : 0
+            icon: "lock"
+            onClicked: { Quickshell.execDetached(["hyprlock"]); UiState.closeAll() }
+        }
+
+        CcIconBtn {
+            visible: cc.controlType === "nightLight"
+            width: 60; height: 60
+            x: cc.isDisc ? (cc.width - 60) / 2 : 0
+            icon: NightLight.enabled ? "dark_mode" : "nightlight"
+            active: NightLight.enabled
+            onClicked: NightLight.toggle()
+        }
+
+        CcIconBtn {
+            visible: cc.controlType === "idleInhibit"
+            width: 60; height: 60
+            x: cc.isDisc ? (cc.width - 60) / 2 : 0
+            icon: "coffee"
+            active: IdleInhibit.active
+            onClicked: IdleInhibit.toggle()
+        }
+
+        CcIconBtn {
+            visible: cc.controlType === "battery"
+            width: 60; height: 60
+            x: cc.isDisc ? (cc.width - 60) / 2 : 0
+            icon: Battery.charging ? "battery_charging_full" : "battery_std"
+            active: Battery.available
+            onClicked: {}
+        }
+
+        SliderCard {
+            visible: cc.controlType === "sound"
+            width: cc.width
+            height: 52
+            cardLabel: "Sound"
+            sliderIcon: Volume.muted ? "volume_off"
+                : (Volume.volumePercent > 50 ? "volume_up" : "volume_down")
+            sliderValue: Volume.muted ? 0 : Volume.volumePercent / 100
+            onSliderMoved: (f) => Volume.setVolume(f * 100)
+            onSliderScrolled: (delta) =>
+                Volume.setVolume(Math.max(0, Math.min(100, Volume.volumePercent + delta * 5)))
+            onChevronClicked: cc.drillRequested("sound")
+            chevronVisible: true
+        }
+
+        SliderCard {
+            visible: cc.controlType === "display"
+            width: cc.width
+            height: 52
+            cardLabel: "Display"
+            // The home capture's Display slider carries the same ring-and-dots
+            // sun as the drill-down one, not brightness_7's filled gear.
+            sliderIcon: "wb_sunny"
+            sliderValue: Math.max(0.04, Brightness.level / 100)
+            onSliderMoved: (f) => Brightness.setBrightness(Math.round(f * 100))
+            onSliderScrolled: (delta) => Brightness.step(delta * 5)
+            onChevronClicked: cc.drillRequested("display")
+            chevronVisible: true
+        }
+
+        // ── Notifications ───────────────────────────────────────
+        Rectangle {
+            id: notifGrid
+            visible: cc.controlType === "notifications"
+            width: cc.width
+            height: cc.height
+            radius: 14
+            color: root.bgCard
+            border.color: "#282828"
+            border.width: 1
+
+            ColumnLayout {
+                id: notifGridInner
+                anchors { top: parent.top; left: parent.left; right: parent.right; margins: 14 }
+                spacing: 8
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    StyledText {
+                        text: "Notifications"
+                        font.pixelSize: 12
+                        font.weight: Font.Medium
+                        color: "#999999"
+                    }
+                    Item { Layout.fillWidth: true }
+                    StyledText {
+                        visible: Notifications.active.length > 0
+                        text: "Clear all"
+                        font.pixelSize: 12
+                        color: root.accent
+                        HoverHandler { cursorShape: Qt.PointingHandCursor }
+                        TapHandler { onTapped: Notifications.clearAll() }
+                    }
+                }
+
+                StyledText {
+                    visible: Notifications.active.length === 0
+                    text: "No notifications"
+                    font.pixelSize: 13
+                    color: "#555555"
+                }
+
+                Flickable {
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: Math.min(notifGridList.implicitHeight,
+                                                      ConfigStore.notifHistoryHeight)
+                    visible: Notifications.active.length > 0
+                    contentWidth: width
+                    contentHeight: notifGridList.implicitHeight
+                    clip: true
+                    boundsBehavior: Flickable.StopAtBounds
+
+                    ColumnLayout {
+                        id: notifGridList
+                        width: parent.width
+                        spacing: 8
+                        Repeater {
+                            model: Notifications.active
+                            delegate: NotifRow {
+                                required property var modelData
+                                Layout.fillWidth: true
+                                notif: modelData
+                                onDismissed: Notifications.dismiss(modelData.id)
+                            }
+                        }
+                    }
                 }
             }
         }
