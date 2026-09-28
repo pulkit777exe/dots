@@ -17,22 +17,35 @@ import "../services"
 Surface {
     id: root
 
-    // Geometry matching reference image exactly:
-    // 5 square/squircle tiles (84x84) + 8px spacing + 8px padding
-    readonly property real tileWidth: 84
-    readonly property real tileHeight: 84
+    // Measured off 2026-09-20_22-28-15: the tile block spans x 208..592 and
+    // y 33..113, so the tiles are 70 x 81 on an 8px gap inside 8px of padding
+    // -- a 401 x 97 panel. This was 84 x 84 tiles in a 468 x 100 panel.
+    readonly property real tileWidth: 70
+    readonly property real tileHeight: 81
     readonly property real tileSpacing: 8
     readonly property real containerPadding: 8
 
-    width: 5 * tileWidth + 4 * tileSpacing + 2 * containerPadding
-    implicitWidth: width
+    // implicitWidth/implicitHeight are computed from the tile metrics and
+    // nothing else. Island.qml sizes the notch from implicitWidth
+    // (`targetW = powerInner.implicitWidth + 24`) and *then* assigns
+    // `width: parent.width` to this Surface -- so deriving implicitWidth from
+    // width was circular. QML resolved it to ~170px, which fitted two tiles and
+    // clipped the other three off the panel.
+    implicitWidth: 5 * tileWidth + 4 * tileSpacing + 2 * containerPadding
     implicitHeight: tileHeight + 2 * containerPadding
     cornerRadius: 24
-    backgroundColor: Theme.colors.background
+
+    // Not Theme.colors.background. In ariadne that token is #046e5e -- a
+    // saturated teal meant as a *light* theme's page background -- so the panel
+    // rendered teal. The reference's panel is black.
+    backgroundColor: "#000000"
 
     readonly property color accent: Theme.colors.accent
     readonly property color accentText: Theme.colors.accentText
-    readonly property color tileInactiveBg: Theme.colors.surface
+    // Likewise Theme.colors.surface, which is #059d86 in ariadne: every
+    // "inactive" tile came out teal. The reference's tiles are the same
+    // (24,22,20) warm dark the settings cards use -- a warm white at 6.3%.
+    readonly property color tileInactiveBg: Qt.rgba(1, 0.875, 0.75, 0.063)
     readonly property color dangerColor: Theme.colors.danger
 
     signal actionTaken()
