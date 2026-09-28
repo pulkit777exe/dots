@@ -77,6 +77,10 @@ Item {
                     Layout.preferredHeight: 46
                     Layout.alignment: Qt.AlignVCenter
 
+                    // Clicking any day opens the month grid over the strip.
+                    HoverHandler { cursorShape: Qt.PointingHandCursor }
+                    TapHandler { onTapped: UiState.showCalendarMonth() }
+
                     readonly property int dist: Math.abs(modelData.offset)
                     // Progressive blur/fade toward both edges
                     opacity: dist === 0 ? 1.0 : (dist === 1 ? 0.75 : (dist === 2 ? 0.40 : 0.18))

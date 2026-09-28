@@ -47,6 +47,16 @@ Singleton {
     readonly property bool mediaOpen: mode === UiState.Mode.Media
     property bool lockVisible: false
 
+    // ── Calendar: week strip vs month grid ────────────────────────────
+    //
+    // A sub-state of the calendar rather than a Mode of its own, because both
+    // live in the same notch: clicking a day in the strip opens the month grid
+    // over it, and the two are never open at once. Making it a Mode would
+    // mean the strip had to be re-opened to get back from the month.
+    //
+    // Reset in closeAll() so reopening the calendar always starts on the strip.
+    property bool calendarMonth: false
+
     // ── Island OSD (volume / brightness) ──────────────────────────────
     //
     // Deliberately NOT a Mode. The OSD is the island's centre notch
@@ -77,11 +87,24 @@ Singleton {
     // ── Mode operations ─────────────────────────────────────────────
     function close() {
         mode = UiState.Mode.Closed;
+        calendarMonth = false;
     }
 
     function toggle(newMode) {
         mode = (mode === newMode) ? UiState.Mode.Closed : newMode;
+        // Reopening any mode starts from its default view, so the calendar
+        // never comes back on the month grid after a close.
+        calendarMonth = false;
     }
+
+    // Clicking a day in the week strip opens the month grid over it.
+    function showCalendarMonth() {
+        if (mode === UiState.Mode.Calendar) calendarMonth = true;
+    }
+
+    // And the month grid's ‹ / › step months; a click on the grid's body (not
+    // on an arrow) goes back to the strip.
+    function showCalendarWeek() { calendarMonth = false; }
 
     // ── Named toggles (backward compatible) ─────────────────────────
     function toggleLauncher() { toggle(UiState.Mode.Launcher); }

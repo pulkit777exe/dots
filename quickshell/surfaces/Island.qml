@@ -49,11 +49,14 @@ Item {
         // which left the media surface unreachable by mouse.
         visible: BarConfig.albumArtCircleEnabled
 
-        // When expanded as Media Player: width 440, height 160
+        // Media Player: 406 x 214, measured off 2026-09-20_22-25-23.
+        // The old 440 x 160 was 34px too wide and 54px too short, which is
+        // why the panel read as a squashed rectangle with the album art
+        // spilling out beside it rather than a card.
         // When collapsed: circular dot (barHeight × barHeight)
         readonly property bool isExpanded: UiState.mediaOpen
-        property real targetW: isExpanded ? 440 : root.barHeight
-        property real targetH: isExpanded ? 160 : root.barHeight
+        property real targetW: isExpanded ? 406 : root.barHeight
+        property real targetH: isExpanded ? 214 : root.barHeight
 
         width: targetW
         height: targetH
@@ -224,7 +227,7 @@ Item {
 
         property real targetW: {
             if (isOsd) return 275
-            if (isCalendar) return 300
+            if (isCalendar) return UiState.calendarMonth ? 341 : 259
             if (isSettings) return 1320
             if (isLauncher) return 550
             if (isClipboard) return 480
@@ -236,7 +239,7 @@ Item {
 
         property real targetH: {
             if (isOsd) return 43
-            if (isCalendar) return 115
+            if (isCalendar) return UiState.calendarMonth ? 281 : 117
             if (isSettings) return 969
             if (isLauncher) return launcherContent.implicitHeight + 24
             if (isClipboard) return clipboardInner.implicitHeight + 24
@@ -346,8 +349,16 @@ Item {
             // ---- Expanded Calendar Content (Reference 4) ----
             Calendar {
                 anchors.fill: parent
-                visible: centerNotchWrap.isCalendar
-                opacity: centerNotchWrap.isCalendar ? 1 : 0
+                visible: centerNotchWrap.isCalendar && !UiState.calendarMonth
+                opacity: visible ? 1 : 0
+                Behavior on opacity { NumberAnimation { duration: MotionConfig.fade(); easing.type: Easing.OutCubic } }
+            }
+
+            // ---- Expanded Month Grid (Reference 2026-09-20_22-25-42) ----
+            MonthCalendar {
+                anchors.fill: parent
+                visible: centerNotchWrap.isCalendar && UiState.calendarMonth
+                opacity: visible ? 1 : 0
                 Behavior on opacity { NumberAnimation { duration: MotionConfig.fade(); easing.type: Easing.OutCubic } }
             }
 

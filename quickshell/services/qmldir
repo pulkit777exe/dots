@@ -20,4 +20,5 @@ singleton Cava 1.0 Cava.qml
 singleton DeviceProfile 1.0 DeviceProfile.qml
 singleton ConfigStore 1.0 ConfigStore.qml
 singleton IdleInhibit 1.0 IdleInhibit.qml
+singleton ControlCenterLayout 1.0 ControlCenterLayout.qml
 BrightnessMonitor 1.0 BrightnessMonitor.qml
