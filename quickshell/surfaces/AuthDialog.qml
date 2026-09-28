@@ -28,12 +28,18 @@ Surface {
     // y 231.6..264.6.
     // ─────────────────────────────────────────────────────────────
 
-    // 392, measured off 2026-09-20_22-28-58 by finding the crop's only
-    // near-black region: x 192..583, y 12..277, i.e. 392 x 266 including the
-    // 1px border. That scan is unambiguous -- the rest of the crop is teal
-    // wallpaper -- so it beats the earlier eyeball figure of 430 that this
-    // comment used to carry, which had the dialog 40px too wide.
-    width: 392
+    // 430, measured off 2026-09-20_22-28-58. The dialog's fill is exactly
+    // (0,0,0) and the dimmed wallpaper behind it is about (3,22,17), so a
+    // threshold of sum<20 separates them cleanly: at the vertical centre the
+    // dialog spans x 173..601, i.e. 429-430px.
+    //
+    // This was 392, from a scan that read the dialog as x 192..583. That is
+    // the same centre, inset ~19px per side, so it was taken at a row where
+    // the 26px corner radius had already cut in -- the figure it corrected
+    // (430) was right and the correction made the dialog 38px too narrow.
+    // The lesson matches the rest of this repo's measurement notes: take the
+    // widest row, never a row near a rounded corner.
+    width: 430
     implicitHeight: column.implicitHeight + 31
 
     cornerRadius: 26

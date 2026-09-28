@@ -45,7 +45,10 @@ Singleton {
     readonly property bool wallpaperPickerOpen: mode === UiState.Mode.WallpaperPicker
     readonly property bool calendarOpen: mode === UiState.Mode.Calendar
     readonly property bool mediaOpen: mode === UiState.Mode.Media
-    property bool lockVisible: false
+    // No lockVisible here any more: the lock screen is hyprlock's, spawned by
+    // the Control Center's lock tile, so there is no in-shell lock surface for
+    // a visibility flag to describe. The property was declared and never read
+    // or written.
 
     // Which Control Center drill-down is open: "home" | "wifi" | "bluetooth" |
     // "sound" | "display". Lives here rather than only on ControlCenter's own
