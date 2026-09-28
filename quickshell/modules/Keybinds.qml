@@ -34,6 +34,21 @@ Singleton {
         function bluetoothToggle(): void { Bluetooth.toggle() }
         function nightLightToggle(): void { NightLight.toggle() }
         function clearNotifs(): void { Notifications.clearAll() }
+        // Opens a Control Center drill-down without a click. The drill-downs
+        // have no keybind of their own and `hyprctl dispatch` cannot synthesise
+        // a pointer on this Hyprland, so this is the only way to compare them
+        // against their references.
+        //
+        // One no-arg function per view, not one taking a name: an IPC handler
+        // argument has to cross a QVariant boundary, and
+        // `function setCcView(v)` fails to parse with "Type of argument 1
+        // (v: QVariant) cannot be used across IPC".
+        function ccHome(): void { openCcView("home") }
+        function ccWifi(): void { openCcView("wifi") }
+        function ccBluetooth(): void { openCcView("bluetooth") }
+        function ccSound(): void { openCcView("sound") }
+        function ccDisplay(): void { openCcView("display") }
+
     }
     IpcHandler {
         target: "uis"
@@ -46,6 +61,14 @@ Singleton {
         function isWallpaperPickerOpen(): bool { return UiState.wallpaperPickerOpen; }
         function isCalendarOpen(): bool { return UiState.calendarOpen; }
         function isMediaOpen(): bool { return UiState.mediaOpen; }
+    }
+
+    // Outside the IpcHandler on purpose: every function declared inside one is
+    // treated as an IPC entry point, so a helper with a parameter fails to
+    // parse with "Type of argument 1 (v: QVariant) cannot be used across IPC".
+    function openCcView(v) {
+        if (!UiState.controlCenterOpen) UiState.toggleControlCenter();
+        UiState.ccView = v;
     }
 
     GlobalShortcut { name: "toggleLauncher"; description: "Toggle launcher"; onPressed: UiState.toggleLauncher() }

@@ -133,6 +133,17 @@ Surface {
     // ── Navigation state ─────────────────────────────────────────
     property string view: "home"
 
+    // Two-way with UiState.ccView, so the drill-down can be opened without a
+    // click. Reads back on every change so the two cannot drift.
+    onViewChanged: if (UiState.ccView !== root.view) UiState.ccView = root.view
+    Connections {
+        target: UiState
+        function onCcViewChanged() {
+            if (UiState.ccView !== root.view) root.view = UiState.ccView;
+        }
+    }
+    Component.onCompleted: root.view = UiState.ccView
+
     // Reset to home whenever CC is closed
     Connections {
         target: UiState

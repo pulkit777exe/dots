@@ -47,6 +47,14 @@ Singleton {
     readonly property bool mediaOpen: mode === UiState.Mode.Media
     property bool lockVisible: false
 
+    // Which Control Center drill-down is open: "home" | "wifi" | "bluetooth" |
+    // "sound" | "display". Lives here rather than only on ControlCenter's own
+    // `view` so it can be driven from outside -- by a keybind, or by
+    // `quickshell ipc call shell setCcView wifi` when comparing the drill-downs
+    // against their references, which is otherwise unreachable without a
+    // synthesised pointer.
+    property string ccView: "home"
+
     // ── Calendar: week strip vs month grid ────────────────────────────
     //
     // A sub-state of the calendar rather than a Mode of its own, because both
