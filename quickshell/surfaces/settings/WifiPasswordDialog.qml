@@ -8,7 +8,7 @@ Surface {
 
     width: 380
     cornerRadius: 18
-    backgroundColor: Theme.colors.surface
+    backgroundColor: Theme.panelFill
 
     property color accent: Theme.colors.accent
     property string ssid: ""

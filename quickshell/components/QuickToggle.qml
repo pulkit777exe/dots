@@ -34,7 +34,7 @@ Item {
         radius: width / 2
         // solid like screenshots (was translucent 0.06/0.12/0.16 on black)
         color: root._filled ? root.accentColor
-            : (tapHandler.pressed ? Qt.lighter(Theme.colors.surfaceAlt, 1.3) : (hoverHandler.hovered ? Theme.colors.surfaceAlt : Theme.colors.surface))
+            : (tapHandler.pressed ? Qt.lighter(Theme.surfaceRaised, 1.3) : (hoverHandler.hovered ? Theme.colors.surfaceAlt : Theme.colors.surface))
         Behavior on color { ColorAnimation { duration: MotionConfig.hover() } }
     }
 

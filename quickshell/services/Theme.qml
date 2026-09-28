@@ -45,6 +45,30 @@ Singleton {
     property var _displayedColors: _targetColors
     property real _colorProgress: 1
     readonly property var colors: _displayedColors
+
+    // ── Dark-surface tokens ───────────────────────────────────────────
+    //
+    // `colors.background` and `colors.surface` are NOT usable as the fill for
+    // this shell's panels and cards. In ariadne they are #046e5e and #059d86 --
+    // saturated teals, authored for a *light* theme's page and card
+    // backgrounds. Every surface that used them rendered teal: the power menu's
+    // "inactive" tiles, the launcher, the clipboard, the Wi-Fi and audio
+    // dialogs, and Surface's own default backgroundColor.
+    //
+    // These three are derived from the theme's `foreground` instead, so they
+    // stay warm or cool with the theme rather than hardcoding ariadne's cast:
+    //
+    //   panelFill     #000000        the panel body -- measured off
+    //                                 2026-09-20_22-25-51 and 22-28-15
+    //   surfaceCard   foreground@6.3%  -> (16,14,12) in ariadne; the settings
+    //                                 app's cards (2026-09-20_22-30-18)
+    //   surfaceRaised foreground@10.5% -> (24,22,20) in ariadne; the control
+    //                                 centre's cards and the power menu's
+    //                                 tiles (2026-09-20_22-28-15)
+    readonly property color panelFill: "#000000"
+    readonly property color surfaceCard: Qt.alpha(colors.foreground, 0.063)
+    readonly property color surfaceRaised: Qt.alpha(colors.foreground, 0.105)
+
     // Tide compatibility — KISS aliases used by Tide-style SettingsApp
     readonly property bool darkMode: _isDarkPreset()
     // Back-compat for surfaces that cache colors.accent etc.

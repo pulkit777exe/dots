@@ -27,7 +27,7 @@ Item {
     // a plain JS object of hex *strings*, so `.r` / `.g` / `.b` are undefined
     // and Qt.rgba() silently produced black-at-94% instead of the theme's
     // background. Qt.alpha() takes the colour as-is and only sets alpha.
-    property color backgroundColor: Qt.alpha(Theme.colors.background, 0.94)
+    property color backgroundColor: Theme.panelFill
     property color borderColor: Qt.rgba(1, 1, 1, 0.07)
     property real borderWidth: 1
 

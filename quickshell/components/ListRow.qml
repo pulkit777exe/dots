@@ -90,7 +90,7 @@ Item {
 
         color:
             root.solidBackground
-                ? Theme.colors.surface
+                ? Theme.surfaceRaised
                 : "transparent"
     }
 

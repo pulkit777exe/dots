@@ -12,7 +12,7 @@ Surface {
 
     width: 550
     cornerRadius: 20
-    backgroundColor: Theme.colors.background
+    backgroundColor: Theme.panelFill
     shadow: false
 
     property color accent: Theme.colors.accent

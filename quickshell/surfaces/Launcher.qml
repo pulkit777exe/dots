@@ -9,7 +9,7 @@ Surface {
 
     width: ConfigStore.launcherWidth
     cornerRadius: 20
-    backgroundColor: Theme.colors.background
+    backgroundColor: Theme.panelFill
 
     property var results: AppLauncher.results
 

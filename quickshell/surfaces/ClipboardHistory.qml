@@ -13,7 +13,7 @@ Surface {
 
     width: 550
     cornerRadius: 20
-    backgroundColor: Theme.colors.background
+    backgroundColor: Theme.panelFill
 
     property var results: Clipboard.filteredEntries
     property int selectedIndex: 0
