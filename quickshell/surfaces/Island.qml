@@ -378,13 +378,18 @@ Item {
         visible: BarConfig.statusCircleEnabled
 
         readonly property bool isExpanded: UiState.controlCenterOpen
-        // 484 measured off the reference capture, where the panel is exactly
-        // square: fill spans x 719..1202 and y 67..550, 484 x 484. The old 440
-        // made it 440 x 460, which read as visibly narrower than the
-        // reference. Height is not set here -- it comes from
+        // 514, measured off the native 1920x1077 reference capture
+        // (2026-09-20_22-27-14.png). The panel's own extent is x 703..1216
+        // and y 53..566 -- 514 x 514, exactly square. What sits inside it is
+        // inset 14px on every side, so the first pill starts at y 67 and the
+        // last card ends at y 551; the card run x 717..1202 is 486 wide, and
+        // an earlier measurement of "484 x 484 square" was reading the card
+        // on both axes, which is why the two agreed and looked deliberate.
+        //
+        // Height is not set here: it comes from
         // controlCenterContent.implicitHeight, i.e. ControlCenter's
-        // panelHeight, which is 484 to match.
-        property real targetW: isExpanded ? 484 : root.barHeight
+        // panelHeight, which is 514 to match.
+        property real targetW: isExpanded ? 514 : root.barHeight
         property real targetH: isExpanded ? controlCenterContent.implicitHeight : root.barHeight
 
         width: targetW

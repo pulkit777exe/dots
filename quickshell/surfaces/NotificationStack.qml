@@ -26,17 +26,14 @@ Item {
                 required property var modelData
                 Layout.fillWidth: true
 
-                icon: {
-                    switch (modelData.urgency) {
-                        case 2: return "priority_high"  // Critical
-                        case 0: return "info"           // Low
-                        default: return "notifications" // Normal
-                    }
-                }
-                iconColor: modelData.urgency === 2 ? Theme.colors.danger : Theme.colors.accent
-                iconBackground: modelData.urgency === 2
-                    ? Theme.withAlpha(Theme.colors.danger, 0.18)
-                    : Theme.withAlpha(Theme.colors.accent, 0.18)
+                // The reference toast shows the app's own icon and falls
+                // back to the app name's initial, so a synthetic glyph is
+                // only supplied for the urgencies the reference singles
+                // out. Leaving `icon` empty for Normal/Low is what lets the
+                // "N" fallback appear instead of a generic bell.
+                icon: modelData.urgency === 2 ? "priority_high" : ""
+                iconColor: Theme.colors.accent
+                iconBackground: "#211c1b"
 
                 appName: modelData.appName
                 title: modelData.summary

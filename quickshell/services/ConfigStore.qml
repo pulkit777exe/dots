@@ -21,8 +21,12 @@ Singleton {
     // Launcher
     property bool launcherIncludeCommands: true
     property int launcherMaxResults: 6
-    property real launcherWidth: 550
-    property real launcherRowHeight: 52
+    // Reference: 2026-09-20_22-27-53.png, a 1:1 crop of the same session.
+    // The launcher panel measures x 204..717 = 514 wide, and the selected row
+    // y 90..134 = 45 tall. The old 550x52 was visibly wider and taller than
+    // the reference. Neither is persisted, so the defaults take effect as-is.
+    property real launcherWidth: 514
+    property real launcherRowHeight: 46
     property int launcherRowsBeforeScrolling: 6
 
     // Notifications
@@ -30,7 +34,14 @@ Singleton {
     property bool notifIslandMorph: true
     property int notifPopupTimeoutMs: 2000
     property int notifUrgentTimeoutMs: 6000
-    property real notifWidth: 480
+    // 449 is the reference toast's width measured 1:1 on
+    // 2026-09-20_22-28-28.png: the card's outer edge falls at x 258.98 and
+    // 708.17 (half-way between the wallpaper and the black fill on each
+    // side), i.e. 449.19px. The references are 1:1 crops of a native
+    // 1920x1080 session -- confirmed by the control-centre panel measuring
+    // the same 514px in the Display crop as in the native home capture -- so
+    // this is a live pixel count, not a capture pixel count to be scaled.
+    property real notifWidth: 449
     property bool notifShowBodyText: true
     property real notifHistoryHeight: 200
 

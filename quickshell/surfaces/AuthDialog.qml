@@ -7,19 +7,54 @@ import "../services"
 Surface {
     id: root
 
-    width: 520
-    implicitHeight: column.implicitHeight + 28
+    // ─────────────────────────────────────────────────────────────
+    // Geometry
+    //
+    // Measured 1:1 off 2026-09-20_22-28-58.png. The references are 1:1
+    // crops of a native 1920x1080 session, so these are live pixels --
+    // nothing here is a capture measurement to be scaled.
+    //
+    // The dialog's black fill spans x 173..602 and y 13..277; its own 1px
+    // hairline sits just outside that at x 172 and x 603, and the
+    // wallpaper-to-edge half-way crossings fall at x 173.05 / 603.00 and
+    // y 12.0 / 280.0. So the card is 430 x 266 of fill inside a 432 x 268
+    // outline, and 430 x 266 is what the code takes.
+    //
+    // The vertical stack sums to the same 266 exactly:
+    //   14 top + 30 title row + 10 + 74 message card + 12 + 15 label
+    //   + 11 + 42 field + 11 + 32 buttons + 15 bottom.
+    // Every one of those is a measured edge: the card's top at y 66.3 and
+    // bottom at 140.3, the field at y 178.5..220.9, the buttons at
+    // y 231.6..264.6.
+    // ─────────────────────────────────────────────────────────────
 
-    cornerRadius: 22
+    // 432, not 430. The reference's dialog measures 430 x 266 of pure black
+    // (2026-09-20_22-28-58.png), but that is the FILL, and Surface draws a
+    // 1px border outside it -- so the element is 432 x 268. At 430 the render
+    // came out 428 of fill, 2px narrow. The 29 below is the vertical budget
+    // and carries the same +2.
+    width: 432
+    implicitHeight: column.implicitHeight + 31
 
-    // Everything color-related comes from the active theme.
-    backgroundColor: Theme.colors.surface
+    cornerRadius: 26
+
+    // Pure black, like the control-centre panel. Theme.colors.surface is
+    // the ariadne teal, which made this dialog read as a bright card on a
+    // dark desktop; the reference dialog is #000000.
+    backgroundColor: "#000000"
 
     property color accent: Theme.colors.accent
 
+    // The inset surfaces the dialog is built from. The message card and the
+    // Cancel button share a fill (16,14,12) off the reference; the input
+    // field is a true black inset inside it, picked out only by its hairline.
+    readonly property color insetFill: "#100e0c"
+    readonly property color fieldFill: "#000000"
+    readonly property color badgeInset: "#211c1b"
+
     readonly property var _p: Auth.pending
 
-    readonly property string dialogTitle: "Authentication Required"
+    readonly property string dialogTitle: "Authentication required"
 
     readonly property string message:
         _p ? _p.message : ""
@@ -37,14 +72,18 @@ Surface {
     signal cancelled()
 
     function clearPassword() {
-        passwordField.text = ""
+        passwordField.text = "";
     }
 
     ColumnLayout {
         id: column
 
         anchors.fill: parent
-        anchors.margins: 14
+        anchors.leftMargin: 15
+        anchors.rightMargin: 15
+        anchors.topMargin: 14
+        anchors.bottomMargin: 15
+
         spacing: 0
 
         // ========================================================
@@ -53,101 +92,189 @@ Surface {
 
         RowLayout {
             Layout.fillWidth: true
-            spacing: 8
+            // 30, so the 29px badge disc fits without overflowing the row:
+            // the reference's disc runs y 25.97..55.74 and the dialog's top
+            // edge is at 12, i.e. 14 down -- exactly topMargin.
+            Layout.preferredHeight: 30
+            spacing: 13
 
-            Icon {
-                icon: "lock"
-                size: 17
-                iconColor: Theme.colors.accent
+            // A filled accent disc carrying a dark glyph, not a bare
+            // accent-coloured icon. 29x30 in the reference: the teal's own
+            // half-way edge falls at x 187.73 / 216.97 and y 25.97 / 55.74,
+            // so 29.2 x 29.8. The dialog's left edge is 172, putting the
+            // disc 15.7 in -- the same inset as the column's margin.
+            Rectangle {
+                Layout.preferredWidth: 29
+                Layout.preferredHeight: 29
+                radius: width / 2
+
+                color: root.accent
+
+                Icon {
+                    anchors.centerIn: parent
+                    icon: "lock"
+                    size: 16
+                    iconColor: Theme.colors.accentText
+                }
             }
 
             StyledText {
                 Layout.fillWidth: true
-
-                variant: "mediaTitle"
+                Layout.alignment: Qt.AlignVCenter
 
                 text: root.dialogTitle
 
-                font.pixelSize: 17
+                font.pixelSize: 18
                 font.weight: Font.DemiBold
 
-                color: Theme.colors.text
+                color: "#FFFFFF"
 
                 elide: Text.ElideRight
             }
         }
 
         // ========================================================
-        // MESSAGE
+        // MESSAGE CARD
+        //
+        // The reference sets the message and the action id inside a
+        // slightly lighter inset well rather than letting them run
+        // straight down the dialog.
+        // ========================================================
+
+        Rectangle {
+            Layout.fillWidth: true
+            Layout.topMargin: 10
+            Layout.bottomMargin: 12
+
+            // 74 in the reference: the well runs y 66.3..140.3.
+            implicitHeight: messageCol.implicitHeight + 21
+            radius: 14
+
+            color: root.insetFill
+
+            ColumnLayout {
+                id: messageCol
+
+                anchors.fill: parent
+                anchors.leftMargin: 12
+                anchors.rightMargin: 12
+                anchors.topMargin: 11
+                anchors.bottomMargin: 10
+
+                spacing: 0
+
+                StyledText {
+                    Layout.fillWidth: true
+
+                    visible: root.message.length > 0
+
+                    text: root.message
+
+                    color: "#FFFFFF"
+
+                    font.pixelSize: 15
+                    font.weight: Font.DemiBold
+                    // Qt scales the FONT's line spacing by this, and SF Pro's
+                    // spacing at 15px is already ~28px. 1.0 lands the two
+                    // reference lines 17px apart, which is what the capture
+                    // shows (ink baselines at y 91.5 and 108.5).
+                    lineHeight: 1.0
+
+                    wrapMode: Text.WordWrap
+                }
+
+                StyledText {
+                    Layout.fillWidth: true
+                    Layout.topMargin: 4
+
+                    visible: root.actionId.length > 0
+
+                    text: root.actionId
+
+                    color: "#8a8a8a"
+
+                    font.pixelSize: 13
+
+                    elide: Text.ElideRight
+                }
+            }
+        }
+
+        // ========================================================
+        // PASSWORD LABEL
         // ========================================================
 
         StyledText {
             Layout.fillWidth: true
-            Layout.topMargin: 5
 
-            visible: root.message.length > 0
+            visible: root.message.length > 0 || root.actionId.length > 0
 
-            variant: "body"
+            text: "Password"
 
-            text: root.message
+            color: "#7a7a7a"
 
             font.pixelSize: 13
-            font.weight: Font.Normal
-
-            color: Theme.colors.textMuted
-
-            wrapMode: Text.WordWrap
         }
 
         // ========================================================
-        // ACTION ID
-        // ========================================================
-
-        StyledText {
-            Layout.fillWidth: true
-            Layout.topMargin: 4
-
-            visible: root.actionId.length > 0
-
-            variant: "mediaArtist"
-
-            text: root.actionId
-
-            font.pixelSize: 10
-            font.weight: Font.Normal
-
-            color: Theme.colors.textMuted
-
-            elide: Text.ElideRight
-        }
-
-        // ========================================================
-        // PASSWORD
+        // PASSWORD FIELD
+        //
+        // A black pill with a faint accent hairline and a dark lock disc
+        // inset at its left edge.
         // ========================================================
 
         Rectangle {
             id: passwordBox
 
             Layout.fillWidth: true
-            Layout.topMargin: 10
+            Layout.topMargin: 11
+            // 42: the reference field's teal hairline crosses half-way at
+            // y 178.5 and 220.9, so 42.4.
             Layout.preferredHeight: 42
 
-            radius: 12
+            radius: height / 2
 
-            color: Theme.colors.surfaceAlt
+            color: root.fieldFill
 
-            border.width:
-                passwordField.activeFocus ? 1 : 0
+            border.width: 1
+            border.color: Qt.rgba(root.accent.r, root.accent.g, root.accent.b, 0.25)
 
-            border.color: Theme.colors.accent
+            Behavior on border.color {
+                ColorAnimation { duration: MotionConfig.hover() }
+            }
+
+            Rectangle {
+                id: fieldBadge
+
+                anchors.left: parent.left
+                // 5, not 9: the reference disc's edge starts 5.2px in
+                // (x 192.55 against the field's 187.4) and is 26 across.
+                anchors.leftMargin: 5
+                anchors.verticalCenter: parent.verticalCenter
+
+                width: 26
+                height: 26
+                radius: width / 2
+
+                color: root.badgeInset
+
+                Icon {
+                    anchors.centerIn: parent
+                    icon: "lock"
+                    size: 14
+                    iconColor: "#9a9a9a"
+                }
+            }
 
             TextInput {
                 id: passwordField
 
                 anchors.fill: parent
-
-                anchors.leftMargin: 12
-                anchors.rightMargin: 12
+                // 38, so the caret clears the 26px disc that starts 5 in
+                // and ends at 31 -- the reference keeps the same 7px gap
+                // between the disc and the placeholder that this had.
+                anchors.leftMargin: 38
+                anchors.rightMargin: 15
 
                 verticalAlignment: TextInput.AlignVCenter
 
@@ -156,10 +283,10 @@ Surface {
                         ? TextInput.Password
                         : TextInput.Normal
 
-                color: Theme.colors.text
+                color: "#FFFFFF"
 
-                font.pixelSize: 13
                 font.family: "SF Pro Display"
+                font.pixelSize: 16
 
                 clip: true
                 selectByMouse: true
@@ -173,16 +300,15 @@ Surface {
                     visible:
                         passwordField.text.length === 0
 
-                    variant: "mediaSubtitle"
+                    // Not polkit's inputPrompt: for the auth_admin action
+                    // that is literally "Password:", which just repeats the
+                    // label sitting directly above the field. The reference
+                    // uses a fixed prompt.
+                    text: "Enter your password"
 
-                    text:
-                        root._p &&
-                        root._p.inputPrompt
-                            ? root._p.inputPrompt
-                            : "Password:"
-
-                    font.pixelSize: 13
-                    color: Theme.colors.textMuted
+                    font.family: "SF Pro Display"
+                    font.pixelSize: 16
+                    color: "#8a8a8a"
                 }
 
                 onAccepted:
@@ -218,17 +344,15 @@ Surface {
 
         StyledText {
             Layout.fillWidth: true
-            Layout.topMargin: 5
+            Layout.topMargin: 6
 
             visible: root.errorText.length > 0
 
-            variant: "mediaSubtitle"
-
             text: root.errorText
 
-            font.pixelSize: 11
-
             color: Theme.colors.danger
+
+            font.pixelSize: 12
 
             wrapMode: Text.WordWrap
         }
@@ -239,9 +363,9 @@ Surface {
 
         RowLayout {
             Layout.fillWidth: true
-            Layout.topMargin: 8
+            Layout.topMargin: 11
 
-            spacing: 7
+            spacing: 8
 
             Item {
                 Layout.fillWidth: true
@@ -254,15 +378,17 @@ Surface {
             Rectangle {
                 id: cancelButton
 
-                Layout.preferredWidth: 62
+                // 73 x 32: the reference pill's own half-way edge runs
+                // x 396.8..469.6 and y 231.6..264.6.
+                Layout.preferredWidth: 73
                 Layout.preferredHeight: 32
 
-                radius: 16
+                radius: height / 2
 
                 color:
                     cancelMouse.containsMouse
-                        ? Theme.colors.surfaceHover
-                        : Theme.colors.surfaceAlt
+                        ? "#1c1917"
+                        : root.insetFill
 
                 Behavior on color {
                     ColorAnimation {
@@ -275,10 +401,10 @@ Surface {
 
                     text: "Cancel"
 
-                    font.pixelSize: 12
+                    font.pixelSize: 15
                     font.weight: Font.Medium
 
-                    color: Theme.colors.textMuted
+                    color: "#e6e6e6"
                 }
 
                 MouseArea {
@@ -300,15 +426,18 @@ Surface {
             Rectangle {
                 id: authenticateButton
 
-                Layout.preferredWidth: 96
+                // 110 x 32: the reference pill is a solid teal shape, so it
+                // measures directly -- its own edge falls at x 477.8/588.6
+                // and y 231.9/263.9.
+                Layout.preferredWidth: 110
                 Layout.preferredHeight: 32
 
-                radius: 16
+                radius: height / 2
 
                 color:
                     authenticateMouse.pressed
                         ? Theme.colors.accentAlt
-                        : Theme.colors.accent
+                        : root.accent
 
                 Behavior on color {
                     ColorAnimation {
@@ -321,7 +450,7 @@ Surface {
 
                     text: "Authenticate"
 
-                    font.pixelSize: 12
+                    font.pixelSize: 15
                     font.weight: Font.DemiBold
 
                     color: Theme.colors.accentText

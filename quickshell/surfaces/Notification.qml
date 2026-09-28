@@ -28,8 +28,18 @@ Surface {
     property var actions: []
     property string image: ""
 
-    property color iconBackground: Theme.colors.surface
+    property color iconBackground: "#211c1b"
     property color iconColor: Theme.colors.accent
+
+    // The reference toast draws the app's own icon when there is one and
+    // otherwise falls back to the first letter of the app name rather than
+    // a generic bell. notify-send, which ships no icon, renders as a bare
+    // accent-coloured "N" on a dark disc.
+    readonly property bool _hasGlyph: (root.icon !== "" || root.appIcon !== "")
+    readonly property string _initial: {
+        const n = String(root.entry.appName || "").trim();
+        return n.length > 0 ? n.charAt(0).toUpperCase() : "";
+    }
 
     readonly property var entry: {
         if (root.notification !== null)
@@ -62,23 +72,40 @@ Surface {
 
     // ─────────────────────────────────────────────────────────────
     // Geometry
+    //
+    // Measured 1:1 off 2026-09-20_22-28-28.png. The card's outer edges sit
+    // at x 258.98 / 708.17 and y 16.6 / 84.3 (half-way between the
+    // wallpaper and the black fill), so 449 x 67.7 -- 449 x 68.
+    //
+    // The radius is 27, fitted against the card's own left-edge profile:
+    // with the top edge at y 18 and the flat side at x 260, a circle of
+    // r = 26.5 through the measured edge points has an rms residual of
+    // 0.11px over 26 rows, and the flat side starts 27px in.
+    //
+    // The three text lines sit 16px and 15px apart, measured from their ink
+    // centres at y 35, 51 and 66 against a card top of 18 -- i.e. 17, 33
+    // and 48 from the top. That is tighter than SF Pro's own leading, so the
+    // stack is positioned rather than laid out.
     // ─────────────────────────────────────────────────────────────
 
-    width: 380
+    width: 449
 
+    // 11 above the first line, 13 below the last. The asymmetry is the
+    // reference's, not a rounding artefact: with the text stack's boxes at
+    // y 0/14/30 in a 44-tall column, those margins put the glyph centres at
+    // 17/33/48 from the top and land the card on 68.
     implicitHeight:
         content.implicitHeight + 24
 
-    cornerRadius: 16
+    cornerRadius: 27
 
-    backgroundColor:
-        Theme.withAlpha(
-            Theme.colors.background,
-            0.97
-        )
+    // Solid near-black, matching the control-centre panel rather than the
+    // theme's teal background — the reference toast is pure #000000.
+    backgroundColor: "#000000"
 
-    borderWidth: 1
-    borderColor: Theme.colors.border
+    // No hairline: the reference edge dissolves straight into the
+    // backdrop, with only the drop shadow separating the two.
+    borderWidth: 0
 
     shadow: true
 
@@ -126,6 +153,8 @@ Surface {
         onTapped: root.clicked()
     }
 
+    HoverHandler { id: hover }
+
     // ─────────────────────────────────────────────────────────────
     // Content
     // ─────────────────────────────────────────────────────────────
@@ -134,34 +163,45 @@ Surface {
         id: content
 
         anchors.fill: parent
-        anchors.margins: 12
+        anchors.margins: 0
+        anchors.leftMargin: 11
+        anchors.rightMargin: 11
+        anchors.topMargin: 11
+        anchors.bottomMargin: 13
 
-        spacing: 10
+        spacing: 0
 
         // ─────────────────────────────────────────────────────────
-        // Header
+        // Header: badge + three-line text stack
         // ─────────────────────────────────────────────────────────
 
         RowLayout {
             Layout.fillWidth: true
-            spacing: 10
+            spacing: 12
 
-            // Icon
-            Item {
-                Layout.preferredWidth: 38
-                Layout.preferredHeight: 38
+            // ─────────────────────────────────────────────────────
+            // Badge — a 37px disc, on the card's own midline
+            //
+            // 37 is the reference: the disc's own edge, half-way between
+            // the #211c1b fill and the card's black, falls at x 269.93 and
+            // 307.64 and y 33.0 and 69.86, so 37.7 x 36.9. Cross-checked
+            // against the live render, where a 35px disc measures 34.8 --
+            // the same half-way rule, so the reference really is ~37.
+            // ─────────────────────────────────────────────────────
 
-                Rectangle {
-                    anchors.fill: parent
+            Rectangle {
+                Layout.preferredWidth: 37
+                Layout.preferredHeight: 37
+                Layout.alignment: Qt.AlignVCenter
 
-                    radius: 11
+                radius: width / 2
 
-                    color:
-                        root.iconBackground
-                }
+                color: root.iconBackground
 
                 Icon {
                     anchors.centerIn: parent
+
+                    visible: root._hasGlyph
 
                     icon:
                         root.entry.icon
@@ -177,95 +217,136 @@ Surface {
                                     )
                             )
 
-                    size: 19
+                    size: 18
 
-                    iconColor:
-                        root.iconColor
+                    iconColor: root.iconColor
+                }
+
+                // App-icon fallback: the app name's initial.
+                StyledText {
+                    anchors.centerIn: parent
+
+                    visible: !root._hasGlyph && root._initial !== ""
+
+                    text: root._initial
+
+                    font.family: "SF Pro Display"
+                    font.pixelSize: 13
+                    font.weight: Font.DemiBold
+
+                    color: root.iconColor
                 }
             }
 
-            // Text
-            ColumnLayout {
-                Layout.fillWidth: true
+            // ─────────────────────────────────────────────────────
+            // Text.
+            //
+            // Positioned rather than laid out: the reference stacks these
+            // three lines 16px and 15px apart, which is tighter than SF
+            // Pro's own line height, and a ColumnLayout would hand the card
+            // its fonts' natural leading instead. The boxes are 12/16/14
+            // tall at y 0/14/30, so their centres fall 6/22/37 down the
+            // stack -- which, with the card's 11px top margin, is 17/33/48
+            // from the card's top edge, matching the reference's ink
+            // centres exactly.
+            // ─────────────────────────────────────────────────────
 
-                spacing: 1
+            Item {
+                id: textCol
+
+                Layout.fillWidth: true
+                Layout.alignment: Qt.AlignVCenter
+
+                readonly property bool hasBody:
+                    Boolean(root.entry.subtitle || root.entry.body)
+
+                implicitHeight: hasBody ? 44 : 30
+                height: implicitHeight
 
                 StyledText {
-                    Layout.fillWidth: true
+                    width: parent.width
+                    height: 12
+                    verticalAlignment: Text.AlignVCenter
 
                     text:
                         root.entry.appName ||
                         "Notification"
 
-                    textColor:
-                        Theme.colors.textMuted
+                    textColor: "#8a8a8a"
 
-                    font.pixelSize: 11
+                    font.pixelSize: 12
                     font.weight: Font.Medium
 
-                    elide:
-                        Text.ElideRight
+                    elide: Text.ElideRight
                 }
 
                 StyledText {
-                    Layout.fillWidth: true
+                    width: parent.width
+                    height: 16
+                    y: 14
+                    verticalAlignment: Text.AlignVCenter
 
                     text:
                         root.entry.title ||
                         root.entry.summary ||
                         ""
 
-                    textColor:
-                        Theme.colors.text
+                    textColor: "#FFFFFF"
 
                     font.pixelSize: 14
                     font.weight: Font.DemiBold
 
-                    maximumLineCount: 2
-
-                    wrapMode:
-                        Text.Wrap
-
-                    elide:
-                        Text.ElideRight
+                    elide: Text.ElideRight
                 }
 
                 StyledText {
-                    Layout.fillWidth: true
+                    width: parent.width
+                    height: 14
+                    y: 30
+                    verticalAlignment: Text.AlignVCenter
 
-                    visible:
-                        Boolean(root.entry.subtitle)
+                    visible: parent.hasBody
 
                     text:
-                        root.entry.subtitle || ""
+                        root.entry.subtitle ||
+                        root.entry.body ||
+                        ""
 
-                    textColor:
-                        Theme.colors.textMuted
+                    textColor: "#8a8a8a"
 
                     font.pixelSize: 11
 
-                    maximumLineCount: 1
-
-                    elide:
-                        Text.ElideRight
+                    elide: Text.ElideRight
                 }
             }
 
+            // ─────────────────────────────────────────────────────
             // Close
+            //
+            // The reference toast carries no visible close affordance,
+            // so it only appears once the pointer is over the card. It
+            // stays in the layout either way, so revealing it does not
+            // reflow the text.
+            // ─────────────────────────────────────────────────────
+
             IconButton {
-                Layout.alignment:
-                    Qt.AlignTop
+                Layout.alignment: Qt.AlignVCenter
+
+                opacity: hover.hovered ? 1 : 0
+                visible: opacity > 0.01
+
+                Behavior on opacity {
+                    NumberAnimation { duration: MotionConfig.fade() }
+                }
 
                 icon: "close"
 
-                size: 28
+                size: 26
                 iconSize: 15
 
-                iconColor:
-                    Theme.colors.textMuted
+                iconColor: "#8a8a8a"
 
-                onClicked:
-                    root.dismissed()
+                onClicked: root.dismissed()
             }
         }
 
@@ -275,26 +356,23 @@ Surface {
 
         Rectangle {
             Layout.fillWidth: true
-            Layout.preferredHeight: 150
+            Layout.preferredHeight: visible ? 160 : 0
+            Layout.topMargin: visible ? 11 : 0
 
-            visible:
-                Boolean(root.entry.image)
+            visible: Boolean(root.entry.image)
 
-            radius: 12
+            radius: 13
 
-            color:
-                Theme.colors.surfaceAlt
+            color: "#181614"
 
             clip: true
 
             Image {
                 anchors.fill: parent
 
-                source:
-                    root.entry.image || ""
+                source: root.entry.image || ""
 
-                fillMode:
-                    Image.PreserveAspectCrop
+                fillMode: Image.PreserveAspectCrop
 
                 asynchronous: true
                 cache: true
@@ -303,47 +381,18 @@ Surface {
         }
 
         // ─────────────────────────────────────────────────────────
-        // Body
-        // ─────────────────────────────────────────────────────────
-
-        StyledText {
-            Layout.fillWidth: true
-
-            visible:
-                Boolean(root.entry.body)
-
-            text:
-                root.entry.body || ""
-
-            textColor:
-                Theme.withAlpha(
-                    Theme.colors.text,
-                    0.76
-                )
-
-            font.pixelSize: 12
-
-            wrapMode:
-                Text.Wrap
-
-            maximumLineCount: 5
-
-            elide:
-                Text.ElideRight
-        }
-
-        // ─────────────────────────────────────────────────────────
         // Actions
         // ─────────────────────────────────────────────────────────
 
         Flow {
             Layout.fillWidth: true
-
-            spacing: 6
+            Layout.topMargin: visible ? 9 : 0
 
             visible:
                 Array.isArray(root.entry.actions) &&
                 root.entry.actions.length > 0
+
+            spacing: 6
 
             Repeater {
                 model:

@@ -203,6 +203,15 @@ Singleton {
     // must omit the segment rather than print NaN.
     property var refreshRates: ({})
 
+    // ── Output scale ──────────────────────────────────────────────
+    // Quickshell.screens does not expose a per-output scale in this build
+    // either, so `modelData.scale` is undefined and the Display page's
+    // spec line silently lost its "· 1.0x" segment and no scale chip ever
+    // lit up. Hyprland reports it, and the probe above already runs, so
+    // collect it in the same pass. A missing entry is normal — callers must
+    // omit the segment rather than print a guess.
+    property var outputScales: ({})
+
     Process {
         id: monitorProbe
         command: ["hyprctl", "-j", "monitors"]
@@ -212,6 +221,7 @@ Singleton {
                 try {
                     const parsed = JSON.parse(text);
                     const map = {};
+                    const scales = {};
                     for (const m of parsed) {
                         if (!m || !m.name) continue;
                         // This Hyprland reports `refreshRate` (a float, e.g.
@@ -221,8 +231,12 @@ Singleton {
                         if (typeof hz === "number" && hz > 1000) hz = hz / 1000;
                         if (typeof hz === "number" && isFinite(hz) && hz > 0)
                             map[m.name] = Math.round(hz);
+                        const sc = m.scale;
+                        if (typeof sc === "number" && isFinite(sc) && sc > 0)
+                            scales[m.name] = sc;
                     }
                     root.refreshRates = map;
+                    root.outputScales = scales;
                 } catch (e) {
                     // Leave the previous map alone; an unreadable response is
                     // not worth clearing good data over.
@@ -265,6 +279,13 @@ Singleton {
                 }
             }
         }
+    }
+
+    // Re-read refresh rates and scales on demand. The probe only fires once
+    // at startup, which is fine for the static values but leaves a scale the
+    // user just changed through the Display page reading stale.
+    function refreshMonitorInfo(): void {
+        monitorProbe.running = true;
     }
 
     Component.onCompleted: {

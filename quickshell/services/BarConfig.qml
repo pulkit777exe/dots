@@ -34,7 +34,14 @@ Singleton {
     // capsule geometry. This unifies what were three separately
     // hardcoded, inconsistent values (24 / 24 / 26 across the three
     // dot wraps) into one.
-    property real expandedCornerRadius: 31
+    //
+    // 27, fitted off the reference panel's top-left corner
+    // (2026-09-20_22-27-14.png): with the panel's left edge at x 703 and top
+    // at y 53, the edge sits at +17 by y=top+2, +13 by +4, +9 by +8 and +3 by
+    // +16. A circle of radius R puts the edge at R - sqrt(2Rd - d^2); R=27
+    // predicts 16.8 / 12.9 / 7.8 / 3.9 against those measurements. The old 31
+    // is visibly tighter than the reference.
+    property real expandedCornerRadius: 27
 
     property bool statusCircleEnabled: true
     property bool albumArtCircleEnabled: true

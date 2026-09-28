@@ -32,6 +32,20 @@ Surface {
     readonly property color bgItemHover: "#2e2e2e"
     readonly property color bgSliderTrack: "#0d0b0a"
 
+    // Sampled off the Display/Sound drill-down captures. The drill-downs
+    // nest one level deeper than the home page does: a #181614 popover
+    // inset inside the black panel, holding #272221 cards. The home page
+    // puts its cards straight on the panel, which is why bgCard is left
+    // as it was.
+    readonly property color bgBadgeDim: "#413a37"
+    readonly property color bgPill: "#342e29"
+    // The track inside a #272221 card reads a shade lighter than the one
+    // on the home page's #181614 cards; the home page value is untouched.
+    readonly property color bgSliderTrackCard: "#141211"
+    // Text tones, sampled rather than guessed.
+    readonly property color textDim: "#7a7a7a"
+    readonly property color textFaint: "#8a8a8a"
+
     width: 460
     // Surface is an Item, so implicitHeight alone does not size it. Without
     // this the panel kept a fixed height and clipped the drill-down.
@@ -137,12 +151,25 @@ Surface {
     // A constant height means the drill-downs all open into the same box.
     // Long lists scroll inside it rather than growing the panel.
     //
-    // 484 is measured off the reference capture, where the panel is exactly
-    // square: fill spans y 67..550, and x 719..1202 for the width. The old
-    // 460 paired with a 440 width made the panel taller than it was wide,
-    // which does not match. Island.qml's rightDotWrap uses 484 for the width
-    // so the two stay equal.
-    readonly property int panelHeight: 484
+    // 514, matching Island.qml's rightDotWrap width. See the note there: the
+    // reference panel is x 703..1216 by y 53..566, square at 514, inset 14px
+    // inside. The "484 square" previously recorded here was the inner card,
+    // measured on both axes.
+    // The reference's panel is square on the home page and TALLER on the two
+    // content-heavy drill-downs, so the height is a function of the open view
+    // rather than one constant. Measured off 1:1 crops of the same session:
+    //   home     514  (2026-09-20_22-27-14.png, x 703..1216, y 53..566)
+    //   display  564  (2026-09-20_22-26-57.png)
+    //   sound    719  (2026-09-20_22-26-47.png)
+    //
+    // This is still deterministic: it depends only on which view is open, so
+    // it cannot drift as content arrives, which is what the fixed-height
+    // requirement was guarding against. Wi-Fi and Bluetooth keep the home
+    // height because no reference capture of them exists in the batch.
+    readonly property int panelHeight:
+        view === "display" ? 564
+        : view === "sound"   ? 719
+        : 514
     implicitHeight: panelHeight
 
     // True while a sub-page is open. The drill card hides by collapsing its
@@ -283,7 +310,9 @@ Surface {
         SliderCard {
             Layout.fillWidth: true
             cardLabel: "Display"
-            sliderIcon: "brightness_7"
+            // The home capture's Display slider carries the same ring-and-dots
+            // sun as the drill-down one, not brightness_7's filled gear.
+            sliderIcon: "wb_sunny"
             sliderValue: Math.max(0.04, Brightness.level / 100)
             onSliderMoved: (f) => Brightness.setBrightness(Math.round(f * 100))
             onSliderScrolled: (delta) => Brightness.step(delta * 5)
@@ -614,15 +643,16 @@ Surface {
         // Set explicitly rather than by anchors, so x stays writable and the
         // reveal below can slide the box onto the clicked cell. Geometry is
         // identical to the anchors this replaces.
-        readonly property real baseX: parent.x + 10
-        readonly property real baseY: root.panelHeight - 14 - height
-        width: parent.width - 20
+        // Same 22px inset sheet as the Display page — see dispFlick.
+        readonly property real baseX: parent.x + 22
+        readonly property real baseY: root.panelHeight - 22 - height
+        width: parent.width - 44
         // Bottom-anchored: the popover hangs off the panel's bottom edge and
         // grows upward in proportion to its content, so a short page sits low
         // and a tall one reaches higher. The BOX is still placed exactly that
         // way; only the content inside it scrolls, so a list longer than the
         // panel can be reached instead of being silently clipped.
-        height: Math.min(soundFlickContent.implicitHeight, root.panelHeight - 14)
+        height: Math.min(soundFlickContent.implicitHeight, root.panelHeight - 44)
         y: baseY + (1 - scale) * pivot.y
         contentWidth: width
         contentHeight: soundFlickContent.implicitHeight
@@ -657,6 +687,12 @@ Surface {
         }
         Behavior on opacity { NumberAnimation { duration: MotionConfig.fade(); easing.type: Easing.OutCubic } }
 
+        Rectangle {
+            anchors.fill: parent
+            radius: 24
+            color: root.bgSurface
+        }
+
         ColumnLayout {
             id: soundFlickContent
             width: soundFlick.width
@@ -666,29 +702,44 @@ Surface {
             // ── Sticky mini-header ───────────────────────────────────
             SubPageHeader {
                 Layout.fillWidth: true
+                Layout.leftMargin: 15
+                Layout.rightMargin: 15
                 title: "Sound"
                 onBack: root.view = "home"
             }
 
-            Item { Layout.preferredHeight: 10 }
+            Item { Layout.preferredHeight: 8 }
 
             // ── Output ───────────────────────────────────────────────
+            // The reference sets each group in from the sheet's edge by 14px
+            // and breathes 5px between device rows; this ran them together
+            // and hard against the edge.
             StyledText {
+                Layout.fillWidth: true
+                Layout.leftMargin: 15
+                Layout.rightMargin: 15
                 text: "Output"
                 font.pixelSize: 11
-                color: "#777777"
+                color: root.textDim
             }
             Item { Layout.preferredHeight: 6 }
 
-            Repeater {
-                model: Volume.sinks
-                delegate: CcDeviceRow {
-                    required property var modelData
-                    Layout.fillWidth: true
-                    label: Volume.displayName(modelData)
-                    icon: "speaker"
-                    selected: Volume.isDefaultSink(modelData)
-                    onPicked: Volume.setDefaultSink(modelData)
+            ColumnLayout {
+                Layout.fillWidth: true
+                Layout.leftMargin: 15
+                Layout.rightMargin: 15
+                spacing: 5
+
+                Repeater {
+                    model: Volume.sinks
+                    delegate: CcDeviceRow {
+                        required property var modelData
+                        Layout.fillWidth: true
+                        label: Volume.displayName(modelData)
+                        icon: "speaker"
+                        selected: Volume.isDefaultSink(modelData)
+                        onPicked: Volume.setDefaultSink(modelData)
+                    }
                 }
             }
 
@@ -697,6 +748,8 @@ Surface {
             // Output volume
             CcDeviceSlider {
                 Layout.fillWidth: true
+                Layout.leftMargin: 15
+                Layout.rightMargin: 15
                 icon: Volume.muted ? "volume_off" : "volume_up"
                 value: Volume.muted ? 0 : Volume.volumePercent
                 onMoved: (f) => Volume.setVolume(f * 100)
@@ -706,21 +759,31 @@ Surface {
 
             // ── Input ────────────────────────────────────────────────
             StyledText {
+                Layout.fillWidth: true
+                Layout.leftMargin: 15
+                Layout.rightMargin: 15
                 text: "Input"
                 font.pixelSize: 11
-                color: "#777777"
+                color: root.textDim
             }
             Item { Layout.preferredHeight: 6 }
 
-            Repeater {
-                model: Volume.sources
-                delegate: CcDeviceRow {
-                    required property var modelData
-                    Layout.fillWidth: true
-                    label: Volume.displayName(modelData)
-                    icon: "mic"
-                    selected: Volume.isDefaultSource(modelData)
-                    onPicked: Volume.setDefaultSource(modelData)
+            ColumnLayout {
+                Layout.fillWidth: true
+                Layout.leftMargin: 15
+                Layout.rightMargin: 15
+                spacing: 5
+
+                Repeater {
+                    model: Volume.sources
+                    delegate: CcDeviceRow {
+                        required property var modelData
+                        Layout.fillWidth: true
+                        label: Volume.displayName(modelData)
+                        icon: "mic"
+                        selected: Volume.isDefaultSource(modelData)
+                        onPicked: Volume.setDefaultSource(modelData)
+                    }
                 }
             }
 
@@ -729,6 +792,8 @@ Surface {
             // Input volume
             CcDeviceSlider {
                 Layout.fillWidth: true
+                Layout.leftMargin: 15
+                Layout.rightMargin: 15
                 icon: Volume.micMuted ? "mic_off" : "mic"
                 value: Volume.micMuted ? 0 : Volume.micVolumePercent
                 onMoved: (f) => Volume.setMicVolume(f * 100)
@@ -738,39 +803,59 @@ Surface {
 
             // ── Apps ─────────────────────────────────────────────────
             StyledText {
+                Layout.fillWidth: true
+                Layout.leftMargin: 15
+                Layout.rightMargin: 15
                 text: "Apps"
                 font.pixelSize: 11
-                color: "#777777"
+                color: root.textDim
                 visible: Volume.streams.length > 0
             }
             Item { Layout.preferredHeight: 6; visible: Volume.streams.length > 0 }
 
+            // Each stream is a card like every other row in this page, with
+            // its name above its own slider. This used to be bare text on
+            // the sheet, so the app list read as a different surface.
             Repeater {
                 model: Volume.streams
-                delegate: ColumnLayout {
+                delegate: Rectangle {
                     required property var modelData
                     Layout.fillWidth: true
-                    spacing: 6
+                    Layout.leftMargin: 15
+                    Layout.rightMargin: 15
+                    Layout.preferredHeight: streamCol.implicitHeight + 16
+                    Layout.topMargin: 5
+                    radius: 13
+                    color: root.bgItem
+                    border.color: "#282828"
+                    border.width: 1
 
-                    StyledText {
-                        text: Volume.displayName(modelData)
-                        font.pixelSize: 12
-                        font.weight: Font.Medium
-                        color: "#DDDDDD"
-                        elide: Text.ElideRight
-                        Layout.fillWidth: true
-                    }
+                    ColumnLayout {
+                        id: streamCol
+                        anchors { fill: parent; margins: 8 }
+                        spacing: 6
 
-                    // Per-app stream volume. The node is tracked in the service
-                    // (PwObjectTracker) so this stays live.
-                    CcDeviceSlider {
-                        Layout.fillWidth: true
-                        icon: "volume_up"
-                        value: modelData.audio ? Math.round(modelData.audio.volume * 100) : 0
-                        onMoved: (f) => {
-                            if (!modelData.audio) return;
-                            modelData.audio.muted = false;
-                            modelData.audio.volume = Math.max(0, Math.min(1, f));
+                        StyledText {
+                            text: Volume.displayName(modelData)
+                            font.pixelSize: 13
+                            font.weight: Font.Medium
+                            color: "#FFFFFF"
+                            elide: Text.ElideRight
+                            Layout.fillWidth: true
+                        }
+
+                        // Per-app stream volume. The node is tracked in the
+                        // service (PwObjectTracker) so this stays live.
+                        CcDeviceSlider {
+                            Layout.fillWidth: true
+                            onCard: true
+                            icon: "volume_up"
+                            value: modelData.audio ? Math.round(modelData.audio.volume * 100) : 0
+                            onMoved: (f) => {
+                                if (!modelData.audio) return;
+                                modelData.audio.muted = false;
+                                modelData.audio.volume = Math.max(0, Math.min(1, f));
+                            }
                         }
                     }
                 }
@@ -802,15 +887,21 @@ Surface {
         // Set explicitly rather than by anchors, so x stays writable and the
         // reveal below can slide the box onto the clicked cell. Geometry is
         // identical to the anchors this replaces.
-        readonly property real baseX: parent.x + 10
-        readonly property real baseY: root.panelHeight - 14 - height
-        width: parent.width - 20
+        // The reference drill-down is a #181614 sheet inset 22px inside the
+        // black panel on all four sides -- measured off the Display crop,
+        // where the panel's own edges fall at x 380.40 / 894.74 and the
+        // sheet's at 402.58 / 872.67. It used to be flush to the panel
+        // with only a 10px horizontal inset and no sheet behind it at all,
+        // so the cards read as floating directly on black.
+        readonly property real baseX: parent.x + 22
+        readonly property real baseY: root.panelHeight - 22 - height
+        width: parent.width - 44
         // Bottom-anchored: the popover hangs off the panel's bottom edge and
         // grows upward in proportion to its content, so a short page sits low
         // and a tall one reaches higher. The BOX is still placed exactly that
         // way; only the content inside it scrolls, so a list longer than the
         // panel can be reached instead of being silently clipped.
-        height: Math.min(dispFlickContent.implicitHeight, root.panelHeight - 14)
+        height: Math.min(dispFlickContent.implicitHeight, root.panelHeight - 44)
         y: baseY + (1 - scale) * pivot.y
         contentWidth: width
         contentHeight: dispFlickContent.implicitHeight
@@ -820,6 +911,10 @@ Surface {
         interactive: contentHeight > height
         flickableDirection: Flickable.VerticalFlick
         visible: root.view === "display"
+
+        onVisibleChanged: {
+            if (visible) Brightness.refreshMonitorInfo()
+        }
 
         // Grow out of the cell that was clicked.
         //
@@ -845,6 +940,12 @@ Surface {
         }
         Behavior on opacity { NumberAnimation { duration: MotionConfig.fade(); easing.type: Easing.OutCubic } }
 
+        Rectangle {
+            anchors.fill: parent
+            radius: 24
+            color: root.bgSurface
+        }
+
         ColumnLayout {
             id: dispFlickContent
             width: dispFlick.width
@@ -854,72 +955,119 @@ Surface {
             // ── Sticky mini-header ───────────────────────────────────
             SubPageHeader {
                 Layout.fillWidth: true
+                Layout.leftMargin: 15
+                Layout.rightMargin: 15
                 title: "Display"
                 onBack: root.view = "home"
             }
 
             Item { Layout.preferredHeight: 12 }
 
-            Item { Layout.preferredHeight: 14 }
-
             // ── Per-monitor brightness cards ──────────────────────────
+            // 15px in from the sheet, 13px between cards: the reference's
+            // nesting. The sheet's own edges are 22px inside the panel and
+            // the cards' 15px inside that, which is what makes the measured
+            // card 440px wide (514 - 2*22 - 2*15).
             Repeater {
                 model: Brightness.monitors
-                ColumnLayout {
+                MonitorCard {
                     required property var modelData
                     Layout.fillWidth: true
-                    spacing: 10
-
-                    MonitorCard {
-                        Layout.fillWidth: true
-                        monitorModel: modelData
-                    }
-
-                    Item { Layout.preferredHeight: 4 }
+                    Layout.leftMargin: 15
+                    Layout.rightMargin: 15
+                    Layout.topMargin: 12
+                    monitorModel: modelData
                 }
             }
 
-            // ── Night Light solid card ────────────────────────────────
+            // ── Night Light card ──────────────────────────────────────
+            //
+            // The reference reads the live colour temperature under the
+            // label ("3700 K"), not a bare "On"/"Off", and carries a second
+            // moon slider underneath the toggle. This used to stop at the
+            // switch, so the page showed "Off" and nothing to drag.
             Rectangle {
                 Layout.fillWidth: true
-                Layout.preferredHeight: 56
-                radius: 14
-                color: root.bgCard
-                border.color: "#282828"
-                border.width: 1
+                Layout.leftMargin: 15
+                Layout.rightMargin: 15
+                Layout.topMargin: 12
+                Layout.preferredHeight: nlCol.implicitHeight + 20
+                radius: 15
+                color: root.bgItem
+                border.width: 0
 
-                RowLayout {
-                    anchors { fill: parent; leftMargin: 12; rightMargin: 12 }
-                    spacing: 12
+                ColumnLayout {
+                    id: nlCol
+                    anchors { fill: parent; margins: 10 }
+                    spacing: 10
 
-                    Rectangle {
-                        Layout.preferredWidth: 36; Layout.preferredHeight: 36; radius: 10
-                        color: NightLight.enabled ? Qt.rgba(root.accent.r, root.accent.g, root.accent.b, 0.25) : "#2c2c2c"
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: 10
 
-                        Icon {
-                            anchors.centerIn: parent
-                            icon: "nightlight"
-                            size: 18
-                            iconColor: NightLight.enabled ? root.accent : "#AAAAAA"
+                        Rectangle {
+                            // 30, matching the per-monitor badge: the
+                            // reference's Night Light disc measures 30x30.
+                            Layout.preferredWidth: 30; Layout.preferredHeight: 30; radius: 15
+                            color: NightLight.enabled ? root.accent : root.bgBadgeDim
+                            Behavior on color { ColorAnimation { duration: MotionConfig.hover() } }
+
+                            Icon {
+                                anchors.centerIn: parent
+                                icon: "nightlight"
+                                size: 15
+                                iconColor: NightLight.enabled ? root.accentText : "#CCCCCC"
+                            }
+                        }
+
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: 1
+                            StyledText { text: "Night Light"; font.pixelSize: 13; font.weight: Font.Medium; color: "#FFFFFF" }
+                            StyledText {
+                                text: NightLight.enabled
+                                    ? Math.round(NightLight.nightTemperature) + " K"
+                                    : "Off"
+                                font.pixelSize: 12
+                                color: root.textDim
+                            }
+                        }
+
+                        // 42 x 21 is already the reference's size: the
+                        // switch measures 41 x 22 as a solid teal shape in
+                        // the Display capture, so it is left alone.
+                        Toggle {
+                            Layout.preferredWidth: 42
+                            Layout.preferredHeight: 21
+                            checked: NightLight.enabled
+                            accentColor: root.accent
+                            // The reference knob is a black hole in the
+                            // accent pill, not a white one.
+                            thumbColor: "#000000"
+                            onToggled: NightLight.toggle()
                         }
                     }
 
-                    ColumnLayout {
+                    // 1000..6500K, i.e. hyprsunset's identity (6500K) at
+                    // the warm end. The reference does not say what range
+                    // its own slider spans, so this is the defensible one
+                    // rather than a fitted guess.
+                    CcDeviceSlider {
                         Layout.fillWidth: true
-                        spacing: 1
-                        StyledText { text: "Night Light"; font.pixelSize: 13; font.weight: Font.Medium; color: "#FFFFFF" }
-                        StyledText { text: NightLight.enabled ? "On" : "Off"; font.pixelSize: 11; color: "#777777" }
-                    }
-
-                    Toggle {
-                        checked: NightLight.enabled
-                        accentColor: root.accent
-                        onToggled: NightLight.toggle()
+                        visible: NightLight.enabled
+                        onCard: true
+                        // Same crescent as the badge above it — the reference
+                        // uses one glyph in both places.
+                        icon: "nightlight"
+                        value: Math.max(0, Math.min(100,
+                            (NightLight.nightTemperature - 1000) / 55))
+                        onMoved: (f) => NightLight.setTemperature(
+                            Math.round(1000 + f * 5500))
                     }
                 }
             }
 
-            Item { Layout.preferredHeight: 4 }
+            Item { Layout.preferredHeight: 14 }
         }
     }
 
@@ -1286,12 +1434,15 @@ Surface {
         signal back()
         signal toggled()
 
-        spacing: 10
+        spacing: 12
 
-        // Back
+        // Back. The reference's chevron disc is 23px -- measured directly,
+        // its #272221 fill spans x 418..440 and y 62..84 in the Display
+        // capture -- so this is smaller than the 28 it used to carry, not
+        // larger. Scaling the previous value up would have been wrong here.
         Rectangle {
             id: backBtn
-            Layout.preferredWidth: 34; Layout.preferredHeight: 34; radius: width / 2
+            Layout.preferredWidth: 23; Layout.preferredHeight: 23; radius: width / 2
             color: backHover.hovered ? root.bgItemHover : root.bgItem
             border.color: "#282828"
             border.width: 1
@@ -1300,14 +1451,14 @@ Surface {
             Icon {
                 anchors.centerIn: parent
                 icon: "chevron_left"
-                size: 18
+                size: 14
                 iconColor: "#DDDDDD"
             }
         }
 
         StyledText {
             text: sph.title
-            font.pixelSize: 15
+            font.pixelSize: 18
             font.weight: Font.DemiBold
             color: "#FFFFFF"
             Layout.fillWidth: true
@@ -1331,6 +1482,9 @@ Surface {
         property bool selected: false
         signal picked()
 
+        // 40: the reference rows are 41px of #272221 (y 180..220 and
+        // 225..265 in the Sound capture), against 39 for the 38 this
+        // carried before.
         Layout.preferredHeight: 40
         radius: 12
         color: devHover.hovered ? root.bgItemHover : root.bgItem
@@ -1344,11 +1498,14 @@ Surface {
             anchors { fill: parent; leftMargin: 10; rightMargin: 12 }
             spacing: 10
 
+            // The reference's unselected badge is a warm #413a37 disc, not
+            // the neutral #2c2c2c this used. 29px: the accent disc in the
+            // Sound capture measures 29 across.
             Rectangle {
-                Layout.preferredWidth: 26
-                Layout.preferredHeight: 26
+                Layout.preferredWidth: 29
+                Layout.preferredHeight: 29
                 radius: width / 2
-                color: devRow.selected ? root.accent : "#2c2c2c"
+                color: devRow.selected ? root.accent : root.bgBadgeDim
                 Behavior on color { ColorAnimation { duration: MotionConfig.hover() } }
 
                 Icon {
@@ -1361,7 +1518,7 @@ Surface {
 
             StyledText {
                 text: devRow.label
-                font.pixelSize: 12
+                font.pixelSize: 14
                 color: "#FFFFFF"
                 elide: Text.ElideRight
                 Layout.fillWidth: true
@@ -1370,74 +1527,86 @@ Surface {
             Icon {
                 visible: devRow.selected
                 icon: "check"
-                size: 15
+                size: 14
                 iconColor: root.accent
             }
         }
     }
 
     // ── CcDeviceSlider — slider with a leading glyph and a % readout ─
+    //
+    // The reference draws this as a bare track sitting straight on the
+    // popover, with the glyph riding inside the accent fill and the
+    // percentage OUTSIDE the track on the right. It used to be a bordered
+    // card with a separate glyph column, which read as one more row in the
+    // list rather than as the group's volume control.
     component CcDeviceSlider: Rectangle {
         id: devSlider
         property string icon: "volume_up"
         property real value: 0
+        // Set when the slider sits on a #272221 card, which needs the
+        // slightly lighter track.
+        property bool onCard: false
         signal moved(real fraction)
 
-        Layout.preferredHeight: 32
+        // 26: the reference's slider tracks are 26px of solid accent fill
+        // (y 368..393 and 576..601 in the Sound capture), against 24 here.
+        Layout.preferredHeight: 26
         radius: 12
-        color: root.bgItem
-        border.color: "#282828"
-        border.width: 1
+        color: "transparent"
+        border.width: 0
 
-        RowLayout {
-            anchors { fill: parent; leftMargin: 10; rightMargin: 12 }
-            spacing: 10
+        Item {
+            id: devTrack
+            anchors.left: parent.left
+            anchors.right: pct.left
+            anchors.rightMargin: 17
+            anchors.verticalCenter: parent.verticalCenter
+            height: 26
 
-            Icon {
-                icon: devSlider.icon
-                size: 15
-                iconColor: "#DDDDDD"
-            }
-
-            // Track
-            Item {
-                Layout.fillWidth: true
-                Layout.preferredHeight: 14
+            Rectangle {
+                anchors.fill: parent
+                radius: height / 2
+                color: devSlider.onCard ? root.bgSliderTrackCard : root.bgSliderTrack
 
                 Rectangle {
-                    anchors.fill: parent
-                    radius: height / 2
-                    color: root.bgSliderTrack
-
-                    Rectangle {
-                        anchors { left: parent.left; top: parent.top; bottom: parent.bottom }
-                        width: Math.max(0, Math.min(1, devSlider.value / 100)) * parent.width
-                        radius: parent.radius
-                        color: root.accent
-                        Behavior on width {
-                            enabled: !devMouse.pressed && !MotionConfig.reduceMotion
-                            SpringAnimation { spring: 3.6; damping: MotionConfig.springDamping; mass: 0.9 }
-                        }
+                    anchors { left: parent.left; top: parent.top; bottom: parent.bottom }
+                    width: Math.max(parent.height, parent.width * Math.max(0, Math.min(1, devSlider.value / 100)))
+                    radius: parent.radius
+                    color: root.accent
+                    Behavior on width {
+                        enabled: !devMouse.pressed && !MotionConfig.reduceMotion
+                        SpringAnimation { spring: 3.6; damping: MotionConfig.springDamping; mass: 0.9 }
                     }
                 }
 
-                MouseArea {
-                    id: devMouse
-                    anchors.fill: parent
-                    cursorShape: Qt.PointingHandCursor
-                    function set(mx) { devSlider.moved(Math.max(0, Math.min(1, mx / width))); }
-                    onPressed: (e) => set(e.x)
-                    onPositionChanged: (e) => { if (pressed) set(e.x); }
+                Icon {
+                    anchors { left: parent.left; leftMargin: 9; verticalCenter: parent.verticalCenter }
+                    icon: devSlider.icon
+                    size: 14
+                    iconColor: "#111111"
                 }
             }
 
-            StyledText {
-                text: Math.round(devSlider.value) + "%"
-                font.pixelSize: 11
-                color: "#999999"
-                Layout.preferredWidth: 34
-                horizontalAlignment: Text.AlignRight
+            MouseArea {
+                id: devMouse
+                anchors.fill: parent
+                cursorShape: Qt.PointingHandCursor
+                function set(mx) { devSlider.moved(Math.max(0, Math.min(1, mx / width))); }
+                onPressed: (e) => set(e.x)
+                onPositionChanged: (e) => { if (pressed) set(e.x); }
             }
+        }
+
+        StyledText {
+            id: pct
+            anchors.right: parent.right
+            anchors.rightMargin: 7
+            anchors.verticalCenter: parent.verticalCenter
+            text: Math.round(devSlider.value) + "%"
+            font.pixelSize: 12
+            color: "#999999"
+            horizontalAlignment: Text.AlignRight
         }
     }
 
@@ -1696,12 +1865,18 @@ Surface {
     // ── MonitorCard — solid per-display brightness + scale card ───
     component MonitorCard: Rectangle {
         id: mc
-        radius: 16
+        // The reference card is a #272221 slab with a soft edge and no
+        // hairline, sitting on the #181614 popover. It used to be the same
+        // #181614 as the popover with a visible border, which made the
+        // nesting read as flat.
+        radius: 15
         property var monitorModel: null
-        implicitHeight: mcCol.implicitHeight + 24
-        color: root.bgCard
-        border.color: "#282828"
-        border.width: 1
+        // +27, not +20: the reference card is 163px tall and its own
+        // measured edges put the content 17px above the card's bottom,
+        // against this column's 10px margin.
+        implicitHeight: mcCol.implicitHeight + 27
+        color: root.bgItem
+        border.width: 0
 
         readonly property real brightness: monitorModel ? monitorModel.brightness : 0
         readonly property string monName: monitorModel ? monitorModel.modelData.name : ""
@@ -1712,10 +1887,25 @@ Surface {
             const hz = monitorModel ? Brightness.refreshRates[monitorModel.modelData.name] : undefined;
             return (typeof hz === "number" && isFinite(hz) && hz > 0) ? Math.round(hz) + " Hz" : "";
         }
+        // Quickshell.screens has no per-output scale in this build, so the
+        // scale comes from Brightness's own Hyprland probe. Falls back to
+        // modelData.scale in case a future build does expose it.
+        readonly property real monScale: {
+            if (!monitorModel) return 0;
+            const probed = Brightness.outputScales[monitorModel.modelData.name];
+            if (typeof probed === "number" && probed > 0) return probed;
+            const direct = monitorModel.modelData.scale;
+            return (typeof direct === "number" && direct > 0) ? direct : 0;
+        }
+
+        readonly property string monScaleLabel: monScale > 0
+            ? Number(monScale).toFixed(2).replace(/0$/, "") + "x"
+            : ""
+
         readonly property string monDesc: monitorModel ? [
             monitorModel.modelData.width + "×" + monitorModel.modelData.height,
             _hz,
-            (monitorModel.modelData.scale ? Number(monitorModel.modelData.scale).toFixed(2).replace(/0$/, "") + "x" : "")
+            monScaleLabel
         ].filter(s => s !== "").join("  ·  ") : ""
 
         // There is no Hyprland focused-output feed wired into this config, so
@@ -1729,88 +1919,128 @@ Surface {
 
         ColumnLayout {
             id: mcCol
-            anchors { fill: parent; margins: 14 }
-            spacing: 10
+            anchors { fill: parent; margins: 10 }
+            // 7, not 10: in the reference the gap between the bottom of the
+            // brightness track (y 185.1) and the top of the scale chips
+            // (y 192) is 6.9px. The gap below the chips is wider, which the
+            // resolution row's topMargin below carries.
+            spacing: 7
 
             RowLayout {
                 Layout.fillWidth: true
                 spacing: 10
 
+                // A 30px disc. The focused output gets a solid accent fill
+                // with a dark glyph; the others get a warm grey disc with a
+                // pale glyph. It used to be a 36px rounded square with a
+                // 20%-alpha accent wash, which matched neither. The 30 is
+                // the reference's: the accent disc on the DP-1 card measures
+                // 30 x 29 as a solid teal shape.
                 Rectangle {
-                    Layout.preferredWidth: 36; Layout.preferredHeight: 36; radius: 10
-                    color: Qt.rgba(root.accent.r, root.accent.g, root.accent.b, 0.2)
-                    Icon { anchors.centerIn: parent; icon: "monitor"; size: 18; iconColor: root.accent }
+                    Layout.preferredWidth: 30; Layout.preferredHeight: 30; radius: 15
+                    color: mc.focused ? root.accent : root.bgBadgeDim
+                    Behavior on color { ColorAnimation { duration: MotionConfig.hover() } }
+                    Icon {
+                        anchors.centerIn: parent
+                        icon: "monitor"
+                        size: 15
+                        iconColor: mc.focused ? root.accentText : "#CCCCCC"
+                    }
                 }
 
                 ColumnLayout {
                     Layout.fillWidth: true
                     spacing: 1
                     StyledText { text: mc.monName; font.pixelSize: 13; font.weight: Font.DemiBold; color: "#FFFFFF" }
-                    StyledText { text: mc.monDesc; font.pixelSize: 11; color: "#777777" }
+                    StyledText { text: mc.monDesc; font.pixelSize: 11; color: root.textDim }
                 }
 
                 StyledText {
                     visible: mc.focused
+                    Layout.alignment: Qt.AlignVCenter
                     text: "focused"
-                    font.pixelSize: 10
+                    font.pixelSize: 11
                     color: root.accent
                 }
             }
 
+            // Track with the percentage parked OUTSIDE it on the right, as
+            // the reference has it. The readout used to be drawn inside the
+            // track and flipped colour with the level, which put a number
+            // on top of the accent fill.
             Item {
+                id: mcBrightRow
                 Layout.fillWidth: true
-                Layout.preferredHeight: 30
+                // 26: the reference track's own edges cross half-way at
+                // y 159.1 and 185.1.
+                Layout.preferredHeight: 26
 
-                Rectangle {
-                    anchors.fill: parent
-                    radius: height / 2
-                    color: root.bgSliderTrack
-                    clip: true
+                Item {
+                    id: mcTrack
+                    anchors.left: parent.left
+                    anchors.right: mcPct.left
+                    anchors.rightMargin: 17
+                    anchors.verticalCenter: parent.verticalCenter
+                    height: 26
 
                     Rectangle {
-                        anchors { left: parent.left; top: parent.top; bottom: parent.bottom }
-                        width: Math.max(parent.height, parent.width * Math.max(0, Math.min(1, mc.brightness)))
-                        radius: parent.radius
-                        color: root.accent
-                        Behavior on width {
-                            enabled: !brightMouse.pressed && !MotionConfig.reduceMotion
-                            SpringAnimation { spring: 3.6; damping: MotionConfig.springDamping; mass: 0.9 }
+                        anchors.fill: parent
+                        radius: height / 2
+                        color: root.bgSliderTrackCard
+                        clip: true
+
+                        Rectangle {
+                            anchors { left: parent.left; top: parent.top; bottom: parent.bottom }
+                            width: Math.max(parent.height, parent.width * Math.max(0, Math.min(1, mc.brightness)))
+                            radius: parent.radius
+                            color: root.accent
+                            Behavior on width {
+                                enabled: !brightMouse.pressed && !MotionConfig.reduceMotion
+                                SpringAnimation { spring: 3.6; damping: MotionConfig.springDamping; mass: 0.9 }
+                            }
+                        }
+
+                        Icon {
+                            anchors { left: parent.left; leftMargin: 9; verticalCenter: parent.verticalCenter }
+                            // "brightness_5" in Material Symbols is a
+                            // scalloped gear; the reference slider uses the
+                            // ring-and-dots sun, which is "wb_sunny".
+                            icon: "wb_sunny"; size: 14; iconColor: "#111111"
                         }
                     }
 
-                    Icon {
-                        anchors { left: parent.left; leftMargin: 9; verticalCenter: parent.verticalCenter }
-                        icon: "brightness_5"; size: 16; iconColor: "#111111"
-                    }
-
-                    StyledText {
-                        anchors { right: parent.right; rightMargin: 10; verticalCenter: parent.verticalCenter }
-                        text: Math.round(mc.brightness * 100) + "%"
-                        font.pixelSize: 11
-                        color: mc.brightness > 0.5 ? "#111111" : "#FFFFFF"
+                    MouseArea {
+                        id: brightMouse
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        function set(mx) {
+                            if (mc.monitorModel)
+                                mc.monitorModel.setBrightness(Math.max(0.01, Math.min(1, mx / width)))
+                        }
+                        onPressed: (e) => set(e.x)
+                        onPositionChanged: (e) => { if (pressed) set(e.x) }
+                        onWheel: (e) => {
+                            if (mc.monitorModel)
+                                mc.monitorModel.setBrightness(mc.brightness + (e.angleDelta.y > 0 ? 0.05 : -0.05))
+                        }
                     }
                 }
 
-                MouseArea {
-                    id: brightMouse
-                    anchors.fill: parent
-                    cursorShape: Qt.PointingHandCursor
-                    function set(mx) {
-                        if (mc.monitorModel)
-                            mc.monitorModel.setBrightness(Math.max(0.01, Math.min(1, mx / width)))
-                    }
-                    onPressed: (e) => set(e.x)
-                    onPositionChanged: (e) => { if (pressed) set(e.x) }
-                    onWheel: (e) => {
-                        if (mc.monitorModel)
-                            mc.monitorModel.setBrightness(mc.brightness + (e.angleDelta.y > 0 ? 0.05 : -0.05))
-                    }
+                StyledText {
+                    id: mcPct
+                    anchors.right: parent.right
+                    anchors.rightMargin: 7
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: Math.round(mc.brightness * 100) + "%"
+                    font.pixelSize: 12
+                    color: "#999999"
+                    horizontalAlignment: Text.AlignRight
                 }
             }
 
             RowLayout {
                 Layout.fillWidth: true
-                spacing: 6
+                spacing: 5
 
                 Repeater {
                     model: [1.0, 1.25, 1.5, 1.75, 2.0]
@@ -1818,13 +2048,17 @@ Surface {
                     Rectangle {
                         required property real modelData
                         readonly property bool selected: mc.monitorModel &&
-                            Math.abs(mc.monitorModel.modelData.scale - modelData) < 0.05
-                        height: 30
+                            mc.monScale > 0 &&
+                            Math.abs(mc.monScale - modelData) < 0.05
+                        // 28 tall and fully rounded: the reference's scale
+                        // chips are pills, not 30px rounded squares. The
+                        // selected chip's own teal edge runs y 193..220 in
+                        // the Display capture -- 28, against 26 here.
+                        height: 28
                         width: scaleLabel.implicitWidth + 20
-                        radius: 8
-                        color: selected ? root.accent : root.bgItem
-                        border.color: selected ? root.accent : "#2c2c2c"
-                        border.width: 1
+                        radius: height / 2
+                        color: selected ? root.accent : root.bgPill
+                        border.width: 0
                         Behavior on color { ColorAnimation { duration: MotionConfig.hover() } }
 
                         HoverHandler { cursorShape: Qt.PointingHandCursor }
@@ -1834,6 +2068,10 @@ Surface {
                                     "hyprctl", "keyword", "monitor",
                                     mc.monName + ",preferred,auto," + modelData
                                 ])
+                                // The scale we just asked for is not what the
+                                // probe last saw; re-read so the chip lights
+                                // up and the spec line follows.
+                                Brightness.refreshMonitorInfo()
                             }
                         }
 
@@ -1848,17 +2086,23 @@ Surface {
                 }
             }
 
-            Rectangle {
+            // The reference sets this row straight onto the card — no second
+            // bordered box — and indents it a little further in than the
+            // chips above.
+            Item {
                 Layout.fillWidth: true
-                Layout.preferredHeight: 38; radius: 10
-                color: root.bgItem
-                border.color: "#282828"
-                border.width: 1
+                Layout.preferredHeight: 18
+                Layout.leftMargin: 8
+                // The reference opens this row 14px below the chips (their
+                // bottom edge is y 220, its own ink starts at 239) where the
+                // column's own 7px spacing would leave 7.
+                Layout.topMargin: 7
+
                 HoverHandler { cursorShape: Qt.PointingHandCursor }
 
                 RowLayout {
-                    anchors { fill: parent; leftMargin: 12; rightMargin: 12 }
-                    StyledText { text: "Resolution"; font.pixelSize: 12; color: "#AAAAAA" }
+                    anchors { fill: parent; rightMargin: 3 }
+                    StyledText { text: "Resolution"; font.pixelSize: 13; color: root.textDim }
                     Item { Layout.fillWidth: true }
                     StyledText {
                         // Same omission rule as monDesc: no refresh rate
@@ -1868,7 +2112,7 @@ Surface {
                                mc.monitorModel.modelData.height +
                                (mc._hz ? " @ " + mc._hz : ""))
                             : ""
-                        font.pixelSize: 12; color: "#888888"
+                        font.pixelSize: 13; color: "#8a8a8a"
                     }
                     Icon { icon: "chevron_right"; size: 14; iconColor: "#666666" }
                 }

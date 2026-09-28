@@ -16,7 +16,11 @@ Surface {
     property int selectedIndex: 0
     property int hoverIndex: -1
 
-    implicitHeight: column.implicitHeight + 24
+    // Reference (2026-09-20_22-27-53.png) budgets exactly 366:
+    //   21 top pad + 32 field + 8 + 1 divider + 11 + 6 rows of 46 (276) + 17
+    //   = 366, with the panel's top edge at y 16 and the first row at y 89.
+    // The column is inset 12 left and right, and 21/17 top and bottom.
+    implicitHeight: column.implicitHeight + 38
 
     transformOrigin: Item.Center
 
@@ -197,7 +201,12 @@ Surface {
         id: column
 
         anchors.fill: parent
-        anchors.margins: 12
+        anchors.leftMargin: 12
+        anchors.rightMargin: 12
+        // 21 above and 17 below, from the reference's 366px budget. These
+        // were a uniform 12, which made the panel 26 short.
+        anchors.topMargin: 21
+        anchors.bottomMargin: 17
 
         spacing: 0
 
@@ -207,7 +216,8 @@ Surface {
 
         RowLayout {
             Layout.fillWidth: true
-            Layout.preferredHeight: 44
+            // Reference: the field's fill (38,36,36) spans y 46..77, so 32 tall.
+            Layout.preferredHeight: 32
 
             Layout.leftMargin: 8
             Layout.rightMargin: 8
@@ -262,8 +272,11 @@ Surface {
             Layout.fillWidth: true
             Layout.preferredHeight: 1
 
+            // Reference: the divider sits at y 76..77 and the first row starts
+            // at y 89, so 8px above it and 11px below. This was 8/8, which
+            // put the rows hard against the divider.
             Layout.topMargin: 8
-            Layout.bottomMargin: 8
+            Layout.bottomMargin: 11
 
             color: Qt.rgba(1, 1, 1, 0.08)
 
@@ -334,7 +347,12 @@ Surface {
 
                 y: targetIndex * ConfigStore.launcherRowHeight
 
-                color: Theme.colors.surfaceAlt
+                // Reference: the selected row's fill is (43,39,37) = #2b2725,
+                // a dark neutral. This was Theme.colors.surfaceAlt, which in
+                // ariadne is #06ccae — a bright teal that filled the entire
+                // row and read as a solid accent block. The reference carries
+                // the accent on the 3px bar alone.
+                color: "#2b2725"
 
                 visible:
                     root.results.length > 0
@@ -348,10 +366,11 @@ Surface {
                     }
                 }
 
-                // Accent indicator.
+                // Accent indicator. Reference: a 3px teal bar 22 tall
+                // (x 231..233, y 101..122).
                 Rectangle {
                     width: 3
-                    height: 26
+                    height: 22
 
                     radius: 2
 
