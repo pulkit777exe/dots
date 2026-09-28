@@ -73,9 +73,18 @@ Item {
         // `root.width / 2 - width - 8`, which put the panel's right edge at
         // the screen's top middle -- so the dot visibly flew to the middle and
         // the panel grew from there instead of opening from where it sits.
+        // Expanded: centred on the island root, matching the control centre
+        // on the right. See the right dot's x for the measurement and for why
+        // this is derived from root.width rather than the notch.
+        //
+        // INFERRED, not measured: no full-screen reference shows the media
+        // panel expanded, so the reference set does not pin its anchor. It is
+        // centred for consistency with the control centre, which is
+        // evidence-backed. Revert to `collapsedCentre - width / 2` if the
+        // reference actually dot-anchors it.
         x: isExpanded
-            ? Math.max(root.gapFromScreenEdge,
-                Math.min(collapsedCentre - width / 2, root.width - width - root.gapFromScreenEdge))
+            ? Math.max(root.gapFromEdge,
+                Math.min((root.width - width) / 2, root.width - width - root.gapFromEdge))
             : collapsedX
 
         Behavior on width {
@@ -107,7 +116,11 @@ Item {
             topRightRadius: (root.notchMode && !leftDotWrap.isExpanded) ? 0 : cornerRadius
             bottomLeftRadius: cornerRadius
             bottomRightRadius: cornerRadius
-            backgroundColor: leftDotWrap.isExpanded ? "#141414" : "#000000"
+            // Pure black when expanded, like the control centre. Sampling
+            // 2026-09-20_22-25-23 -- the media panel reference -- gives
+            // (0,0,0) for the panel body, so #141414 here was lifting the
+            // media panel off the desktop and out of step with its twin.
+            backgroundColor: "#000000"
             shadow: leftDotWrap.isExpanded
 
             Behavior on cornerRadius {
@@ -495,14 +508,34 @@ Item {
         readonly property real collapsedCentre: collapsedX + root.barHeight / 2
 
         // Position: collapsed, immediately right of the centre notch.
-        // Expanded, the panel is centred on THIS DOT's centre, then clamped to
-        // stay on screen. It used to be hardcoded to `root.width / 2 + 8`,
-        // which put the panel's left edge at the screen's top middle -- the
-        // dot flew to the middle and the panel grew from there instead of
-        // opening from where it sits.
+        // Expanded, the panel is centred on the NOTCH, not on this dot.
+        //
+        // Measured off 2026-09-20_22-27-14, a 1920x1077 full-screen capture
+        // with the control centre open: the panel's margins sit at x ~706 and
+        // ~1214, so it spans 509px centred on 960 -- the screen's centre
+        // exactly, and the notch's. Dot-anchoring put it at 1041..1551,
+        // 336px right of the reference.
+        //
+        // The notch is used rather than `root.width / 2` so the panel tracks
+        // the notch if it is ever off-centre, and is clamped so a panel wider
+        // than the screen still stays on it.
+        // Expanded: centred on the island root, which spans the screen.
+        //
+        // Measured off 2026-09-20_22-27-14, a 1920x1077 full-screen capture
+        // with the control centre open: the panel's margins sit at x ~706 and
+        // ~1214, so it spans ~509px centred on 960. Verified by hardcoding 703
+        // and measuring the render at 704..1215.
+        //
+        // Centred on root.width rather than on the notch's live x/width. The
+        // notch-relative form was tried first and evaluated to 1041, not 703:
+        // the notch is wider than BarConfig.collapsedWidth and its geometry
+        // is not what a collapsed-width arithmetic assumes. Deriving from
+        // root.width also drops a chained binding onto the notch's *animating*
+        // x and width -- the same fragility the dot positions already have to
+        // work around.
         x: isExpanded
-            ? Math.max(root.gapFromScreenEdge,
-                Math.min(collapsedCentre - width / 2, root.width - width - root.gapFromScreenEdge))
+            ? Math.max(root.gapFromEdge,
+                Math.min((root.width - width) / 2, root.width - width - root.gapFromEdge))
             : collapsedX
 
         Behavior on width {
