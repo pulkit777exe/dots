@@ -329,24 +329,52 @@ Item {
     // ---- One instance per shape, gated on the control's type -------------
 
     StatusPill {
+        // Fill the slot the arranger gives this control. Without it the
+        // shape fell back to its implicit size, and StatusPill and
+        // SliderCard declare only an implicitHeight -- so they rendered
+        // 0px wide and the icon disc sat on top of the title instead of
+        // beside it. DiscButton happened to look right only because its
+        // 52x52 implicit size is close to a 1x1 cell.
+        anchors.fill: parent
         visible: root.controlType === "wifi"
         title: "Wi-Fi"; iconName: "wifi"; isOn: Wifi.connected
         subtitle: Wifi.connected ? (Wifi.ssid || "Connected") : "Off"
     }
 
     StatusPill {
+        // Fill the slot the arranger gives this control. Without it the
+        // shape fell back to its implicit size, and StatusPill and
+        // SliderCard declare only an implicitHeight -- so they rendered
+        // 0px wide and the icon disc sat on top of the title instead of
+        // beside it. DiscButton happened to look right only because its
+        // 52x52 implicit size is close to a 1x1 cell.
+        anchors.fill: parent
         visible: root.controlType === "bluetooth"
         title: "Bluetooth"; iconName: "bluetooth"; isOn: Bluetooth.enabled
         subtitle: Bluetooth.enabled ? (Bluetooth.connectedName || "On") : "Off"
     }
 
     StatusPill {
+        // Fill the slot the arranger gives this control. Without it the
+        // shape fell back to its implicit size, and StatusPill and
+        // SliderCard declare only an implicitHeight -- so they rendered
+        // 0px wide and the icon disc sat on top of the title instead of
+        // beside it. DiscButton happened to look right only because its
+        // 52x52 implicit size is close to a 1x1 cell.
+        anchors.fill: parent
         visible: root.controlType === "focus"
         title: "Focus"; iconName: "do_not_disturb_on"; isOn: Notifications.dnd
         subtitle: Notifications.dnd ? "On" : "Off"
     }
 
     StatusPill {
+        // Fill the slot the arranger gives this control. Without it the
+        // shape fell back to its implicit size, and StatusPill and
+        // SliderCard declare only an implicitHeight -- so they rendered
+        // 0px wide and the icon disc sat on top of the title instead of
+        // beside it. DiscButton happened to look right only because its
+        // 52x52 implicit size is close to a 1x1 cell.
+        anchors.fill: parent
         visible: root.controlType === "gameMode"
         title: "Game Mode"; iconName: "sports_esports"
         isOn: PowerProfile.active === "performance"
@@ -354,6 +382,13 @@ Item {
     }
 
     StatusPill {
+        // Fill the slot the arranger gives this control. Without it the
+        // shape fell back to its implicit size, and StatusPill and
+        // SliderCard declare only an implicitHeight -- so they rendered
+        // 0px wide and the icon disc sat on top of the title instead of
+        // beside it. DiscButton happened to look right only because its
+        // 52x52 implicit size is close to a 1x1 cell.
+        anchors.fill: parent
         visible: root.controlType === "nowPlaying"
         title: Media.hasPlayer ? (Media.title || "Now Playing") : "Nothing playing"
         iconName: "music_note"
@@ -362,6 +397,13 @@ Item {
     }
 
     StatusPill {
+        // Fill the slot the arranger gives this control. Without it the
+        // shape fell back to its implicit size, and StatusPill and
+        // SliderCard declare only an implicitHeight -- so they rendered
+        // 0px wide and the icon disc sat on top of the title instead of
+        // beside it. DiscButton happened to look right only because its
+        // 52x52 implicit size is close to a 1x1 cell.
+        anchors.fill: parent
         visible: root.controlType === "clipboard"
         title: "Clipboard"; iconName: "content_paste"
         isOn: Clipboard.entries.length > 0
@@ -369,29 +411,64 @@ Item {
     }
 
     DiscButton {
+        // Fill the slot the arranger gives this control. Without it the
+        // shape fell back to its implicit size, and StatusPill and
+        // SliderCard declare only an implicitHeight -- so they rendered
+        // 0px wide and the icon disc sat on top of the title instead of
+        // beside it. DiscButton happened to look right only because its
+        // 52x52 implicit size is close to a 1x1 cell.
+        anchors.fill: parent
         visible: root.controlType === "lock"
         iconName: "lock"
     }
 
     DiscButton {
+        // Fill the slot the arranger gives this control. Without it the
+        // shape fell back to its implicit size, and StatusPill and
+        // SliderCard declare only an implicitHeight -- so they rendered
+        // 0px wide and the icon disc sat on top of the title instead of
+        // beside it. DiscButton happened to look right only because its
+        // 52x52 implicit size is close to a 1x1 cell.
+        anchors.fill: parent
         visible: root.controlType === "nightLight"
         iconName: "dark_mode"
         isOn: NightLight.enabled
     }
 
     DiscButton {
+        // Fill the slot the arranger gives this control. Without it the
+        // shape fell back to its implicit size, and StatusPill and
+        // SliderCard declare only an implicitHeight -- so they rendered
+        // 0px wide and the icon disc sat on top of the title instead of
+        // beside it. DiscButton happened to look right only because its
+        // 52x52 implicit size is close to a 1x1 cell.
+        anchors.fill: parent
         visible: root.controlType === "idleInhibit"
         iconName: "coffee"
         isOn: IdleInhibit.active
     }
 
     DiscButton {
+        // Fill the slot the arranger gives this control. Without it the
+        // shape fell back to its implicit size, and StatusPill and
+        // SliderCard declare only an implicitHeight -- so they rendered
+        // 0px wide and the icon disc sat on top of the title instead of
+        // beside it. DiscButton happened to look right only because its
+        // 52x52 implicit size is close to a 1x1 cell.
+        anchors.fill: parent
         visible: root.controlType === "battery"
         iconName: Battery.charging ? "battery_charging_full" : "battery_std"
         isOn: Battery.available
     }
 
     SliderCard {
+        // Fill the slot the arranger gives this control. Without it the
+        // shape fell back to its implicit size, and StatusPill and
+        // SliderCard declare only an implicitHeight -- so they rendered
+        // 0px wide and the icon disc sat on top of the title instead of
+        // beside it. DiscButton happened to look right only because its
+        // 52x52 implicit size is close to a 1x1 cell.
+        anchors.fill: parent
         visible: root.controlType === "sound"
         title: "Sound"
         iconName: Volume.iconName || "volume_up"
@@ -403,6 +480,13 @@ Item {
     }
 
     SliderCard {
+        // Fill the slot the arranger gives this control. Without it the
+        // shape fell back to its implicit size, and StatusPill and
+        // SliderCard declare only an implicitHeight -- so they rendered
+        // 0px wide and the icon disc sat on top of the title instead of
+        // beside it. DiscButton happened to look right only because its
+        // 52x52 implicit size is close to a 1x1 cell.
+        anchors.fill: parent
         visible: root.controlType === "display"
         title: "Display"
         iconName: "brightness_high"
@@ -410,6 +494,13 @@ Item {
     }
 
     NotificationList {
+        // Fill the slot the arranger gives this control. Without it the
+        // shape fell back to its implicit size, and StatusPill and
+        // SliderCard declare only an implicitHeight -- so they rendered
+        // 0px wide and the icon disc sat on top of the title instead of
+        // beside it. DiscButton happened to look right only because its
+        // 52x52 implicit size is close to a 1x1 cell.
+        anchors.fill: parent
         visible: root.controlType === "notifications"
     }
 
