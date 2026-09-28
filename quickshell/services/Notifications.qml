@@ -255,15 +255,19 @@ Singleton {
                             )
                     )
 
-            if (shouldPopup || !root.dnd) {
-                expireTimerComponent.createObject(
-                    root,
-                    {
-                        targetId: entry.id,
-                        interval: timeoutMs
-                    }
-                )
-            }
+            // Armed unconditionally, not just when the notification popped
+            // up. The old `shouldPopup || !root.dnd` skipped the timer
+            // whenever DND was on and nothing was allowed to popup, which
+            // left the entry in Notifications.active forever: the stack grew
+            // without bound and nothing but a restart cleared it. Suppressing
+            // the popup is not a reason to suppress expiry.
+            expireTimerComponent.createObject(
+                root,
+                {
+                    targetId: entry.id,
+                    interval: timeoutMs
+                }
+            )
 
             notification.tracked = true
         }
@@ -503,16 +507,21 @@ Singleton {
 
         if (shouldPopup) {
             root.playNotifySound()
-
-            expireTimerComponent.createObject(
-                root,
-                {
-                    targetId: notifId,
-                    interval:
-                        entry.expireTimeout
-                }
-            )
         }
+
+        // Armed unconditionally, for the same reason as the server path
+        // above. This is the path every internally-generated toast takes --
+        // battery, Wi-Fi, clipboard, volume -- and it skipped the timer
+        // whenever shouldShowPopup() was false, i.e. when the launcher or
+        // control centre was open. That is what left the Wi-Fi toasts on
+        // screen indefinitely instead of for their 2s timeout.
+        expireTimerComponent.createObject(
+            root,
+            {
+                targetId: notifId,
+                interval: entry.expireTimeout
+            }
+        )
 
         return notifId
     }
