@@ -177,6 +177,20 @@ Surface {
     // it cannot drift as content arrives, which is what the fixed-height
     // requirement was guarding against. Wi-Fi and Bluetooth keep the home
     // height because no reference capture of them exists in the batch.
+    // The drill-down box, identical for every sub-page: from the bottom of
+    // the home's first pill row down to the panel's bottom inset.
+    //
+    // It used to be bottom-anchored with a content-dependent height --
+    // baseY was `panelHeight - 14 - height`, and each page's height came from
+    // its own content -- so every page sat at a different height and the
+    // card's top edge cut through the home wherever it happened to land. The
+    // visible symptoms were a Bluetooth pill sliced in half behind the Wi-Fi
+    // card, and the Sound card filling the panel edge to edge with "Apps"
+    // cut off. One fixed box for all four pages also stops them each picking
+    // a different height for the panel itself.
+    readonly property real drillTop: homePage.y + homePage.firstRowBottom
+    readonly property real drillHeight: Math.max(140, root.panelHeight - 14 - root.drillTop)
+
     readonly property int panelHeight:
         view === "display" ? 564
         : view === "sound"   ? 719
@@ -253,6 +267,15 @@ Surface {
             return t[r] !== undefined ? t[r] : 0
         }
 
+        // Bottom of the first pill row, in homePage coordinates. The
+        // drill-down card starts exactly here, so row 0 stays whole above it
+        // instead of having its neighbour sliced in half.
+        readonly property real firstRowBottom: {
+            const t = rowTops()
+            if (t.length < 2) return Math.min(height, 70)
+            return t[1] - 5
+        }
+
         // The height a single placed control wants, in px. Kept in step with
         // CcControl.cellHeight by construction -- both switch on the same list.
         function rowHeightFor(it) {
@@ -310,19 +333,18 @@ Surface {
         // Set explicitly rather than by anchors, so x stays writable and the
         // reveal below can slide the box onto the clicked cell. Geometry is
         // identical to the anchors this replaces.
-        readonly property real baseX: parent.x + 10
-        readonly property real baseY: root.panelHeight - 14 - height
-        width: parent.width - 20
-        // Matches whichever page is open, so the card is exactly the page's
-        // box. Both hang off the panel's bottom edge and grow upward in
-        // proportion to content: a short page sits low, a tall one reaches
-        // higher. The page ids are the Flickables themselves, so a scrolling
-        // page still reports the same box and the card never drifts off it.
-        height: root.view === "bluetooth" ? btFlick.height
-               : root.view === "display"   ? dispFlick.height
-               : root.view === "wifi"      ? wifiFlick.height
-               : root.view === "sound"     ? soundFlick.height
-               : 0
+        // Match the inset of whichever page is open. Display and Sound are
+        // 22px-inset sheets, Wi-Fi and Bluetooth are 10px; the card was 10px
+        // for all four, so on Display and Sound the sheet sat on a card 24px
+        // wider than itself, with 12px of bare card showing either side.
+        readonly property real inset:
+            (root.view === "display" || root.view === "sound") ? 22 : 10
+        readonly property real baseX: parent.x + inset
+        readonly property real baseY: root.drillTop
+        width: parent.width - inset * 2
+        // The same box the pages use, so the card is always exactly the
+        // page's bounds and cannot drift off a page whose content resizes.
+        height: root.drillHeight
         y: baseY + (1 - scale) * pivot.y
 
 
@@ -368,14 +390,12 @@ Surface {
         // reveal below can slide the box onto the clicked cell. Geometry is
         // identical to the anchors this replaces.
         readonly property real baseX: parent.x + 10
-        readonly property real baseY: root.panelHeight - 14 - height
+        readonly property real baseY: root.drillTop
         width: parent.width - 20
-        // Bottom-anchored: the popover hangs off the panel's bottom edge and
-        // grows upward in proportion to its content, so a short page sits low
-        // and a tall one reaches higher. The BOX is still placed exactly that
-        // way; only the content inside it scrolls, so a list longer than the
-        // panel can be reached instead of being silently clipped.
-        height: Math.min(btFlickContent.implicitHeight, root.panelHeight - 14)
+        // The shared drill-down box, not a content-derived one. The page
+        // content still scrolls inside it, so a list taller than the box is
+        // reachable rather than silently clipped.
+        height: root.drillHeight
         y: baseY + (1 - scale) * pivot.y
         contentWidth: width
         contentHeight: btFlickContent.implicitHeight
@@ -384,6 +404,13 @@ Surface {
         // Nothing to scroll when the content fits: no travel, no grab.
         interactive: contentHeight > height
         flickableDirection: Flickable.VerticalFlick
+
+        SubtleScroll {
+            flickable: btFlick
+            anchors.right: parent.right
+            anchors.top: parent.top
+            anchors.bottom: parent.bottom
+        }
         visible: root.view === "bluetooth"
 
         // Grow out of the cell that was clicked.
@@ -544,14 +571,11 @@ Surface {
         // identical to the anchors this replaces.
         // Same 22px inset sheet as the Display page — see dispFlick.
         readonly property real baseX: parent.x + 22
-        readonly property real baseY: root.panelHeight - 22 - height
+        readonly property real baseY: root.drillTop
         width: parent.width - 44
-        // Bottom-anchored: the popover hangs off the panel's bottom edge and
-        // grows upward in proportion to its content, so a short page sits low
-        // and a tall one reaches higher. The BOX is still placed exactly that
-        // way; only the content inside it scrolls, so a list longer than the
-        // panel can be reached instead of being silently clipped.
-        height: Math.min(soundFlickContent.implicitHeight, root.panelHeight - 44)
+        // The shared drill-down box, not a content-derived one; the content
+        // still scrolls inside it.
+        height: root.drillHeight
         y: baseY + (1 - scale) * pivot.y
         contentWidth: width
         contentHeight: soundFlickContent.implicitHeight
@@ -560,6 +584,13 @@ Surface {
         // Nothing to scroll when the content fits: no travel, no grab.
         interactive: contentHeight > height
         flickableDirection: Flickable.VerticalFlick
+
+        SubtleScroll {
+            flickable: soundFlick
+            anchors.right: parent.right
+            anchors.top: parent.top
+            anchors.bottom: parent.bottom
+        }
         visible: root.view === "sound"
 
         // Grow out of the cell that was clicked.
@@ -793,14 +824,11 @@ Surface {
         // with only a 10px horizontal inset and no sheet behind it at all,
         // so the cards read as floating directly on black.
         readonly property real baseX: parent.x + 22
-        readonly property real baseY: root.panelHeight - 22 - height
+        readonly property real baseY: root.drillTop
         width: parent.width - 44
-        // Bottom-anchored: the popover hangs off the panel's bottom edge and
-        // grows upward in proportion to its content, so a short page sits low
-        // and a tall one reaches higher. The BOX is still placed exactly that
-        // way; only the content inside it scrolls, so a list longer than the
-        // panel can be reached instead of being silently clipped.
-        height: Math.min(dispFlickContent.implicitHeight, root.panelHeight - 44)
+        // The shared drill-down box, not a content-derived one; the content
+        // still scrolls inside it.
+        height: root.drillHeight
         y: baseY + (1 - scale) * pivot.y
         contentWidth: width
         contentHeight: dispFlickContent.implicitHeight
@@ -809,6 +837,13 @@ Surface {
         // Nothing to scroll when the content fits: no travel, no grab.
         interactive: contentHeight > height
         flickableDirection: Flickable.VerticalFlick
+
+        SubtleScroll {
+            flickable: dispFlick
+            anchors.right: parent.right
+            anchors.top: parent.top
+            anchors.bottom: parent.bottom
+        }
         visible: root.view === "display"
 
         onVisibleChanged: {
@@ -983,14 +1018,12 @@ Surface {
         // reveal below can slide the box onto the clicked cell. Geometry is
         // identical to the anchors this replaces.
         readonly property real baseX: parent.x + 10
-        readonly property real baseY: root.panelHeight - 14 - height
+        readonly property real baseY: root.drillTop
         width: parent.width - 20
-        // Bottom-anchored: the popover hangs off the panel's bottom edge and
-        // grows upward in proportion to its content, so a short page sits low
-        // and a tall one reaches higher. The BOX is still placed exactly that
-        // way; only the content inside it scrolls, so a list longer than the
-        // panel can be reached instead of being silently clipped.
-        height: Math.min(wifiFlickContent.implicitHeight, root.panelHeight - 14)
+        // The shared drill-down box, not a content-derived one. The page
+        // content still scrolls inside it, so a list taller than the box is
+        // reachable rather than silently clipped.
+        height: root.drillHeight
         y: baseY + (1 - scale) * pivot.y
         contentWidth: width
         contentHeight: wifiFlickContent.implicitHeight
@@ -999,6 +1032,13 @@ Surface {
         // Nothing to scroll when the content fits: no travel, no grab.
         interactive: contentHeight > height
         flickableDirection: Flickable.VerticalFlick
+
+        SubtleScroll {
+            flickable: wifiFlick
+            anchors.right: parent.right
+            anchors.top: parent.top
+            anchors.bottom: parent.bottom
+        }
         visible: root.view === "wifi"
 
         // Grow out of the cell that was clicked.
@@ -1803,6 +1843,7 @@ Surface {
                 }
 
                 Flickable {
+                    id: notifFlick
                     Layout.fillWidth: true
                     Layout.preferredHeight: Math.min(notifGridList.implicitHeight,
                                                       ConfigStore.notifHistoryHeight)
@@ -1811,6 +1852,13 @@ Surface {
                     contentHeight: notifGridList.implicitHeight
                     clip: true
                     boundsBehavior: Flickable.StopAtBounds
+
+                    SubtleScroll {
+                        flickable: notifFlick
+                        anchors.right: parent.right
+                        anchors.top: parent.top
+                        anchors.bottom: parent.bottom
+                    }
 
                     ColumnLayout {
                         id: notifGridList
