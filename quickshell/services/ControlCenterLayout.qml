@@ -42,7 +42,22 @@ Singleton {
 
     property string selectedId: ""
 
-    readonly property var undoStack: []
+    // NOT readonly. _commit() pushes onto it and undo() pops off it, and a
+    // readonly property makes both throw:
+    //
+    //   TypeError: Cannot assign to read-only property "undoStack"
+    //     at services/ControlCenterLayout.qml[309:-1]
+    //
+    // That silently disabled the entire arranger. _commit() runs *before*
+    // the caller writes the new state, so the throw aborted resizeTo, moveTo,
+    // remove, setColumns, add, tidy and reset -- each one returned without
+    // doing anything, and with no visible error, because the exception was
+    // swallowed inside a QML function call. Only the selection chrome
+    // appeared to work, since that path does not commit.
+    property var undoStack: []
+
+    // Derived, so this one can stay readonly; it re-evaluates on each
+    // reassignment of undoStack.
     readonly property int undoDepth: undoStack.length
 
     // ---- Control catalogue ----------------------------------------------
@@ -308,7 +323,23 @@ Singleton {
     function _commit() {
         root.undoStack = root.undoStack.concat([{ items: root.items, columns: root.columns }]);
         if (root.undoStack.length > 50) root.undoStack = root.undoStack.slice(1);
-        _persist();
+        // Deferred, not persisted here. Every caller runs _commit() *before*
+        // it writes the new state -- resizeTo, moveTo, remove, undo and
+        // setColumns all follow this call with their assignment to items --
+        // so persisting inline serialised the pre-edit layout and the file
+        // always lagged one change behind, losing the last edit on restart.
+        //
+        // A short debounce rather than Qt.callLater: callLater never ran here
+        // (and a 0ms Timer.restart() never fired either), so nothing was
+        // written at all. 60ms also coalesces a drag, which commits on every
+        // pointer move, into a single write of the final layout.
+        persistDebounce.restart();
+    }
+
+    Timer {
+        id: persistDebounce
+        interval: 60
+        onTriggered: root._persist()
     }
 
     // ---- Persistence -----------------------------------------------------
