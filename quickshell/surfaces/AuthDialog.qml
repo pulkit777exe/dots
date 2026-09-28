@@ -28,12 +28,12 @@ Surface {
     // y 231.6..264.6.
     // ─────────────────────────────────────────────────────────────
 
-    // 432, not 430. The reference's dialog measures 430 x 266 of pure black
-    // (2026-09-20_22-28-58.png), but that is the FILL, and Surface draws a
-    // 1px border outside it -- so the element is 432 x 268. At 430 the render
-    // came out 428 of fill, 2px narrow. The 29 below is the vertical budget
-    // and carries the same +2.
-    width: 432
+    // 392, measured off 2026-09-20_22-28-58 by finding the crop's only
+    // near-black region: x 192..583, y 12..277, i.e. 392 x 266 including the
+    // 1px border. That scan is unambiguous -- the rest of the crop is teal
+    // wallpaper -- so it beats the earlier eyeball figure of 430 that this
+    // comment used to carry, which had the dialog 40px too wide.
+    width: 392
     implicitHeight: column.implicitHeight + 31
 
     cornerRadius: 26
