@@ -1842,37 +1842,56 @@ Surface {
                     color: "#555555"
                 }
 
-                Flickable {
-                    id: notifFlick
+                // The list and its scroll indicator sit in a plain Item, with
+                // the indicator as a later sibling of the Flickable rather
+                // than a child of it.
+                //
+                // A Flickable composites its contentItem ahead of its own
+                // other children, so an indicator inside the Flickable is
+                // painted *under* the cards. The cards are translucent, so it
+                // still showed through rather than vanishing -- just dimmed
+                // where they overlapped, which read as three broken segments
+                // instead of one continuous thumb. Moving it after the
+                // Flickable, raising its z, and dropping the contentItem's z
+                // were each tried and none changed the paint order. As a
+                // sibling in a plain Item the ordering is ordinary, so it is
+                // on top.
+                Item {
+                    id: notifListBox
                     Layout.fillWidth: true
                     Layout.preferredHeight: Math.min(notifGridList.implicitHeight,
                                                       ConfigStore.notifHistoryHeight)
                     visible: Notifications.active.length > 0
-                    contentWidth: width
-                    contentHeight: notifGridList.implicitHeight
-                    clip: true
-                    boundsBehavior: Flickable.StopAtBounds
+
+                    Flickable {
+                        id: notifFlick
+                        anchors.fill: parent
+                        contentWidth: width
+                        contentHeight: notifGridList.implicitHeight
+                        clip: true
+                        boundsBehavior: Flickable.StopAtBounds
+
+                        ColumnLayout {
+                            id: notifGridList
+                            width: parent.width
+                            spacing: 8
+                            Repeater {
+                                model: Notifications.active
+                                delegate: NotifRow {
+                                    required property var modelData
+                                    Layout.fillWidth: true
+                                    notif: modelData
+                                    onDismissed: Notifications.dismiss(modelData.id)
+                                }
+                            }
+                        }
+                    }
 
                     SubtleScroll {
                         flickable: notifFlick
                         anchors.right: parent.right
                         anchors.top: parent.top
                         anchors.bottom: parent.bottom
-                    }
-
-                    ColumnLayout {
-                        id: notifGridList
-                        width: parent.width
-                        spacing: 8
-                        Repeater {
-                            model: Notifications.active
-                            delegate: NotifRow {
-                                required property var modelData
-                                Layout.fillWidth: true
-                                notif: modelData
-                                onDismissed: Notifications.dismiss(modelData.id)
-                            }
-                        }
                     }
                 }
             }
