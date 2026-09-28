@@ -327,7 +327,14 @@ Item {
                 Behavior on opacity { NumberAnimation { duration: MotionConfig.fade(); easing.type: Easing.OutCubic } }
 
                 MouseArea {
+                    id: notchHover
                     anchors.fill: parent
+                    // The notch was the one interactive element on the bar with
+                    // no hover feedback: this MouseArea had no hoverEnabled and
+                    // nothing anywhere read containsMouse, so the clock gave no
+                    // sign it was a target while the two dots beside it both
+                    // lifted. Added to match them.
+                    hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
                     onClicked: UiState.toggleCalendar()
                 }
@@ -336,15 +343,51 @@ Item {
                 // isOsd alone rather than on this Item's visibility, so the
                 // OSD can take over the notch without taking the click
                 // target with it.
-                StyledText {
-                    anchors.centerIn: parent
-                    text: root.currentTime
-                    font.pixelSize: 14
-                    font.weight: Font.DemiBold
-                    color: "#F7EFE1"
-                    visible: !centerNotchWrap.isOsd
-                    opacity: visible ? 1 : 0
-                    Behavior on opacity { NumberAnimation { duration: MotionConfig.fade(); easing.type: Easing.OutCubic } }
+                //
+                // Wrapped in a hover stage with the same lift and scale the
+                // dots use on dotArtContainer, so all three of the bar's
+                // targets behave alike.
+                //
+                // The stage is a sibling of the MouseArea rather than its
+                // parent, for the same reason the dots lift the artwork and
+                // not the hit area: lifting the MouseArea would move the
+                // target out from under the cursor and flicker at the edges.
+                // It is parent-sized so the default centre transform origin
+                // lands on the pill's centre, which is also where the clock
+                // already sits via anchors.centerIn.
+                Item {
+                    width: parent.width
+                    height: parent.height
+                    // Half the dots' stageLiftOnHover. At the full 7px the
+                    // clock's top row lands on row 7, which is exactly the
+                    // pill's own top row, so the glyph rides the edge and
+                    // reads as clipped -- measured on a grim capture with the
+                    // cursor parked on the notch. The dots can afford the
+                    // full lift because their art is a 24px disc in a 30px
+                    // dot that reads as rising out of the pill; the clock is
+                    // ~10px of text with only ~10px of slack above it.
+                    y: -(notchHover.containsMouse ? BarConfig.stageLiftOnHover / 2 : 0)
+                    scale: notchHover.containsMouse ? 1.05 : 1.0
+
+                    Behavior on scale {
+                        enabled: !MotionConfig.reduceMotion
+                        SpringAnimation { spring: 5.2; damping: MotionConfig.springDamping; mass: 0.6 }
+                    }
+                    Behavior on y {
+                        enabled: !MotionConfig.reduceMotion
+                        SpringAnimation { spring: 5.2; damping: MotionConfig.springDamping; mass: 0.6 }
+                    }
+
+                    StyledText {
+                        anchors.centerIn: parent
+                        text: root.currentTime
+                        font.pixelSize: 14
+                        font.weight: Font.DemiBold
+                        color: "#F7EFE1"
+                        visible: !centerNotchWrap.isOsd
+                        opacity: visible ? 1 : 0
+                        Behavior on opacity { NumberAnimation { duration: MotionConfig.fade(); easing.type: Easing.OutCubic } }
+                    }
                 }
             }
 
