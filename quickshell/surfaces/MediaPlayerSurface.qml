@@ -19,12 +19,31 @@ Item {
         border.width: 1
         clip: true
 
-        // Subtle album art background glow (low opacity so it doesn't wash out solid background)
+        // Album-art backdrop.
+        //
+        // The reference (2026-09-20_22-25-23) fills the whole card with the
+        // artwork, *blurred* and heavily washed: interior samples run
+        // (45,75,145), (122,134,168), (159,114,98) -- recognisably the record
+        // cover, not a flat dark. This was 0.08, which is nearly invisible.
+        //
+        // Qt cannot blur here on purpose: GraphicalEffects is not installed on
+        // the target machine and already crashed once (see ARCHITECTURE.md, and
+        // the same note on the art clip below), so the blur itself is not
+        // reproducible. Raising the opacity and laying a dark scrim over it gets
+        // the *value* of a blurred backdrop right, which is most of the read,
+        // without pretending to the blur. Sharp detail under the scrim is the
+        // visible cost.
         Image {
             anchors.fill: parent
             source: Media.artUrl
             fillMode: Image.PreserveAspectCrop
-            opacity: 0.08
+            opacity: 0.34
+            visible: Media.artUrl.length > 0
+        }
+
+        Rectangle {
+            anchors.fill: parent
+            color: Qt.rgba(0, 0, 0, 0.28)
             visible: Media.artUrl.length > 0
         }
 
@@ -106,12 +125,19 @@ Item {
                 }
 
                 // Artist
+                //
+                // Muted, not Theme.colors.accent. In 2026-09-20_22-25-23 the
+                // artist line is a soft grey-green -- its peak sample is
+                // (151,170,159) -- while the accent is #3ed0af, far more
+                // saturated. The reference's exact value is not recoverable
+                // because its text is antialiased over a *blurred, variable*
+                // backdrop, so this matches the register rather than a number.
                 StyledText {
                     Layout.fillWidth: true
                     text: Media.artist || "Unknown artist"
                     font.pixelSize: 13
                     font.weight: Font.Medium
-                    color: Theme.colors.accent
+                    color: Qt.rgba(1, 0.93, 0.88, 0.62)
                     elide: Text.ElideRight
                 }
 
@@ -223,11 +249,18 @@ Item {
                         onClicked: Media.previous()
                     }
 
+                    // Not accent-filled. In 2026-09-20_22-25-23 the play
+                    // button's disc samples (50,71,64) against a surrounding
+                    // backdrop of (48,72,64) -- it is a *barely* lighter
+                    // frosted disc, not a teal button -- while the glyph inside
+                    // is (245,241,215), a warm cream. A solid accent circle here
+                    // was the loudest thing on the card and read as a different
+                    // design entirely.
                     Rectangle {
                         Layout.preferredWidth: 38
                         Layout.preferredHeight: 38
                         radius: 19
-                        color: Theme.colors.accent
+                        color: Qt.rgba(1, 1, 1, 0.09)
 
                         scale: playTap.pressed ? 0.93 : 1.0
                         Behavior on scale { SpringAnimation { spring: 6; damping: 0.7; mass: 0.4 } }
@@ -236,7 +269,7 @@ Item {
                             anchors.centerIn: parent
                             icon: Media.playing ? "pause" : "play_arrow"
                             size: 20
-                            iconColor: Theme.colors.accentText
+                            iconColor: "#F5F1D7"
                         }
 
                         HoverHandler { id: playHover; cursorShape: Qt.PointingHandCursor }
