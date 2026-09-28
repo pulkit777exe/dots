@@ -21,5 +21,11 @@ ColumnLayout {
     ControlCenterArranger {
         id: arranger
         Layout.fillWidth: true
+        // Zero the demand for width so fillWidth hands the arranger whatever
+        // the content column has, instead of the two children splitting it.
+        // The arranger asks for 728px implicitly (see the note on its own
+        // root), which left the header card -- the other fillWidth child --
+        // with 72px, truncating "Control Center" to "Con...".
+        Layout.preferredWidth: 0
     }
 }

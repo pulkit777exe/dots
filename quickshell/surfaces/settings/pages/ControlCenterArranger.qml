@@ -24,12 +24,13 @@ ColumnLayout {
 
     spacing: 10
 
-    // A ColumnLayout's implicitWidth is the widest of its children, and the two
-    // hint lines here are ~900px of unwrapped text. Inside the page's own
-    // ColumnLayout that made the arranger demand more width than the content
-    // column has, and the header card -- the only other fillWidth child -- was
-    // squeezed to about 60px. Zeroing it lets Layout.fillWidth do the work.
-    implicitWidth: 0
+    // This root's implicitWidth is NOT zeroed here, deliberately. A
+    // ColumnLayout regenerates its own implicitWidth during layout, so an
+    // `implicitWidth: 0` binding on it is inert -- it reads back as 728, the
+    // width of the widest child (the two unwrapped hint lines). The width
+    // demand is zeroed by the parent instead, via Layout.preferredWidth: 0 on
+    // this component, which is the mechanism a ColumnLayout parent does
+    // respect. See ControlCenterPage.qml.
 
     readonly property int cols: ControlCenterLayout.columns
 
