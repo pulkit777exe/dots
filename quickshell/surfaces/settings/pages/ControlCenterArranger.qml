@@ -183,8 +183,23 @@ ColumnLayout {
             // Bare canvas: clears the selection. Declared first so it sits
             // behind the controls rather than swallowing their clicks.
             MouseArea {
+                // Suspend the canvas while the size menu is up. The menu draws over its
+                // neighbours -- it is pinned to the selected control's top-right and is
+                // 130px wide -- but a press still reached the slot underneath, so
+                // right-clicking a size row selected whichever control happened to be
+                // behind the menu instead of resizing anything. A MouseArea under a
+                // TapHandler takes the press and cancels the tap, so the rows could never
+                // win; disabling the canvas is what makes the menu modal.
+                enabled: !sizeMenu.visible
                 anchors.fill: parent
-                acceptedButtons: Qt.LeftButton | Qt.RightButton
+                // Left button only. This area's whole job is "click empty space
+                // to deselect", and it spans the entire canvas including the
+                // controls. Accepting the right button too put it in direct
+                // competition with each slot's own right-click handler, which
+                // selects the control and opens this same menu: whichever ran
+                // last won, and a right-click over a control could leave
+                // nothing selected at all. Right-click belongs to the slots.
+                acceptedButtons: Qt.LeftButton
                 onPressed: { ControlCenterLayout.select(""); root.takeFocus(); }
             }
 
@@ -238,6 +253,14 @@ ColumnLayout {
 
                     // ---- Drag to move ----
                     MouseArea {
+                        // Suspend the canvas while the size menu is up. The menu draws over its
+                        // neighbours -- it is pinned to the selected control's top-right and is
+                        // 130px wide -- but a press still reached the slot underneath, so
+                        // right-clicking a size row selected whichever control happened to be
+                        // behind the menu instead of resizing anything. A MouseArea under a
+                        // TapHandler takes the press and cancels the tap, so the rows could never
+                        // win; disabling the canvas is what makes the menu modal.
+                        enabled: !sizeMenu.visible
                         id: grab
                         anchors.fill: parent
                         anchors.margins: -4
@@ -283,6 +306,14 @@ ColumnLayout {
 
                     // ---- Right-click for sizes ----
                     MouseArea {
+                        // Suspend the canvas while the size menu is up. The menu draws over its
+                        // neighbours -- it is pinned to the selected control's top-right and is
+                        // 130px wide -- but a press still reached the slot underneath, so
+                        // right-clicking a size row selected whichever control happened to be
+                        // behind the menu instead of resizing anything. A MouseArea under a
+                        // TapHandler takes the press and cancels the tap, so the rows could never
+                        // win; disabling the canvas is what makes the menu modal.
+                        enabled: !sizeMenu.visible
                         anchors.fill: parent
                         anchors.margins: -4
                         acceptedButtons: Qt.RightButton
@@ -305,6 +336,14 @@ ColumnLayout {
                         z: 20
 
                         MouseArea {
+                            // Suspend the canvas while the size menu is up. The menu draws over its
+                            // neighbours -- it is pinned to the selected control's top-right and is
+                            // 130px wide -- but a press still reached the slot underneath, so
+                            // right-clicking a size row selected whichever control happened to be
+                            // behind the menu instead of resizing anything. A MouseArea under a
+                            // TapHandler takes the press and cancels the tap, so the rows could never
+                            // win; disabling the canvas is what makes the menu modal.
+                            enabled: !sizeMenu.visible
                             anchors.fill: parent
                             anchors.margins: -8
                             cursorShape: Qt.SizeFDiagCursor
@@ -366,6 +405,20 @@ ColumnLayout {
                     border.color: Qt.rgba(1, 1, 1, 0.1)
                 }
 
+                // Dismisses the menu. Needed because the canvas is disabled
+                // while the menu is up: without this there would be no way to
+                // close it short of Escape, and the canvas click that used to
+                // do it is exactly the pass-through being fixed. Declared
+                // before the rows, which are MouseAreas too, so a press on a
+                // row goes to the row rather than here.
+                MouseArea {
+                    anchors.fill: parent
+                    onClicked: {
+                        ControlCenterLayout.select("");
+                        root.takeFocus();
+                    }
+                }
+
                 StyledText {
                     id: menuTitle
                     anchors.top: parent.top
@@ -398,7 +451,7 @@ ColumnLayout {
                             width: parent.width
                             height: 24
                             radius: 6
-                            color: sizeHover.hovered ? Qt.rgba(1, 1, 1, 0.08) : "transparent"
+                            color: sizeHit.containsMouse ? Qt.rgba(1, 1, 1, 0.08) : "transparent"
 
                             StyledText {
                                 anchors.centerIn: parent
@@ -407,9 +460,12 @@ ColumnLayout {
                                 color: sizeRow.current ? Theme.colors.accent : Qt.rgba(1, 1, 1, 0.75)
                             }
 
-                            HoverHandler { id: sizeHover; cursorShape: Qt.PointingHandCursor }
-                            TapHandler {
-                                onTapped: {
+                            MouseArea {
+                                id: sizeHit
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: {
                                     ControlCenterLayout.resizeTo(sizeMenu.target.id,
                                                                  sizeRow.modelData[0],
                                                                  sizeRow.modelData[1]);
