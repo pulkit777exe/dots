@@ -138,13 +138,18 @@ Singleton {
         return offsets.map(o => Qt.hsla(((c.hslHue + o) % 1 + 1) % 1, s, l, 1));
     }
 
-    ListModel {
-        id: _wallpaperListModel
-    }
-    readonly property var wallpaperPickerModel: _wallpaperListModel
+    // A plain JS array, not a ListModel.
+    //
+    // WallpaperPicker reads its list as an array -- `wallpapers.length`,
+    // `wallpapers[i].selected`, a for-loop over it -- and a ListModel has no
+    // `length`, so passing one left the picker holding `undefined`: the grid
+    // rendered empty and the footer fell through to its zero branch and showed
+    // "0/0" instead of the reference's "6/12 · Enter to apply".
+    //
+    // Reassigned rather than mutated, so bindings on it re-evaluate.
+    property var wallpaperPickerModel: []
 
     function _rebuildWallpaperPickerModel() {
-        _wallpaperListModel.clear();
         const theme = root.presets[root.currentName];
         const wallpapers = (theme && theme.wallpapers) ? theme.wallpapers : [];
         const savedIndex = Number(root.wallpaperIndex[root.currentName] !== undefined ? root.wallpaperIndex[root.currentName] : 0);
@@ -152,15 +157,17 @@ Singleton {
             ? Math.min(savedIndex, wallpapers.length - 1)
             : -1;
 
+        const out = [];
         for (let index = 0; index < wallpapers.length; index++) {
             const path = wallpapers[index];
-            _wallpaperListModel.append({
+            out.push({
                 themeKey: root.currentName,
                 source: root._fileUrl(path),
                 fileName: String(path).split("/").pop(),
                 selected: index === selectedIndex
             });
         }
+        root.wallpaperPickerModel = out;
     }
 
     readonly property var _fallbackColors: ({
