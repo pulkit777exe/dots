@@ -32,17 +32,23 @@ import "../services"
 Item {
     id: ind
 
-    required property Flickable flickable
+    // Not `required`: the Control Center binds this to whichever
+    // drill-down page is open, which is null on the home page. Every use below
+    // is guarded so a null flickable simply hides the indicator.
+    property Flickable flickable
 
     // Gap from the flickable's own edge, so the bar never touches a card.
     property int inset: 3
 
-    readonly property bool needed: flickable.contentHeight > flickable.height + 1
+    readonly property bool needed:
+        flickable !== null && flickable.contentHeight > flickable.height + 1
     readonly property real track: Math.max(1, height - inset * 2)
     // Proportional to the visible fraction, but never so small it is hard to
     // see or grab.
-    readonly property real barSize: Math.max(20, track * (flickable.height / Math.max(1, flickable.contentHeight)))
-    readonly property real travel: Math.max(0, flickable.contentHeight - flickable.height)
+    readonly property real barSize: Math.max(20, track *
+        (flickable ? flickable.height / Math.max(1, flickable.contentHeight) : 1))
+    readonly property real travel:
+        flickable ? Math.max(0, flickable.contentHeight - flickable.height) : 0
     readonly property real pos: travel > 0
         ? Math.max(0, Math.min(1, flickable.contentY / travel))
         : 0
@@ -71,7 +77,7 @@ Item {
 
     states: State {
         name: "lit"
-        when: ind.containsMouse || ind.flickable.moving
+        when: ind.containsMouse || (ind.flickable && ind.flickable.moving)
         PropertyChanges { target: bar; opacity: 0.55 }
     }
 

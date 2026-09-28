@@ -188,6 +188,14 @@ Surface {
     // card, and the Sound card filling the panel edge to edge with "Apps"
     // cut off. One fixed box for all four pages also stops them each picking
     // a different height for the panel itself.
+    // Whichever sub-page is showing, for the shared scroll indicator.
+    readonly property Flickable activeFlick:
+        view === "bluetooth" ? btFlick
+        : view === "display"   ? dispFlick
+        : view === "wifi"      ? wifiFlick
+        : view === "sound"     ? soundFlick
+        : null
+
     readonly property real drillTop: homePage.y + homePage.firstRowBottom
     readonly property real drillHeight: Math.max(140, root.panelHeight - 14 - root.drillTop)
 
@@ -405,12 +413,6 @@ Surface {
         interactive: contentHeight > height
         flickableDirection: Flickable.VerticalFlick
 
-        SubtleScroll {
-            flickable: btFlick
-            anchors.right: parent.right
-            anchors.top: parent.top
-            anchors.bottom: parent.bottom
-        }
         visible: root.view === "bluetooth"
 
         // Grow out of the cell that was clicked.
@@ -585,12 +587,6 @@ Surface {
         interactive: contentHeight > height
         flickableDirection: Flickable.VerticalFlick
 
-        SubtleScroll {
-            flickable: soundFlick
-            anchors.right: parent.right
-            anchors.top: parent.top
-            anchors.bottom: parent.bottom
-        }
         visible: root.view === "sound"
 
         // Grow out of the cell that was clicked.
@@ -838,12 +834,6 @@ Surface {
         interactive: contentHeight > height
         flickableDirection: Flickable.VerticalFlick
 
-        SubtleScroll {
-            flickable: dispFlick
-            anchors.right: parent.right
-            anchors.top: parent.top
-            anchors.bottom: parent.bottom
-        }
         visible: root.view === "display"
 
         onVisibleChanged: {
@@ -1033,12 +1023,6 @@ Surface {
         interactive: contentHeight > height
         flickableDirection: Flickable.VerticalFlick
 
-        SubtleScroll {
-            flickable: wifiFlick
-            anchors.right: parent.right
-            anchors.top: parent.top
-            anchors.bottom: parent.bottom
-        }
         visible: root.view === "wifi"
 
         // Grow out of the cell that was clicked.
@@ -1896,6 +1880,25 @@ Surface {
                 }
             }
         }
+    }
+
+    // One scroll indicator for all four sub-pages, rather than one inside each
+    // page. A Flickable composites its clipped contentItem ahead of its own
+    // other children, so an indicator parented to the Flickable is painted
+    // under the content -- on the notification list the translucent cards
+    // dimmed it into three broken segments. Only one page is open at a time,
+    // so a single indicator bound to whichever is showing is enough, and as a
+    // later sibling it paints over the whole page. The sub-pages are 22px or
+    // 10px inset sheets, so it tracks the card rather than the panel.
+    SubtleScroll {
+        flickable: root.activeFlick
+        z: 60
+        // Inset 6px, not 3. At 3 it landed exactly on the card's 1px border
+        // and was indistinguishable from it; 6 puts it just inside the card
+        // fill, clear of both the border and the content's own right edge.
+        x: drillCard.x + drillCard.width - 6
+        y: drillCard.y + 4
+        height: drillCard.height - 8
     }
 
     // ── MiniHeader — solid mini bar for sub-pages ─────────────────
