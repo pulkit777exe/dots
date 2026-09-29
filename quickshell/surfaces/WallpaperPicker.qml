@@ -18,6 +18,16 @@ Surface {
     implicitHeight: 232
     cornerRadius: 20
 
+    // Thumbnail metrics, named so the delegate and the ListView's highlight
+    // maths cannot drift apart. The delegate is laid out at `itemW` and then
+    // scaled, so its *visual* width is itemW * currentScale -- which is what
+    // has to be used when centring the current item.
+    readonly property real itemW: 196
+    readonly property real itemH: 118
+    readonly property real currentScale: 1.16
+    readonly property real otherScale: 0.87
+    readonly property real scaledItemW: itemW * currentScale
+
     // ------------------------------------------------------------
     // Selection
     // ------------------------------------------------------------
@@ -207,7 +217,14 @@ Surface {
                 ListView.Horizontal
 
             spacing: 12
-            clip: false
+
+            // Clip. It was false, so the thumbnails were free to render past
+            // the panel's edge and over its rounded corner: the current item is
+            // scaled to 1.16, i.e. 227px against a 196px slot, and the
+            // neighbours spill either side of it. With the list 706px of
+            // usable width the three visible items need 170 + 12 + 227 + 12 +
+            // 170 = 591, so clipping costs nothing and nothing can escape.
+            clip: true
 
             model:
                 root.wallpapers
@@ -218,11 +235,15 @@ Surface {
             highlightRangeMode:
                 ListView.StrictlyEnforceRange
 
+            // Centred on the SCALED width. It used the unscaled 196, so the
+            // current item was positioned as if it were still 196 wide while
+            // actually painting 227, leaving it 15px right of centre and
+            // shoving the row toward the panel's right edge.
             preferredHighlightBegin:
-                (width - 196) / 2
+                (width - root.scaledItemW) / 2
 
             preferredHighlightEnd:
-                (width - 196) / 2
+                (width - root.scaledItemW) / 2
 
             highlightMoveDuration:
                 MotionConfig.reduceMotion
@@ -238,13 +259,13 @@ Surface {
                 required property string fileName
                 required property int index
 
-                width: 196
-                height: 118
+                width: root.itemW
+                height: root.itemH
 
                 scale:
                     ListView.isCurrentItem
-                        ? 1.16
-                        : 0.87
+                        ? root.currentScale
+                        : root.otherScale
 
                 opacity:
                     ListView.isCurrentItem

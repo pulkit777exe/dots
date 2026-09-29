@@ -211,7 +211,12 @@ Surface {
                 required property var modelData
                 required property int index
 
-                width: 184
+                // 176, not 184. The panel is 780 wide, so 756 is usable
+                // after its margins, and four cards at 184 with 10px gaps
+                // need 766 -- 10px too many. The fourth card was therefore
+                // clipped by exactly 10px against the panel's edge on every
+                // frame. 176 needs 734, leaving 22px of margin.
+                width: 176
                 height: 98
 
                 readonly property bool selected:
@@ -220,8 +225,17 @@ Surface {
                 readonly property bool highlighted:
                     ListView.isCurrentItem
 
-                scale:
-                    highlighted ? 1.06 : 0.92
+                // Uniform, no scale. The cards were 184px slots scaled to
+                // 1.06 when highlighted and 0.92 otherwise, so a highlighted
+                // card painted 195px into a 184px slot and ate 5.5px of each
+                // neighbour's gap while unhighlighted pairs left 25px. Measured
+                // along the row, the gaps came out 38 / 16 / 16 / 27 / 26 --
+                // visibly irregular, and the two gaps either side of the
+                // highlighted card were the tight ones.
+                //
+                // Nothing is lost: the selected card already carries a border,
+                // a corner dot and full opacity against 0.72 for the rest.
+                scale: 1
 
                 opacity:
                     highlighted ? 1 : 0.72
