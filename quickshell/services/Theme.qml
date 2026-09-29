@@ -34,7 +34,7 @@ Singleton {
     readonly property string statePath: Quickshell.statePath("theme-state.json")
 
     property var presets: ({})
-    property string currentName: "everforest"
+    property string currentName: ""
     property var wallpaperIndex: ({})
 
     readonly property var current: presets[currentName] ? presets[currentName] : null
@@ -149,7 +149,7 @@ Singleton {
     // Reassigned rather than mutated, so bindings on it re-evaluate.
     property var wallpaperPickerModel: []
 
-    function _rebuildWallpaperPickerModel() {
+    function rebuildPickerModel() {
         const theme = root.presets[root.currentName];
         const wallpapers = (theme && theme.wallpapers) ? theme.wallpapers : [];
         const savedIndex = Number(root.wallpaperIndex[root.currentName] !== undefined ? root.wallpaperIndex[root.currentName] : 0);
@@ -236,7 +236,7 @@ Singleton {
         return out;
     }
     function _startColorTransition() {
-        if (_initialWallpaperApplied) {
+        if (wallpaperApplied) {
             _fromColors = _displayedColors;
             _colorProgress = 0;
             _colorAnim.restart();
@@ -246,7 +246,7 @@ Singleton {
         }
     }
     function _startWallpaperTransition(newWall) {
-        if (!_initialWallpaperApplied || !newWall || wallpaperProgress < 1) {
+        if (!wallpaperApplied || !newWall || wallpaperProgress < 1) {
             _wallpaperFrom = "";
         } else {
             _wallpaperFrom = wallpaperTo;
@@ -287,7 +287,7 @@ Singleton {
         easing.type: Easing.InOutCubic
     }
     onCurrentWallpaperChanged: {
-        if (currentWallpaper && _initialWallpaperApplied) _startWallpaperTransition(currentWallpaper);
+        if (currentWallpaper && wallpaperApplied) _startWallpaperTransition(currentWallpaper);
         else {
             wallpaperTo = currentWallpaper;
             _wallpaperFrom = "";
@@ -353,14 +353,14 @@ Singleton {
         if (!presets[name] || name === currentName) return;
 
         currentName = name;
-        // Keep _pendingTheme in step. It is what _applyPresetsData() treats
+        // Keep savedTheme in step. It is what applyPresets() treats
         // as the authoritative selection, and discovery re-runs whenever
         // anything under colors/ changes — including this theme's own
         // publish-colors.py output. Left stale, the next re-run would snap
         // the shell back to the theme it booted with.
-        _pendingTheme = name;
-        _rebuildWallpaperPickerModel();
-        _persist();
+        savedTheme = name;
+        rebuildPickerModel();
+        saveState();
 
         // Push this theme's own static colors out to Hyprland/GTK/CSS —
         // without this, only Theme.qml's own in-shell `colors` binding
@@ -388,8 +388,8 @@ Singleton {
         updated[currentName] = index;
         wallpaperIndex = updated;
 
-        _rebuildWallpaperPickerModel();
-        _persist();
+        rebuildPickerModel();
+        saveState();
         wallpaperChanged(currentWallpaper);
     }
     function cycleWallpaper() {
@@ -405,7 +405,7 @@ Singleton {
             onStreamFinished: {
                 try {
                     const data = JSON.parse(text);
-                    root._applyPresetsData(data);
+                    root.applyPresets(data);
                 } catch (e) {
                     console.warn("Theme: failed to parse discovery output:", e, text.slice(0, 500));
                 }
@@ -430,7 +430,7 @@ Singleton {
     Timer { id: debouncedReload; interval: 400; onTriggered: discovery.running = true }
 
     Component.onCompleted: {
-        _rebuildWallpaperPickerModel();
+        rebuildPickerModel();
         discovery.running = true;
     }
 
@@ -442,19 +442,29 @@ Singleton {
         onFileChanged: discovery.running = true
     }
 
-    // Loading state — state may load before presets, so keep pending theme until presets arrive
-    property bool _presetsResolved: false
-    property bool _stateResolved: false
-    property bool _initialWallpaperApplied: false
-    property string _pendingTheme: ""
+    // ---- Startup ordering ----
+    // The theme list and the saved state arrive independently and in either
+    // order, so nothing may decide currentName until both have landed.
+    // resolveTheme() is the single decider and simply does nothing until
+    // then; whichever side arrives second triggers it. That replaces a
+    // four-branch chain which had to re-check the same conditions in
+    // different combinations.
+    property bool presetsResolved: false
+    property bool stateResolved: false
+    property bool wallpaperApplied: false
+    // The theme theme-state.json holds, or the one just picked in ThemePicker.
+    property string savedTheme: ""
+    // colors/index.json's `current`, with `default` as its seed. Declarative
+    // only: it sets the theme on a machine that has never chosen one.
+    property string declaredTheme: ""
 
     FileView {
         id: stateLoader
         path: root.statePath
         watchChanges: false
         printErrors: true
-        onLoaded: { _applyState(text()); _stateResolved = true; _maybeApplyInitialWallpaper(); }
-        onLoadFailed: (err) => { console.warn("Theme: failed to load state", root.statePath, err); _stateResolved = true; _maybeApplyInitialWallpaper(); }
+        onLoaded: { applyState(text()); stateResolved = true; resolveTheme(); applyInitialWallpaper(); }
+        onLoadFailed: (err) => { console.warn("Theme: failed to load state", root.statePath, err); stateResolved = true; resolveTheme(); applyInitialWallpaper(); }
     }
     FileView {
         id: stateWriter
@@ -463,64 +473,64 @@ Singleton {
         printErrors: false
     }
 
-    function _maybeApplyInitialWallpaper() {
-        if (_initialWallpaperApplied || !_presetsResolved || !_stateResolved) return;
-        _initialWallpaperApplied = true;
+    // The one place the active theme is decided. Precedence, highest first:
+    //   1. savedTheme     — what theme-state.json holds, or was just picked
+    //   2. declaredTheme  — colors/index.json's `current`, the declarative knob
+    //   3. the first theme that exists
+    // Does nothing until both the theme list and the saved state have
+    // arrived, so the order they turn up in cannot change the answer, and a
+    // saved theme that no longer exists (a rename) falls through on its own.
+    function resolveTheme() {
+        if (!presetsResolved || !stateResolved) return;
+        const keys = Object.keys(presets);
+        if (keys.length === 0) return;
+
+        let wanted = keys[0];
+        if (declaredTheme && presets[declaredTheme]) wanted = declaredTheme;
+        if (savedTheme && presets[savedTheme]) wanted = savedTheme;
+        if (currentName !== wanted) currentName = wanted;
+    }
+
+    function applyInitialWallpaper() {
+        if (wallpaperApplied || !presetsResolved || !stateResolved) return;
+        wallpaperApplied = true;
         if (currentWallpaper) wallpaperChanged(currentWallpaper);
         else if (_wallpapers.length === 0) console.warn("Theme: no wallpapers discovered for", currentName);
-        // currentName is final here (state + presets both resolved), so this
-        // is the one place that knows which theme the desktop should be on
-        // at startup. Without it the shell would render the saved theme
-        // while hyprland.conf/gtk/css still held the last published one.
+        // resolveTheme() has now run with both sides loaded, so currentName is
+        // final and this is the one place that knows which theme the desktop
+        // should be on at startup. Without it the shell would render the
+        // saved theme while hyprland.conf/gtk/css still held the last
+        // published one.
         publish(currentName);
     }
 
-    function _applyPresetsData(data) {
+    function applyPresets(data) {
         try {
-            const themes = (data && data.themes) ? data.themes : {};
-            root.presets = themes;
-            // index.json's `current` is the declarative active-theme knob;
-            // `default` is only its seed. Both are overridable by the
-            // shell's own saved state, which wins whenever it exists.
-            const preferred = (data && data.current) || (data && data.default);
-            // Honor saved theme even if state loaded before presets (fixes last wallpaper not remembered)
-            if (_pendingTheme && themes[_pendingTheme]) {
-                root.currentName = _pendingTheme;
-            } else if (preferred && themes[preferred] && !stateLoader.loaded && !_pendingTheme) {
-                root.currentName = preferred;
-            } else if (!themes[currentName] && Object.keys(themes).length > 0) {
-                // currentName not in discovered list (e.g., after rename) -> pick default or first
-                if (preferred && themes[preferred]) root.currentName = preferred;
-                else root.currentName = Object.keys(themes)[0];
-            } else if (_pendingTheme && themes[_pendingTheme] && currentName !== _pendingTheme) {
-                // State arrived after presets but before _maybeApplyInitialWallpaper
-                root.currentName = _pendingTheme;
-            }
+            root.presets = (data && data.themes) ? data.themes : {};
+            root.declaredTheme = (data && data.current) || (data && data.default) || "";
         } catch (e) {
-            console.warn("Theme: _applyPresetsData failed", e);
+            console.warn("Theme: applyPresets failed", e);
         }
 
-        _rebuildWallpaperPickerModel();
-        _presetsResolved = true;
-        _maybeApplyInitialWallpaper();
+        rebuildPickerModel();
+        presetsResolved = true;
+        resolveTheme();
+        applyInitialWallpaper();
     }
 
-    function _applyState(jsonText) {
+    function applyState(jsonText) {
         try {
             const data = JSON.parse(jsonText);
-            if (data.theme) {
-                _pendingTheme = data.theme;
-                // Set immediately; if presets not yet loaded it will be validated in _applyPresetsData
-                // Also set currentName now so wallpaperIndex lookup is correct even before presets
-                currentName = data.theme;
-            }
+            // Only record the choice here. resolveTheme() owns currentName, so
+            // that it can check the theme still exists before adopting it.
+            if (data.theme) savedTheme = data.theme;
             if (data.wallpaperIndex) wallpaperIndex = data.wallpaperIndex;
-            _rebuildWallpaperPickerModel();
+            rebuildPickerModel();
         } catch (e) {
             console.warn("Theme: failed to parse state", root.statePath, e);
         }
     }
-    function _persist() {
+    function saveState() {
         stateWriter.setText(JSON.stringify({
             theme: currentName,
             wallpaperIndex: wallpaperIndex
