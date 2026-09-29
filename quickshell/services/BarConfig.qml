@@ -19,13 +19,13 @@ import Quickshell.Io
 Singleton {
     id: root
 
-    property bool notchMode: false
-    property real notchFlare: 16
-    property real barHeight: 33
-    property real collapsedWidth: 90
-    property real expandedHeight: 125
-    property real minimumExpandedWidth: 440
-    property real gapFromScreenEdge: 11
+    readonly property bool notchMode: data.notchMode
+    readonly property real notchFlare: data.notchFlare
+    readonly property real barHeight: data.barHeight
+    readonly property real collapsedWidth: data.collapsedWidth
+    readonly property real expandedHeight: data.expandedHeight
+    readonly property real minimumExpandedWidth: data.minimumExpandedWidth
+    readonly property real gapFromScreenEdge: data.gapFromScreenEdge
 
     // Only "Corner radius (expanded)" from the reference design is
     // wired here — the collapsed pill shape (`barHeight / 2`) and the
@@ -41,10 +41,10 @@ Singleton {
     // +16. A circle of radius R puts the edge at R - sqrt(2Rd - d^2); R=27
     // predicts 16.8 / 12.9 / 7.8 / 3.9 against those measurements. The old 31
     // is visibly tighter than the reference.
-    property real expandedCornerRadius: 27
+    readonly property real expandedCornerRadius: data.expandedCornerRadius
 
-    property bool statusCircleEnabled: true
-    property bool albumArtCircleEnabled: true
+    readonly property bool statusCircleEnabled: data.statusCircleEnabled
+    readonly property bool albumArtCircleEnabled: data.albumArtCircleEnabled
 
     // ---- The Bar & Island page's three remaining rows -------------------
     // These existed in the reference settings UI with no property behind
@@ -55,96 +55,88 @@ Singleton {
     // Insets the collapsed dot's artwork from the dot's edge. 3 reproduces
     // what Island.qml hardcoded as `barHeight - 6`, so nothing moves on
     // first load; the slider just makes the number reachable.
-    property real innerPadding: 3
+    readonly property real innerPadding: data.innerPadding
 
     // Corner radius of the *collapsed* dot, clamped to barHeight / 2 so the
     // dot can never turn inside-out. The reference shows 20 against a 33px
     // bar, which is already past the capsule limit (16.5) -- so at its
     // default this is a full capsule, exactly as before.
-    property real collapsedCornerRadius: 20
+    readonly property real collapsedCornerRadius: data.collapsedCornerRadius
 
     // How far the dot lifts on hover, in px, moving up and out of the bar.
     // Island.qml used a fixed 1px nudge *down* instead, which read as a
     // press rather than a lift.
-    property real stageLiftOnHover: 7
+    readonly property real stageLiftOnHover: data.stageLiftOnHover
     // How far a dot panel starts above its resting place and slides down
     // into it. One value for both panels so they move as a pair.
     property real panelSlideIn: 22
 
-    function setNotchMode(v) { notchMode = v; save(); }
-    function setNotchFlare(v) { notchFlare = v; save(); }
-    function setBarHeight(v) { barHeight = v; save(); }
-    function setCollapsedWidth(v) { collapsedWidth = v; save(); }
-    function setExpandedHeight(v) { expandedHeight = v; save(); }
-    function setMinimumExpandedWidth(v) { minimumExpandedWidth = v; save(); }
-    function setGapFromScreenEdge(v) { gapFromScreenEdge = v; save(); }
-    function setExpandedCornerRadius(v) { expandedCornerRadius = v; save(); }
-    function setStatusCircleEnabled(v) { statusCircleEnabled = v; save(); }
-    function setAlbumArtCircleEnabled(v) { albumArtCircleEnabled = v; save(); }
-    function setInnerPadding(v) { innerPadding = v; save(); }
-    function setCollapsedCornerRadius(v) { collapsedCornerRadius = v; save(); }
-    function setStageLiftOnHover(v) { stageLiftOnHover = v; save(); }
+    function setNotchMode(v) { data.notchMode = v; save(); }
+    function setNotchFlare(v) { data.notchFlare = v; save(); }
+    function setBarHeight(v) { data.barHeight = v; save(); }
+    function setCollapsedWidth(v) { data.collapsedWidth = v; save(); }
+    function setExpandedHeight(v) { data.expandedHeight = v; save(); }
+    function setMinimumExpandedWidth(v) { data.minimumExpandedWidth = v; save(); }
+    function setGapFromScreenEdge(v) { data.gapFromScreenEdge = v; save(); }
+    function setExpandedCornerRadius(v) { data.expandedCornerRadius = v; save(); }
+    function setStatusCircleEnabled(v) { data.statusCircleEnabled = v; save(); }
+    function setAlbumArtCircleEnabled(v) { data.albumArtCircleEnabled = v; save(); }
+    function setInnerPadding(v) { data.innerPadding = v; save(); }
+    function setCollapsedCornerRadius(v) { data.collapsedCornerRadius = v; save(); }
+    function setStageLiftOnHover(v) { data.stageLiftOnHover = v; save(); }
 
     // The single clamped radius the Island actually applies. Exposed as a
     // readonly so the three call sites can't each re-derive (and mis-clamp)
     // it.
     readonly property real effectiveCollapsedRadius: Math.min(collapsedCornerRadius, barHeight / 2)
 
-    readonly property string statePath: Quickshell.statePath("bar-config.json")
-
+    // ---- Storage -------------------------------------------------------
+    // True once the file has been read, or once we know there isn't one.
     property bool resolved: false
 
+    // Writes the adapter out. Guarded on `resolved` because the file loads
+    // asynchronously: a setter called during startup would otherwise
+    // serialise the defaults straight over the saved config.
+    function save() {
+        if (!root.resolved) return;
+        state.writeAdapter();
+    }
+
+    // One FileView with an adapter on it. The adapter maps each of its
+    // properties to a key in the file and does the parsing and the type
+    // checking itself, so there is no hand-written parse and no
+    // `typeof d.x === "number"` guard per field: a missing key leaves the
+    // declared default in place, and one of the wrong type is dropped
+    // rather than throwing on a corrupt file.
+    //
+    // Written with an explicit writeAdapter() from save() rather than
+    // onAdapterUpdated, because loading the file also updates the adapter's
+    // properties, and that would rewrite the file on every start.
     FileView {
-        id: loader
-        path: root.statePath
+        id: state
+        path: Quickshell.statePath("bar-config.json")
+        // Read once at startup. Watching would fight our own writes.
         watchChanges: false
         printErrors: false
-        onLoaded: { root.applyState(text()); root.resolved = true; }
-        onLoadFailed: (err) => { root.resolved = true; } // no saved config yet, keep defaults
-    }
+        onLoaded: root.resolved = true
+        // No saved config yet is the normal first-run case, not an error.
+        onLoadFailed: root.resolved = true
 
-    FileView {
-        id: writer
-        path: root.statePath
-        printErrors: false
-    }
-
-    function applyState(jsonText) {
-        try {
-            const d = JSON.parse(jsonText);
-            if (typeof d.notchMode === "boolean") root.notchMode = d.notchMode;
-            if (typeof d.notchFlare === "number") root.notchFlare = d.notchFlare;
-            if (typeof d.barHeight === "number") root.barHeight = d.barHeight;
-            if (typeof d.collapsedWidth === "number") root.collapsedWidth = d.collapsedWidth;
-            if (typeof d.expandedHeight === "number") root.expandedHeight = d.expandedHeight;
-            if (typeof d.minimumExpandedWidth === "number") root.minimumExpandedWidth = d.minimumExpandedWidth;
-            if (typeof d.gapFromScreenEdge === "number") root.gapFromScreenEdge = d.gapFromScreenEdge;
-            if (typeof d.expandedCornerRadius === "number") root.expandedCornerRadius = d.expandedCornerRadius;
-            if (typeof d.statusCircleEnabled === "boolean") root.statusCircleEnabled = d.statusCircleEnabled;
-            if (typeof d.albumArtCircleEnabled === "boolean") root.albumArtCircleEnabled = d.albumArtCircleEnabled;
-            if (typeof d.innerPadding === "number") root.innerPadding = d.innerPadding;
-            if (typeof d.collapsedCornerRadius === "number") root.collapsedCornerRadius = d.collapsedCornerRadius;
-            if (typeof d.stageLiftOnHover === "number") root.stageLiftOnHover = d.stageLiftOnHover;
-        } catch (e) {
-            // corrupt/empty state file, ignore — keep defaults
+        JsonAdapter {
+            id: data
+            property bool notchMode: false
+            property real notchFlare: 16
+            property real barHeight: 33
+            property real collapsedWidth: 90
+            property real expandedHeight: 125
+            property real minimumExpandedWidth: 440
+            property real gapFromScreenEdge: 11
+            property real expandedCornerRadius: 27
+            property bool statusCircleEnabled: true
+            property bool albumArtCircleEnabled: true
+            property real innerPadding: 3
+            property real collapsedCornerRadius: 20
+            property real stageLiftOnHover: 7
         }
-    }
-
-    function save() {
-        writer.setText(JSON.stringify({
-            notchMode: root.notchMode,
-            notchFlare: root.notchFlare,
-            barHeight: root.barHeight,
-            collapsedWidth: root.collapsedWidth,
-            expandedHeight: root.expandedHeight,
-            minimumExpandedWidth: root.minimumExpandedWidth,
-            gapFromScreenEdge: root.gapFromScreenEdge,
-            expandedCornerRadius: root.expandedCornerRadius,
-            statusCircleEnabled: root.statusCircleEnabled,
-            albumArtCircleEnabled: root.albumArtCircleEnabled,
-            innerPadding: root.innerPadding,
-            collapsedCornerRadius: root.collapsedCornerRadius,
-            stageLiftOnHover: root.stageLiftOnHover
-        }));
     }
 }
