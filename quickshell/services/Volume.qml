@@ -87,24 +87,24 @@ Singleton {
     // Filtered once here rather than in the view, so the panel stays a
     // visual leaf and the Pipewire knowledge stays in the service.
 
-    readonly property var _allNodes: Pipewire.nodes
+    readonly property var allNodes: Pipewire.nodes
 
-    function _isAudioNode(n) {
+    function isAudioNode(n) {
         return n !== null && n !== undefined && n.audio !== null;
     }
 
     // Hardware output devices.
-    readonly property var sinks: _filterNodes(n => !n.isStream && n.isSink && _isAudioNode(n))
+    readonly property var sinks: filterNodes(n => !n.isStream && n.isSink && isAudioNode(n))
     // Hardware input devices.
-    readonly property var sources: _filterNodes(n => !n.isStream && !n.isSink && _isAudioNode(n))
+    readonly property var sources: filterNodes(n => !n.isStream && !n.isSink && isAudioNode(n))
     // Application streams.
-    readonly property var streams: _filterNodes(n => n.isStream && _isAudioNode(n))
+    readonly property var streams: filterNodes(n => n.isStream && isAudioNode(n))
 
     // Pipewire.nodes is an ObjectModel; build a plain array so views can
     // bind to it directly. Recomputed whenever the node list changes.
-    function _filterNodes(pred) {
+    function filterNodes(pred) {
         const out = [];
-        const model = _allNodes;
+        const model = allNodes;
         if (!model || !model.values) return out;
         for (let i = 0; i < model.values.length; i++) {
             const n = model.values[i];
@@ -116,9 +116,9 @@ Singleton {
     // Nodes must be bound for `.properties` (media.name, application.name)
     // to be valid, so keep every enumerated node tracked.
     PwObjectTracker {
-        objects: root._trackedNodes
+        objects: root.trackedNodes
     }
-    readonly property var _trackedNodes: sinks.concat(sources, streams)
+    readonly property var trackedNodes: sinks.concat(sources, streams)
 
     // Human label, preferring the friendlier of nickname/description.
     function displayName(n) {

@@ -27,7 +27,7 @@ Singleton {
 
     function setQuery(text) {
         query = text;
-        _refilter();
+        refilter();
     }
 
     function launch(result) {
@@ -37,7 +37,7 @@ Singleton {
             return;
         }
         // Use DesktopEntry.execute() — handles working dir, env, etc.
-        const entry = _findEntry(result.title);
+        const entry = findEntry(result.title);
         if (entry) {
             entry.execute();
             launched(app);
@@ -47,32 +47,32 @@ Singleton {
     }
 
     function refresh() {
-        _buildIndex();
+        buildIndex();
     }
 
     Connections {
         target: ConfigStore
-        function onLauncherMaxResultsChanged() { root._refilter(); }
+        function onLauncherMaxResultsChanged() { root.refilter(); }
     }
 
     // ── Native desktop entries ──────────────────────────────────────
     // UntypedObjectModel exposes `values` (a QObjectList) — there is no
     // .count/.get(i) API on it, so the old count/get loop silently
     // produced an empty index (launcher showed no apps).
-    readonly property var _entries: DesktopEntries.applications.values
+    readonly property var entries: DesktopEntries.applications.values
 
-    function _findEntry(name) {
-        for (let i = 0; i < _entries.length; i++) {
-            const e = _entries[i];
+    function findEntry(name) {
+        for (let i = 0; i < entries.length; i++) {
+            const e = entries[i];
             if (e.name === name) return e;
         }
         return null;
     }
 
-    function _buildIndex() {
+    function buildIndex() {
         const apps = [];
-        for (let i = 0; i < _entries.length; i++) {
-            const e = _entries[i];
+        for (let i = 0; i < entries.length; i++) {
+            const e = entries[i];
             if (e.noDisplay) continue;
             apps.push({
                 name: e.name,
@@ -81,14 +81,13 @@ Singleton {
                 description: e.comment || e.genericName || "",
                 terminal: e.runInTerminal,
                 categories: e.categories ?? [],
-                _entry: e  // reference for launch
             });
         }
         allApps = apps;
-        _refilter();
+        refilter();
     }
 
-    function _refilter() {
+    function refilter() {
         const q = query.trim().toLowerCase();
         let pool = allApps;
         if (q.length > 0) {
@@ -99,14 +98,14 @@ Singleton {
             );
         }
         results = pool.slice(0, Math.max(1, ConfigStore.launcherMaxResults)).map(a => ({
-            icon: _materialIconFor(a),
+            icon: materialIconFor(a),
             iconSource: a.icon || "",
             title: a.name,
             subtitle: a.description
         }));
     }
 
-    function _materialIconFor(app) {
+    function materialIconFor(app) {
         const cats = (app.categories || []).map(c => c.toLowerCase());
         if (app.terminal || cats.includes("terminalemulator")) return "terminal";
         if (cats.includes("network") || cats.includes("webbrowser")) return "language";
@@ -122,8 +121,8 @@ Singleton {
     // Rebuild when the desktop entries model changes (installs/uninstalls)
     Connections {
         target: DesktopEntries
-        function onApplicationsChanged() { root._buildIndex() }
+        function onApplicationsChanged() { root.buildIndex() }
     }
 
-    Component.onCompleted: _buildIndex()
+    Component.onCompleted: buildIndex()
 }

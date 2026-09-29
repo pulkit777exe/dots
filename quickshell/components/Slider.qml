@@ -35,7 +35,7 @@ Item {
     scale: dragArea.pressed ? 0.985 : 1.0
     Behavior on scale { enabled: !MotionConfig.reduceMotion; SpringAnimation { spring: 5; damping: MotionConfig.springDamping; mass: 0.5 } }
 
-    readonly property real _fraction: (value - minimumValue) / (maximumValue - minimumValue)
+    readonly property real fraction: (value - minimumValue) / (maximumValue - minimumValue)
 
     Rectangle {
         id: track
@@ -46,7 +46,7 @@ Item {
 
         Rectangle {
             id: fill
-            width: track.width * root._fraction
+            width: track.width * root.fraction
             height: track.height
             radius: track.radius
             color: root.accentColor

@@ -2018,7 +2018,7 @@ Surface {
         // Quickshell.screens has no refresh rate, so it comes from the
         // Brightness service's Hyprland probe. Omit the segment when it is
         // unknown rather than printing "NaN Hz", which is what this did.
-        readonly property string _hz: {
+        readonly property string hostname: {
             const hz = monitorModel ? Brightness.refreshRates[monitorModel.modelData.name] : undefined;
             return (typeof hz === "number" && isFinite(hz) && hz > 0) ? Math.round(hz) + " Hz" : "";
         }
@@ -2039,7 +2039,7 @@ Surface {
 
         readonly property string monDesc: monitorModel ? [
             monitorModel.modelData.width + "×" + monitorModel.modelData.height,
-            _hz,
+            hostname,
             monScaleLabel
         ].filter(s => s !== "").join("  ·  ") : ""
 
@@ -2245,7 +2245,7 @@ Surface {
                         text: mc.monitorModel
                             ? (mc.monitorModel.modelData.width + "×" +
                                mc.monitorModel.modelData.height +
-                               (mc._hz ? " @ " + mc._hz : ""))
+                               (mc.hostname ? " @ " + mc.hostname : ""))
                             : ""
                         font.pixelSize: 13; color: "#8a8a8a"
                     }

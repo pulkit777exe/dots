@@ -24,7 +24,7 @@ import qs.modules
 // properties — there is no polling anywhere in this file either.
 ShellRoot {
     id: shellRoot
-    property var _keybinds: Keybinds
+    property var keybinds: Keybinds
 
     // ---- Wallpaper: Background layer with macOS-like crossfade ----
     Variants {

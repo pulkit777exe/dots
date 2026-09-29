@@ -91,7 +91,7 @@ cat ${configPath}`]
         }
     }
 
-    property var _smoothed: [0,0,0]
+    property var smoothedLevels: [0,0,0]
 
     Process {
         id: cavaProc
@@ -108,7 +108,7 @@ cat ${configPath}`]
                 for (let i=0; i<root.bars; i++) {
                     let raw = Math.max(0, Math.min(100, parts[i])) / 100
                     if (raw < 0.05) raw = 0
-                    let prev = root._smoothed[i] ?? 0
+                    let prev = root.smoothedLevels[i] ?? 0
                     // Heavy smoothing: 0.80/0.20, slower attack
                     let smoothed = prev * 0.80 + raw * 0.20
                     if (raw > prev) smoothed = prev * 0.70 + raw * 0.30
@@ -118,7 +118,7 @@ cat ${configPath}`]
                     smoothed = Math.max(0, Math.min(1, smoothed))
                     newLevels.push(smoothed)
                 }
-                root._smoothed = newLevels
+                root.smoothedLevels = newLevels
                 root.levels = newLevels.map(v => Math.pow(v, 0.92))
             }
         }

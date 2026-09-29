@@ -27,13 +27,13 @@ Item {
     width: 44
     height: 44
 
-    readonly property bool _filled: active && !momentary
+    readonly property bool filled: active && !momentary
 
     Rectangle {
         anchors.fill: parent
         radius: width / 2
         // solid like screenshots (was translucent 0.06/0.12/0.16 on black)
-        color: root._filled ? root.accentColor
+        color: root.filled ? root.accentColor
             : (tapHandler.pressed ? Qt.lighter(Theme.surfaceRaised, 1.3) : (hoverHandler.hovered ? Theme.colors.surfaceAlt : Theme.colors.surface))
         Behavior on color { ColorAnimation { duration: MotionConfig.hover() } }
     }
@@ -42,7 +42,7 @@ Item {
         anchors.centerIn: parent
         icon: root.icon
         size: 18
-        iconColor: root._filled ? root.accentTextColor : Qt.rgba(1, 1, 1, 0.88)
+        iconColor: root.filled ? root.accentTextColor : Qt.rgba(1, 1, 1, 0.88)
         Behavior on iconColor { ColorAnimation { duration: MotionConfig.hover() } }
     }
 

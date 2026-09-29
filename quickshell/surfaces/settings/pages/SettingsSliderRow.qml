@@ -29,7 +29,7 @@ Item {
     implicitHeight: 61
     Layout.fillWidth: true
 
-    readonly property real _fraction: (value - from) / (to - from)
+    readonly property real fraction: (value - from) / (to - from)
 
     ColumnLayout {
         anchors.fill: parent
@@ -75,7 +75,7 @@ Item {
             Rectangle {
                 id: fill
                 anchors.verticalCenter: parent.verticalCenter
-                width: track.width * root._fraction
+                width: track.width * root.fraction
                 height: 4
                 radius: 2
                 color: Theme.colors.accent

@@ -61,7 +61,7 @@ Singleton {
         // surface conditionally (e.g. supplementaryMessage).
         // QML's binding tracker records any property read that occurs
         // during evaluation, so reading them here is sufficient.
-        const _touch = [
+        const touch = [
             f.supplementaryMessage,
             f.supplementaryIsError,
             f.inputPrompt,
@@ -99,10 +99,10 @@ Singleton {
 
     // Internal bookkeeping so we can emit requestBegan/Ended exactly
     // once per authentication turn.
-    property var _prevPending: null
+    property var prevPending: null
 
     onPendingChanged: {
-        const prev = root._prevPending;
+        const prev = root.prevPending;
         const next = root.pending;
 
         // null -> object : new request began
@@ -125,7 +125,7 @@ Singleton {
             root.requestBegan(next);
         }
 
-        root._prevPending = next;
+        root.prevPending = next;
     }
 
     signal requestBegan(var request)

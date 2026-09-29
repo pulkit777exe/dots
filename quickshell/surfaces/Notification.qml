@@ -35,8 +35,8 @@ Surface {
     // otherwise falls back to the first letter of the app name rather than
     // a generic bell. notify-send, which ships no icon, renders as a bare
     // accent-coloured "N" on a dark disc.
-    readonly property bool _hasGlyph: (root.icon !== "" || root.appIcon !== "")
-    readonly property string _initial: {
+    readonly property bool hasGlyph: (root.icon !== "" || root.appIcon !== "")
+    readonly property string initial: {
         const n = String(root.entry.appName || "").trim();
         return n.length > 0 ? n.charAt(0).toUpperCase() : "";
     }
@@ -201,7 +201,7 @@ Surface {
                 Icon {
                     anchors.centerIn: parent
 
-                    visible: root._hasGlyph
+                    visible: root.hasGlyph
 
                     icon:
                         root.entry.icon
@@ -226,9 +226,9 @@ Surface {
                 StyledText {
                     anchors.centerIn: parent
 
-                    visible: !root._hasGlyph && root._initial !== ""
+                    visible: !root.hasGlyph && root.initial !== ""
 
-                    text: root._initial
+                    text: root.initial
 
                     font.family: "SF Pro Display"
                     font.pixelSize: 13

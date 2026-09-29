@@ -27,9 +27,9 @@ Singleton {
 
     function setProfile(profile) {
         if (!available || profile === active) return;
-        if (_usePlatformFallback) {
+        if (usePlatformFallback) {
             // ACPI platform_profile requires root; use pkexec tee so polkit prompts, fallback to direct tee
-            const p = _toPlatformProfile(profile);
+            const p = toPlatformProfile(profile);
             platformSetter.command = ["bash", "-c", "echo '" + p + "' | pkexec tee /sys/firmware/acpi/platform_profile >/dev/null 2>&1 || echo '" + p + "' | tee /sys/firmware/acpi/platform_profile >/dev/null; echo " + p + "| cat /sys/firmware/acpi/platform_profile | grep -q " + p + " && echo ok || echo fail"];
             platformSetter.running = true;
         } else {
@@ -62,18 +62,18 @@ Singleton {
     // Fallback for desktops where power-profiles-daemon is masked but ACPI platform_profile exists
     // (seen on this machine: /sys/firmware/acpi/platform_profile → performance / quiet balanced performance)
     // Maps quiet→power-saver so UI stays consistent with powerprofilesctl naming.
-    function _fromPlatformProfile(v) {
+    function fromPlatformProfile(v) {
         const s = v.trim();
         if (s === "quiet") return "power-saver";
         if (s === "balanced" || s === "performance") return s;
         return s;
     }
-    function _toPlatformProfile(v) {
+    function toPlatformProfile(v) {
         if (v === "power-saver") return "quiet";
         if (v === "balanced" || v === "performance") return v;
         return v;
     }
-    property bool _usePlatformFallback: false
+    property bool usePlatformFallback: false
 
     Process {
         id: probe
@@ -83,7 +83,7 @@ Singleton {
                 const val = text.trim();
                 if (val.length > 0) {
                     root.available = true;
-                    root._usePlatformFallback = false;
+                    root.usePlatformFallback = false;
                     root.active = val;
                     monitor.running = true;
                 }
@@ -105,8 +105,8 @@ Singleton {
                 const val = text.trim();
                 if (val.length > 0) {
                     root.available = true;
-                    root._usePlatformFallback = true;
-                    root.active = _fromPlatformProfile(val);
+                    root.usePlatformFallback = true;
+                    root.active = fromPlatformProfile(val);
                     choicesProbe.running = true;
                 }
             }
@@ -120,7 +120,7 @@ Singleton {
                 const txt = text.trim();
                 if (txt.length > 0) {
                     const raw = txt.split(/\s+/);
-                    root.profiles = raw.map(_fromPlatformProfile);
+                    root.profiles = raw.map(fromPlatformProfile);
                 }
             }
         }
@@ -150,7 +150,7 @@ Singleton {
             }
         }
         onExited: (code, status) => {
-            if (root._usePlatformFallback) {
+            if (root.usePlatformFallback) {
                 // Don't restart powerprofilesctl monitor when using fallback
                 return;
             }

@@ -47,13 +47,13 @@ Singleton {
     signal connectionFailed(string ssid)
 
     // ── Native Quickshell.Networking Device (Fast path) ─────────────
-    readonly property var _devices: Networking.devices
-    property var _wifiDevice: null
+    readonly property var devices: Networking.devices
+    property var wifiDevice: null
 
-    function _findWifiDevice() {
-        if (!_devices) return null;
-        for (let i = 0; i < _devices.count; i++) {
-            const d = _devices.get(i);
+    function findWifiDevice() {
+        if (!devices) return null;
+        for (let i = 0; i < devices.count; i++) {
+            const d = devices.get(i);
             if (d && d.type === DeviceType.Wifi) return d;
         }
         return null;
@@ -65,8 +65,8 @@ Singleton {
     }
 
     function enableWifi(enable) {
-        if (_wifiDevice) {
-            _wifiDevice.enabled = enable;
+        if (wifiDevice) {
+            wifiDevice.enabled = enable;
         }
         toggleProc.cmdState = enable ? "on" : "off";
         toggleProc.running = true;
@@ -74,22 +74,22 @@ Singleton {
 
     function scan() {
         root.scanning = true;
-        if (_wifiDevice) {
-            _wifiDevice.scannerEnabled = true;
+        if (wifiDevice) {
+            wifiDevice.scannerEnabled = true;
             scanTimeout.restart();
         }
         rescanProc.running = true;
     }
 
     function refreshStatus() {
-        _syncState();
+        syncState();
         statusProc.running = true;
         getNetworksProc.running = true;
     }
 
     function disconnect() {
-        if (_wifiDevice && _wifiDevice.connected) {
-            const nets = _wifiDevice.networks;
+        if (wifiDevice && wifiDevice.connected) {
+            const nets = wifiDevice.networks;
             for (let i = 0; i < nets.count; i++) {
                 const n = nets.get(i);
                 if (n.connected) { n.disconnect(); return; }
@@ -172,11 +172,11 @@ Singleton {
         proc.running = true;
     }
 
-    function _syncState() {
-        if (_wifiDevice) {
-            root.enabled = _wifiDevice.enabled;
-            root.connected = _wifiDevice.connected;
-            const nets = _wifiDevice.networks;
+    function syncState() {
+        if (wifiDevice) {
+            root.enabled = wifiDevice.enabled;
+            root.connected = wifiDevice.connected;
+            const nets = wifiDevice.networks;
             let found = false;
             const list = [];
             for (let i = 0; i < nets.count; i++) {
@@ -258,7 +258,7 @@ Singleton {
 
                 root.activeInterface = activeIf;
                 root.activeConnection = activeConn;
-                if (!foundConn && (!root._wifiDevice || !root._wifiDevice.connected)) {
+                if (!foundConn && (!root.wifiDevice || !root.wifiDevice.connected)) {
                     root.connected = false;
                     root.ssid = "";
                 }
@@ -360,7 +360,7 @@ Singleton {
         interval: 10000
         onTriggered: {
             root.scanning = false;
-            if (root._wifiDevice) root._wifiDevice.scannerEnabled = false;
+            if (root.wifiDevice) root.wifiDevice.scannerEnabled = false;
             root.scanFinished();
         }
     }
@@ -375,23 +375,23 @@ Singleton {
     }
 
     Connections {
-        target: _wifiDevice
-        function onEnabledChanged() { root._syncState() }
-        function onConnectedChanged() { root._syncState(); root.connectionChanged(); }
-        function onNetworksChanged() { root._syncState() }
+        target: wifiDevice
+        function onEnabledChanged() { root.syncState() }
+        function onConnectedChanged() { root.syncState(); root.connectionChanged(); }
+        function onNetworksChanged() { root.syncState() }
     }
 
     Connections {
         target: Networking.devices
         function onValuesChanged() {
-            root._wifiDevice = root._findWifiDevice();
-            root._syncState();
+            root.wifiDevice = root.findWifiDevice();
+            root.syncState();
         }
     }
 
     Component.onCompleted: {
-        _wifiDevice = _findWifiDevice();
-        _syncState();
+        wifiDevice = findWifiDevice();
+        syncState();
         refreshStatus();
     }
 

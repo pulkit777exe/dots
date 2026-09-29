@@ -58,18 +58,18 @@ Surface {
     readonly property color fieldFill: "#000000"
     readonly property color badgeInset: "#211c1b"
 
-    readonly property var _p: Auth.pending
+    readonly property var pendingRequest: Auth.pending
 
     readonly property string dialogTitle: "Authentication required"
 
     readonly property string message:
-        _p ? _p.message : ""
+        pendingRequest ? pendingRequest.message : ""
 
     readonly property string actionId:
-        _p ? _p.actionId : ""
+        pendingRequest ? pendingRequest.actionId : ""
 
     readonly property string errorText:
-        _p ? _p.errorText : ""
+        pendingRequest ? pendingRequest.errorText : ""
 
     signal authenticateRequested(string password)
     signal cancelled()
@@ -280,7 +280,7 @@ Surface {
                 // Always masked, unconditionally.
                 //
                 // This used to be keyed off `responseHidden`, which is
-                // `!_p.responseVisible` -- i.e. "is this a response flow". That
+                // `!pendingRequest.responseVisible` -- i.e. "is this a response flow". That
                 // conflates two unrelated things: whether a response is
                 // *needed* says nothing about whether the text should be
                 // legible. Every real password prompt is a response flow, so

@@ -26,7 +26,7 @@ Singleton {
                 let v = parseInt(text.trim()) || 0
                 root.memKB = v
                 root.isLowMem = v > 0 && v < 4000000 // <4GB
-                root._updateLowSpec()
+                root.updateLowSpec()
             }
         }
     }
@@ -38,11 +38,11 @@ Singleton {
                 let v = parseInt(text.trim()) || 0
                 root.cpuCount = v
                 root.isLowCpu = v > 0 && v <= 2
-                root._updateLowSpec()
+                root.updateLowSpec()
             }
         }
     }
-    function _updateLowSpec() {
+    function updateLowSpec() {
         // Low-spec if low mem or low cpu, or manually forced via env
         let forced = Quickshell.env("QUICKSHELL_LOW_SPEC") === "1"
         root.lowSpec = forced || root.isLowMem || root.isLowCpu

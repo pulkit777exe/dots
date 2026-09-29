@@ -95,7 +95,7 @@ Surface {
                 // Same robust-focus retry as AuthDialog.qml — see file
                 // header for why this specific pattern, not a simpler one.
                 Timer {
-                    id: _focusRetry
+                    id: focusRetry
                     interval: 80
                     repeat: false
                     onTriggered: if (root.visible && !passwordField.activeFocus) passwordField.forceActiveFocus()
@@ -122,7 +122,7 @@ Surface {
             function onRequestTokenChanged() {
                 Qt.callLater(() => {
                     passwordField.forceActiveFocus()
-                    if (!passwordField.activeFocus) _focusRetry.restart()
+                    if (!passwordField.activeFocus) focusRetry.restart()
                 })
             }
         }
