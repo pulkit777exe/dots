@@ -14,19 +14,26 @@ Surface {
 
     signal wallpaperSelected(int index)
 
-    width: 734
-    implicitHeight: 232
+    // Geometry measured off 2026-09-20_22-30-49, the wallpaper reference.
+    // That capture's panel spans x 198..1207 (1009 wide) with the first card
+    // starting 37 in and the last ending 38 from the other edge -- symmetric.
+    // Five cards of ~170 with ~16px gaps need 5*170 + 4*16 = 914, which fits
+    // the 985 of usable width with ~35 either side.
+    //
+    // 734 was showing three and a half cards in a much smaller panel, which is
+    // where the crowding came from.
+    width: 1008
+    implicitHeight: 222
     cornerRadius: 20
 
-    // Thumbnail metrics, named so the delegate and the ListView's highlight
-    // maths cannot drift apart. The delegate is laid out at `itemW` and then
-    // scaled, so its *visual* width is itemW * currentScale -- which is what
-    // has to be used when centring the current item.
-    readonly property real itemW: 196
-    readonly property real itemH: 118
-    readonly property real currentScale: 1.16
-    readonly property real otherScale: 0.87
-    readonly property real scaledItemW: itemW * currentScale
+    // Thumbnail metrics, named so the delegate and the ListView agree.
+    //
+    // No currentScale/otherScale: the reference does not scale the selected
+    // card, and the scale is what made this row's spacing uneven (see the
+    // delegate's `scale` below).
+    readonly property real itemW: 170
+    readonly property real itemH: 113
+    readonly property real cardSpacing: 16
 
     // ------------------------------------------------------------
     // Selection
@@ -211,12 +218,12 @@ Surface {
             id: list
 
             Layout.fillWidth: true
-            Layout.preferredHeight: 138
+            Layout.preferredHeight: root.itemH
 
             orientation:
                 ListView.Horizontal
 
-            spacing: 12
+            spacing: root.cardSpacing
 
             // Clip. It was false, so the thumbnails were free to render past
             // the panel's edge and over its rounded corner: the current item is
@@ -235,15 +242,13 @@ Surface {
             highlightRangeMode:
                 ListView.StrictlyEnforceRange
 
-            // Centred on the SCALED width. It used the unscaled 196, so the
-            // current item was positioned as if it were still 196 wide while
-            // actually painting 227, leaving it 15px right of centre and
-            // shoving the row toward the panel's right edge.
+            // Centred on the real item width. Nothing is scaled now, so this
+            // is simply centring the current thumbnail in the row.
             preferredHighlightBegin:
-                (width - root.scaledItemW) / 2
+                (width - root.itemW) / 2
 
             preferredHighlightEnd:
-                (width - root.scaledItemW) / 2
+                (width - root.itemW) / 2
 
             highlightMoveDuration:
                 MotionConfig.reduceMotion
@@ -262,27 +267,20 @@ Surface {
                 width: root.itemW
                 height: root.itemH
 
-                scale:
-                    ListView.isCurrentItem
-                        ? root.currentScale
-                        : root.otherScale
+                // Uniform, no scale -- the reference's selected card is the
+                // same size as the rest, marked only by its 2px accent border
+                // (which the thumbnail Rectangle below already draws).
+                //
+                // The 1.16/0.87 scale is what made this row's spacing look
+                // broken: the current card painted 227px into a 196px slot and
+                // ate 15px of each neighbour's gap, while unhighlighted pairs
+                // were left with far more, so the gaps alternated.
+                scale: 1
 
                 opacity:
                     ListView.isCurrentItem
                         ? 1
-                        : 0.72
-
-                Behavior on scale {
-                    enabled:
-                        !MotionConfig.reduceMotion
-
-                    NumberAnimation {
-                        duration: MotionConfig.fade(1.4)
-
-                        easing.type:
-                            Easing.OutBack
-                    }
-                }
+                        : 0.86
 
                 Behavior on opacity {
                     enabled:
