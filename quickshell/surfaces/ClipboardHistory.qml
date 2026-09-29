@@ -588,7 +588,7 @@ Surface {
 
                             font.weight:
                                 rowDelegate.modelData.isImage
-                                    ? Font.SemiBold
+                                    ? Font.DemiBold
                                     : Font.Normal
 
                             textColor:
