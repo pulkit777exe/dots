@@ -343,47 +343,76 @@ Singleton {
     }
 
     // ---- Persistence -----------------------------------------------------
-    readonly property string statePath: Quickshell.statePath("control-center-layout.json")
-
+    // Unlike the other three state services, `columns` and `items` are
+    // genuinely mutable here -- the drag and resize handlers rewrite them in
+    // eight places -- so they stay the source of truth and the adapter is
+    // only the file format. It still does the parsing and the type checking,
+    // which is why there is no hand-written parse of the text here.
     property bool resolved: false
 
-    FileView {
-        id: loader
-        path: root.statePath
-        watchChanges: false
-        printErrors: false
-        onLoaded: { root.applyState(text()); root.resolved = true; }
-        onLoadFailed: { root.resolved = true; }
-    }
-
-    FileView {
-        id: writer
-        path: root.statePath
-        printErrors: false
-    }
-
-    function applyState(jsonText) {
-        try {
-            const d = JSON.parse(jsonText);
-            if (typeof d.columns === "number")
-                root.columns = Math.max(root.minColumns, Math.min(root.maxColumns, d.columns));
-            if (Array.isArray(d.items) && d.items.length) {
-                // Drop anything whose type is no longer in the catalogue rather
-                // than letting it render as a blank hole.
-                root.items = d.items
-                    .filter(function (x) { return x && root.catalogue[x.type]; })
-                    .map(function (x) {
-                        return { id: String(x.id), type: x.type,
-                                 col: x.col | 0, row: x.row | 0,
-                                 colSpan: x.colSpan | 0, rowSpan: x.rowSpan | 0 };
-                    });
-            }
-        } catch (e) {
-            // corrupt state, keep defaults
+    // Moves a loaded file into the live properties. Clamping the column count
+    // and dropping entries the catalogue no longer has both belong here rather
+    // than in a setter, so a hand-edited or stale file cannot put the grid
+    // into a state the UI has no way to reach.
+    //
+    // `d.items` is tested for a length, not with Array.isArray: the adapter
+    // hands back a JSON array wrapped in a QML value, so Array.isArray is
+    // false for it even though length, filter and map all work. Guarding on
+    // isArray silently dropped the whole saved layout and left the default
+    // one in place.
+    function applyState(d) {
+        if (!d || typeof d !== "object") return;
+        if (typeof d.columns === "number")
+            root.columns = Math.max(root.minColumns, Math.min(root.maxColumns, d.columns));
+        if (d.items && d.items.length) {
+            // Drop anything whose type is no longer in the catalogue rather
+            // than letting it render as a blank hole.
+            root.items = d.items
+                .filter(function (x) { return x && root.catalogue[x.type]; })
+                .map(function (x) {
+                    return { id: String(x.id), type: x.type,
+                             col: x.col | 0, row: x.row | 0,
+                             colSpan: x.colSpan | 0, rowSpan: x.rowSpan | 0 };
+                });
         }
     }
 
+    // Guarded on `resolved`: writing before the load resolves would save the
+    // defaults straight over the saved layout. Called from commit(), which is
+    // itself debounced, so this only ever runs on a real edit.
     function save() {
-        writer.setText(JSON.stringify({ columns: root.columns, items: root.items }));
+        if (!root.resolved) return;
+        data.columns = root.columns;
+        data.items = root.items;
+        state.writeAdapter();
+    }
+
+    // One FileView with an adapter on it. `items` is declared as a var
+    // because it is a JSON array, which the adapter round-trips unchanged.
+    //
+    // The adapter is fully populated by the time onLoaded runs -- measured,
+    // not assumed: with a file of columns 9 and one item, the adapter's change
+    // handlers all fire before onLoaded, and data.columns/data.items already
+    // hold the file's values at that point. So reading them from onLoaded is
+    // safe, and is the same point the text was parsed at before.
+    //
+    // Written with an explicit writeAdapter() from save() rather than
+    // onAdapterUpdated, because loading the file also updates the adapter's
+    // properties, and that would rewrite the file on every start.
+    FileView {
+        id: state
+        path: Quickshell.statePath("control-center-layout.json")
+        // Read once at startup. Watching would fight our own writes.
+        watchChanges: false
+        printErrors: false
+        onLoaded: { root.applyState(data); root.resolved = true; }
+        // No saved layout yet is the normal first-run case, not an error.
+        onLoadFailed: root.resolved = true
+
+        JsonAdapter {
+            id: data
+            property int columns: 7
+            property var items: []
+        }
     }
 }
