@@ -55,15 +55,28 @@ label {
     valign = center
 }
 
-# Time  --  centre at y ~235, i.e. -28%
+# Time
 # %I is the reference's own format: it renders 0:47, not 00:47.
+#
+# -28.5, not -28. Measured off 2026-09-20_22-27-37 rather than eyeballed:
+# the white glyphs in the central band give the time's vertical centre as
+# y 232.5, and at 1080px with valign=center a position of P% lands it at
+# 540 + P*10.8, so P = -28.5. At -28 it rendered 5.1px low.
+#
+# The same measurement for the other four elements, against what this file
+# generates (all within ~3px):
+#   date    reference 141.0   generated 140.4
+#   time    reference 232.5   generated 237.6  <- fixed here
+#   avatar  reference 865.5   generated 864.0
+#   user    reference 926.0   generated 924.5
+#   hint    reference 972.5   generated 969.8
 label {
     monitor =
     text = cmd[update:1000] echo "<span>$(date +\"%I:%M\")</span>"
     color = rgba(238, 240, 235, 0.92)
     font_size = 120
     font_family = SF Pro Display
-    position = 0, -28
+    position = 0, -28.5
     halign = center
     valign = center
 }
