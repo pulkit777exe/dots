@@ -85,10 +85,19 @@ Item {
         // and centred-on-dot at ~688..1094 -- both wrong, and both overlapping
         // the notch. Right-aligning the dot reproduces the reference's
         // relationship, which is the part that is actually pinned by it.
+        // targetW, not width.
+        //
+        // `width` is the *animated* property -- it springs from barHeight to
+        // 406 -- so binding x to it makes x a moving target for its own
+        // Behavior: the two animations stack and the panel drifts before it
+        // settles, which reads as the panel first appearing to the right and
+        // then jumping left. targetW is the settled value, so x has one
+        // target and one animation, and `Behavior on x` carries the panel
+        // straight from the dot to its final place.
         x: isExpanded
             ? Math.max(root.gapFromEdge,
-                Math.min(collapsedX + root.barHeight - width,
-                         root.width - width - root.gapFromEdge))
+                Math.min(collapsedX + root.barHeight - targetW,
+                         root.width - targetW - root.gapFromEdge))
             : collapsedX
 
         Behavior on width {
@@ -582,9 +591,14 @@ Item {
         // it was followed until now). Centring is what the reference shows;
         // dot-anchoring is what was asked for, because the dot should not
         // appear to jump. Revert to `(root.width - width) / 2` to go back.
+        // targetW, not width, for the same reason as the left dot: `width` is
+        // the animated property, so binding x to it makes x a moving target
+        // for its own Behavior and the two animations stack. Here the clamp is
+        // not even reached (the panel fits well inside the screen), but the
+        // same form keeps the two dots consistent.
         x: isExpanded
             ? Math.max(root.gapFromEdge,
-                Math.min(collapsedX, root.width - width - root.gapFromEdge))
+                Math.min(collapsedX, root.width - targetW - root.gapFromEdge))
             : collapsedX
 
         Behavior on width {
