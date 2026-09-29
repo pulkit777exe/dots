@@ -74,10 +74,6 @@ Surface {
     signal authenticateRequested(string password)
     signal cancelled()
 
-    function clearPassword() {
-        passwordField.text = "";
-    }
-
     ColumnLayout {
         id: column
 

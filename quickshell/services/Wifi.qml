@@ -102,10 +102,6 @@ Singleton {
         connectWireless(targetSsid, password, bssid, null);
     }
 
-    function connectToNetworkWithPasswordCheck(targetSsid, isSecure, callback, bssid) {
-        connectWireless(targetSsid, "", bssid, callback);
-    }
-
     function forgetNetwork(targetSsid) {
         forgetProc.ssidArg = targetSsid;
         forgetProc.running = true;

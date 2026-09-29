@@ -130,14 +130,6 @@ Singleton {
     // Six hue-rotated variants of a base accent color — same lightness/
     // saturation family, spread around the color wheel. Used for the
     // theme picker's multi-dot preview (see pickerModel above).
-    function _deriveSwatchPalette(accentHex) {
-        const c = Qt.color(accentHex);
-        const s = Math.max(c.hslSaturation, 0.35);
-        const l = Math.max(Math.min(c.hslLightness, 0.72), 0.4);
-        const offsets = [0, 0.13, -0.13, 0.27, -0.27, 0.42];
-        return offsets.map(o => Qt.hsla(((c.hslHue + o) % 1 + 1) % 1, s, l, 1));
-    }
-
     // A plain JS array, not a ListModel.
     //
     // WallpaperPicker reads its list as an array -- `wallpapers.length`,
