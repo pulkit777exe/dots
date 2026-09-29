@@ -46,9 +46,9 @@ A shell is not a destination — it **appears when needed, gets out of the way i
 
 ### Color — static themes
 - **Source:** `colors/themes/<name>/colors.json` — hand-authored, `{background,surface,surfaceAlt,border,text,textMuted,accent,accentText,danger,warning,success,...}`. Wallpapers are *generated from* these palettes (`scripts/generate-theme-wallpapers.py`), never the other way around; wallpapers are discovered by `scripts/list-themes.py` from each theme's `wallpaperDir` (no sampling, no generator at runtime). `current` in `colors/index.json` names the active theme.
-- **Runtime:** `Theme.qml` `colors = _displayedColors` lerped `220ms OutCubic` toward `_targetColors` (the active theme's `colors`). `pickerModel` accent/cardColor derived live. No dynamic/wallpaper-derived override exists.
+- **Runtime:** `Theme.qml` `colors = displayedColors` lerped `220ms OutCubic` toward `targetColors` (the active theme's `colors`). `pickerModel` accent/cardColor derived live. No dynamic/wallpaper-derived override exists.
 - **Published outward:** `scripts/publish-colors.py <theme>` writes the same palette to `colors/{current.json,colors.css,colors.sh,hyprland.conf,gtk.css,kitty.conf}` and pushes Hyprland's border colours live. Run on startup and on every theme switch. Kitty is recorded but deliberately never applied.
-- **Light/Dark:** Not inverted — `_isDarkPreset()` on the static background (lightness <0.5). `border` carries alpha, `accentText` by luminance.
+- **Light/Dark:** Not inverted — `isDarkPreset()` on the static background (lightness <0.5). `border` carries alpha, `accentText` by luminance.
 
 ### Typography
 - Stack: `-apple-system, "SF Pro Display/Text", Inter` (bundled `Inter`/`Inter Display` via `Appearance` page).

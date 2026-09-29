@@ -444,18 +444,22 @@ Singleton {
         urgency,
         actions
     ) {
-        const _appName =
+        // Defaults for the trailing arguments, which most call sites omit.
+        // These need names of their own: `const appName = appName || ...`
+        // would shadow the parameter and read it in its own initialiser,
+        // which is a ReferenceError the moment notify() is called.
+        const name =
             appName || "System"
 
-        const _appIcon =
+        const icon =
             appIcon || "notifications"
 
-        const _urgency =
+        const level =
             urgency !== undefined
                 ? urgency
                 : NotificationUrgency.Normal
 
-        const _actions =
+        const actionList =
             actions || []
 
         const notifId =
@@ -469,8 +473,8 @@ Singleton {
         const entry = {
             id: notifId,
 
-            appName: _appName,
-            appIcon: _appIcon,
+            appName: name,
+            appIcon: icon,
 
             summary:
                 summary || "",
@@ -479,10 +483,10 @@ Singleton {
                 body || "",
 
             urgency:
-                _urgency,
+                level,
 
             actions:
-                _actions,
+                actionList,
 
             image:
                 "",
@@ -491,7 +495,7 @@ Singleton {
                 shouldPopup,
 
             expireTimeout:
-                _urgency === NotificationUrgency.Critical
+                level === NotificationUrgency.Critical
                     ? root.urgentExpireTimeout
                     : root.defaultExpireTimeout
         }
@@ -532,32 +536,32 @@ Singleton {
     Connections {
         target: Battery
 
-        property bool _wasCharging:
+        property bool wasCharging:
             Battery.charging
 
-        property bool _init: false
+        property bool initialised: false
 
-        property bool _warnedLow: false
-        property bool _warnedCritical: false
+        property bool warnedLow: false
+        property bool warnedCritical: false
 
         function onChargingChanged() {
-            if (!_init) {
-                _init = true
-                _wasCharging =
+            if (!initialised) {
+                initialised = true
+                wasCharging =
                     Battery.charging
                 return
             }
 
             if (
                 Battery.charging !==
-                _wasCharging
+                wasCharging
             ) {
-                _wasCharging =
+                wasCharging =
                     Battery.charging
 
                 if (Battery.charging) {
-                    _warnedLow = false
-                    _warnedCritical = false
+                    warnedLow = false
+                    warnedCritical = false
 
                     root.notify(
                         "Charger Connected",
@@ -587,10 +591,10 @@ Singleton {
         }
 
         function onBatteryLow() {
-            if (_warnedLow)
+            if (warnedLow)
                 return
 
-            _warnedLow = true
+            warnedLow = true
 
             root.notify(
                 "Low Battery",
@@ -607,10 +611,10 @@ Singleton {
         }
 
         function onBatteryCritical() {
-            if (_warnedCritical)
+            if (warnedCritical)
                 return
 
-            _warnedCritical = true
+            warnedCritical = true
 
             root.notify(
                 "Critical Battery",
@@ -627,7 +631,7 @@ Singleton {
         }
     }
 
-    property bool _systemNotifsReady: false
+    property bool systemNotifsReady: false
 
     Timer {
         interval: 3000
@@ -636,28 +640,28 @@ Singleton {
         repeat: false
 
         onTriggered:
-            root._systemNotifsReady = true
+            root.systemNotifsReady = true
     }
 
     // Bluetooth
     Connections {
         target: Bluetooth
 
-        property bool _wasEnabled:
+        property bool wasEnabled:
             Bluetooth.enabled
 
         function onEnabledChanged() {
-            if (!root._systemNotifsReady) {
-                _wasEnabled =
+            if (!root.systemNotifsReady) {
+                wasEnabled =
                     Bluetooth.enabled
                 return
             }
 
             if (
                 Bluetooth.enabled !==
-                _wasEnabled
+                wasEnabled
             ) {
-                _wasEnabled =
+                wasEnabled =
                     Bluetooth.enabled
 
                 if (Bluetooth.enabled) {
@@ -683,21 +687,21 @@ Singleton {
     Connections {
         target: Wifi
 
-        property bool _wasConnected:
+        property bool wasConnected:
             Wifi.connected
 
         function onConnectedChanged() {
-            if (!root._systemNotifsReady) {
-                _wasConnected =
+            if (!root.systemNotifsReady) {
+                wasConnected =
                     Wifi.connected
                 return
             }
 
             if (
                 Wifi.connected !==
-                _wasConnected
+                wasConnected
             ) {
-                _wasConnected =
+                wasConnected =
                     Wifi.connected
 
                 if (Wifi.connected) {
@@ -730,11 +734,11 @@ Singleton {
     Connections {
         target: PowerProfile
 
-        property bool _init: false
+        property bool initialised: false
 
         function onProfileChanged(profile) {
-            if (!_init) {
-                _init = true
+            if (!initialised) {
+                initialised = true
                 return
             }
 
@@ -765,11 +769,11 @@ Singleton {
     Connections {
         target: NightLight
 
-        property bool _init: false
+        property bool initialised: false
 
         function onToggled(enabled) {
-            if (!_init) {
-                _init = true
+            if (!initialised) {
+                initialised = true
                 return
             }
 
@@ -791,24 +795,24 @@ Singleton {
     Connections {
         target: IdleInhibit
 
-        property bool _init: false
+        property bool initialised: false
 
-        property bool _wasActive:
+        property bool wasActive:
             IdleInhibit.active
 
         function onActiveChanged() {
-            if (!_init) {
-                _init = true
-                _wasActive =
+            if (!initialised) {
+                initialised = true
+                wasActive =
                     IdleInhibit.active
                 return
             }
 
             if (
                 IdleInhibit.active !==
-                _wasActive
+                wasActive
             ) {
-                _wasActive =
+                wasActive =
                     IdleInhibit.active
 
                 root.notify(
@@ -830,20 +834,20 @@ Singleton {
     Connections {
         target: Theme
 
-        property bool _init: false
+        property bool initialised: false
 
-        property string _lastName:
+        property string lastName:
             Theme.currentName
 
         function onThemeChanged(name) {
-            if (!_init) {
-                _init = true
-                _lastName = name
+            if (!initialised) {
+                initialised = true
+                lastName = name
                 return
             }
 
-            if (name !== _lastName) {
-                _lastName = name
+            if (name !== lastName) {
+                lastName = name
 
                 root.notify(
                     "Theme Changed",
@@ -867,24 +871,24 @@ Singleton {
     Connections {
         target: Volume
 
-        property bool _init: false
+        property bool initialised: false
 
-        property bool _wasMuted:
+        property bool wasMuted:
             Volume.muted
 
         function onMutedChanged() {
-            if (!_init) {
-                _init = true
-                _wasMuted =
+            if (!initialised) {
+                initialised = true
+                wasMuted =
                     Volume.muted
                 return
             }
 
             if (
                 Volume.muted !==
-                _wasMuted
+                wasMuted
             ) {
-                _wasMuted =
+                wasMuted =
                     Volume.muted
 
                 if (Volume.muted) {
@@ -918,10 +922,10 @@ Singleton {
     Connections {
         target: Media
 
-        property bool _init: false
-        property string _lastTrackKey: ""
+        property bool initialised: false
+        property string lastTrackKey: ""
 
-        function _maybeToast() {
+        function maybeToast() {
             if (
                 !ConfigStore.mediaShowToast
             )
@@ -937,15 +941,15 @@ Singleton {
 
             if (
                 !Media.title ||
-                key === _lastTrackKey ||
+                key === lastTrackKey ||
                 key === "|"
             )
                 return
 
-            _lastTrackKey = key
+            lastTrackKey = key
 
-            if (!_init) {
-                _init = true
+            if (!initialised) {
+                initialised = true
                 return
             }
 
@@ -977,17 +981,17 @@ Singleton {
         }
 
         function onTitleChanged() {
-            _maybeToast()
+            maybeToast()
         }
 
         function onArtistChanged() {
-            _maybeToast()
+            maybeToast()
         }
 
         function onPlayingChanged() {
             if (Media.playing) {
-                _init = true
-                _maybeToast()
+                initialised = true
+                maybeToast()
             }
         }
     }
@@ -999,11 +1003,11 @@ Singleton {
     Connections {
         target: Clipboard
 
-        property bool _init: false
+        property bool initialised: false
 
         function onEntryCopied(text) {
-            if (!_init) {
-                _init = true
+            if (!initialised) {
+                initialised = true
                 return
             }
 

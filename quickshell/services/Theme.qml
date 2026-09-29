@@ -40,11 +40,11 @@ Singleton {
     readonly property var current: presets[currentName] ? presets[currentName] : null
     // Colors: the active theme's own static palette, with a last-resort
     // fallback if discovery hasn't landed (or the theme has no colors.json).
-    readonly property var _targetColors: (current && current.colors) ? current.colors : _fallbackColors
-    property var _fromColors: _fallbackColors
-    property var _displayedColors: _targetColors
-    property real _colorProgress: 1
-    readonly property var colors: _displayedColors
+    readonly property var targetColors: (current && current.colors) ? current.colors : fallbackColors
+    property var fromColors: fallbackColors
+    property var displayedColors: targetColors
+    property real colorProgress: 1
+    readonly property var colors: displayedColors
 
     // ── Dark-surface tokens ───────────────────────────────────────────
     //
@@ -70,14 +70,14 @@ Singleton {
     readonly property color surfaceRaised: Qt.alpha(colors.foreground, 0.105)
 
     // Tide compatibility — KISS aliases used by Tide-style SettingsApp
-    readonly property bool darkMode: _isDarkPreset()
+    readonly property bool darkMode: isDarkPreset()
     // Back-compat for surfaces that cache colors.accent etc.
     readonly property string displayName: current ? current.name : currentName
 
     // Wallpaper — system-discovered, not hardcoded, with crossfade
-    readonly property var _wallpapers: (current && current.wallpapers) ? current.wallpapers : []
-    readonly property int currentWallpaperIndex: Math.min((wallpaperIndex[currentName] !== undefined ? wallpaperIndex[currentName] : 0), Math.max(0, _wallpapers.length - 1))
-    function _fileUrl(path) {
+    readonly property var themeWallpapers: (current && current.wallpapers) ? current.wallpapers : []
+    readonly property int currentWallpaperIndex: Math.min((wallpaperIndex[currentName] !== undefined ? wallpaperIndex[currentName] : 0), Math.max(0, themeWallpapers.length - 1))
+    function fileUrl(path) {
         if (!path) return "";
         const s = path.toString();
         if (s.startsWith("file://")) return s;
@@ -85,12 +85,11 @@ Singleton {
         return "file://" + root.colorsRoot + "/" + s;
     }
 
-    readonly property string currentWallpaper: _wallpapers.length > 0
-        ? _fileUrl(_wallpapers[currentWallpaperIndex])
+    readonly property string currentWallpaper: themeWallpapers.length > 0
+        ? fileUrl(themeWallpapers[currentWallpaperIndex])
         : ""
     // For QML wallpaper view crossfade
-    property string _wallpaperFrom: ""
-    property string wallpaperFrom: _wallpaperFrom
+    property string wallpaperFrom: ""
     property string wallpaperTo: currentWallpaper
     property real wallpaperProgress: 1  // 0→1 during crossfade
     property bool wallpaperTransitioning: wallpaperProgress < 1
@@ -99,8 +98,8 @@ Singleton {
         let out = [];
         for (let key in presets) {
             const t = presets[key];
-            const accent = (t.colors && t.colors.accent) ? t.colors.accent : _fallbackColors.accent;
-            const bg = (t.colors && t.colors.background) ? t.colors.background : _fallbackColors.background;
+            const accent = (t.colors && t.colors.accent) ? t.colors.accent : fallbackColors.accent;
+            const bg = (t.colors && t.colors.background) ? t.colors.background : fallbackColors.background;
             out.push({
                 key: key,
                 name: t.name ? t.name : key,
@@ -154,7 +153,7 @@ Singleton {
             const path = wallpapers[index];
             out.push({
                 themeKey: root.currentName,
-                source: root._fileUrl(path),
+                source: root.fileUrl(path),
                 fileName: String(path).split("/").pop(),
                 selected: index === selectedIndex
             });
@@ -162,7 +161,7 @@ Singleton {
         root.wallpaperPickerModel = out;
     }
 
-    readonly property var _fallbackColors: ({
+    readonly property var fallbackColors: ({
         background: "#202020", surface: "#282828", surfaceAlt: "#303030",
         surfaceElevated: "#383838", surfaceMuted: "#b0282828",
         border: "#404040", divider: "#30404040",
@@ -178,10 +177,10 @@ Singleton {
     onWallpaperChanged: (source) => {
         if (!source) return;
         const path = source.replace("file://", "");
-        root._applyWallpaper(path);
+        root.applyWallpaper(path);
     }
 
-    function _applyWallpaper(path) {
+    function applyWallpaper(path) {
         wallpaperApply.command = ["bash", "-c",
             'p="' + path.replace(/"/g, '\\"') + '"; ' +
             'if command -v hyprctl >/dev/null 2>&1; then ' +
@@ -197,81 +196,81 @@ Singleton {
     Process { id: wallpaperApply }
 
     // --- macOS-like smooth color interpolation ---
-    function _lerpHex(a, b, t) {
+    function lerpHex(a, b, t) {
         // Interpolate two hex colors (with optional alpha #AARRGGBB)
         let hasAlpha = a.length === 9 || b.length === 9;
         let ah = a, bh = b;
         let aAlpha = 1, bAlpha = 1;
         if (ah.length === 9) { aAlpha = parseInt(ah.slice(1,3),16)/255; ah = "#" + ah.slice(3); }
         if (bh.length === 9) { bAlpha = parseInt(bh.slice(1,3),16)/255; bh = "#" + bh.slice(3); }
-        const ca = _hexToRgb(ah), cb = _hexToRgb(bh);
+        const ca = hexToRgb(ah), cb = hexToRgb(bh);
         const r = Math.round(ca.r + (cb.r - ca.r) * t);
         const g = Math.round(ca.g + (cb.g - ca.g) * t);
         const b_ = Math.round(ca.b + (cb.b - ca.b) * t);
-        const hex = _toHex(r,g,b_);
+        const hex = toHex(r,g,b_);
         if (hasAlpha) {
             const alpha = Math.round((aAlpha + (bAlpha - aAlpha)*t)*255);
             return "#" + alpha.toString(16).padStart(2,"0") + hex.slice(1);
         }
         return hex;
     }
-    function _interpolateColors(from, to, t) {
-        if (!from || !to) return to ? to : (from ? from : _fallbackColors);
+    function interpolateColors(from, to, t) {
+        if (!from || !to) return to ? to : (from ? from : fallbackColors);
         let out = {};
         const keys = new Set([...Object.keys(from), ...Object.keys(to)]);
         for (const k of keys) {
             const fv = from[k], tv = to[k];
             if (typeof fv === "string" && typeof tv === "string" && fv.startsWith("#") && tv.startsWith("#")) {
-                out[k] = _lerpHex(fv, tv, t);
+                out[k] = lerpHex(fv, tv, t);
             } else out[k] = t < 0.5 ? fv : tv;
         }
         return out;
     }
-    function _startColorTransition() {
+    function startColorTransition() {
         if (wallpaperApplied) {
-            _fromColors = _displayedColors;
-            _colorProgress = 0;
-            _colorAnim.restart();
+            fromColors = displayedColors;
+            colorProgress = 0;
+            colorAnim.restart();
         } else {
-            _displayedColors = _targetColors;
-            _colorProgress = 1;
+            displayedColors = targetColors;
+            colorProgress = 1;
         }
     }
-    function _startWallpaperTransition(newWall) {
+    function startWallpaperTransition(newWall) {
         if (!wallpaperApplied || !newWall || wallpaperProgress < 1) {
-            _wallpaperFrom = "";
+            wallpaperFrom = "";
         } else {
-            _wallpaperFrom = wallpaperTo;
+            wallpaperFrom = wallpaperTo;
         }
         wallpaperTo = newWall;
         wallpaperProgress = 0;
-        _wallpaperAnim.restart();
+        wallpaperAnim.restart();
     }
 
     // Color transition — duration follows the Motion page's "Fades &
     // colour" slider (MotionConfig.fadeMs), same as every color fade
     // elsewhere in the app. Snaps instantly when Reduce Motion is on.
     NumberAnimation {
-        id: _colorAnim
+        id: colorAnim
         target: root
-        property: "_colorProgress"
+        property: "colorProgress"
         from: 0; to: 1
         duration: MotionConfig.fade()
         easing.type: Easing.OutCubic
-        onFinished: { root._displayedColors = root._targetColors; }
+        onFinished: { root.displayedColors = root.targetColors; }
     }
-    on_ColorProgressChanged: {
-        if (_colorProgress >= 1) _displayedColors = _targetColors;
-        else _displayedColors = _interpolateColors(_fromColors, _targetColors, _colorProgress);
+    onColorProgressChanged: {
+        if (colorProgress >= 1) displayedColors = targetColors;
+        else displayedColors = interpolateColors(fromColors, targetColors, colorProgress);
     }
-    on_TargetColorsChanged: _startColorTransition()
+    onTargetColorsChanged: startColorTransition()
 
     // Wallpaper crossfade — also a "fade", same slider. Runs a little
     // longer than a plain color fade reads as (1.6x) since it's
     // dissolving a whole image, not a swatch — proportional to the
     // live setting rather than a second fixed constant.
     NumberAnimation {
-        id: _wallpaperAnim
+        id: wallpaperAnim
         target: root
         property: "wallpaperProgress"
         from: 0; to: 1
@@ -279,32 +278,32 @@ Singleton {
         easing.type: Easing.InOutCubic
     }
     onCurrentWallpaperChanged: {
-        if (currentWallpaper && wallpaperApplied) _startWallpaperTransition(currentWallpaper);
+        if (currentWallpaper && wallpaperApplied) startWallpaperTransition(currentWallpaper);
         else {
             wallpaperTo = currentWallpaper;
-            _wallpaperFrom = "";
+            wallpaperFrom = "";
             wallpaperProgress = 1;
         }
     }
 
-    function _isDarkPreset() {
+    function isDarkPreset() {
         // Static palette only — no dynamic override to consult.
         let bg = "#202020";
-        if (_targetColors && _targetColors.background) bg = _targetColors.background;
-        return _hexLightness(bg) < 0.5;
+        if (targetColors && targetColors.background) bg = targetColors.background;
+        return hexLightness(bg) < 0.5;
     }
-    function _hexToRgb(hex) {
+    function hexToRgb(hex) {
         let h = hex.replace("#", "");
         if (h.length === 3) h = h.split("").map(ch => ch + ch).join("");
         const num = parseInt(h, 16);
         return { r: (num >> 16) & 255, g: (num >> 8) & 255, b: num & 255 };
     }
-    function _hexLightness(hex) {
-        const c = _hexToRgb(hex);
+    function hexLightness(hex) {
+        const c = hexToRgb(hex);
         const r = c.r / 255, g = c.g / 255, b = c.b / 255;
         return (Math.max(r, g, b) + Math.min(r, g, b)) / 2;
     }
-    function _toHex(r, g, b) {
+    function toHex(r, g, b) {
         const clamp = (v) => Math.max(0, Math.min(255, Math.round(v)));
         const pad = (v) => clamp(v).toString(16).padStart(2, "0");
         return "#" + pad(r) + pad(g) + pad(b);
@@ -374,7 +373,7 @@ Singleton {
         setTheme(keys[(idx + 1) % keys.length]);
     }
     function setWallpaper(index) {
-        if (index < 0 || index >= _wallpapers.length) return;
+        if (index < 0 || index >= themeWallpapers.length) return;
 
         let updated = Object.assign({}, wallpaperIndex);
         updated[currentName] = index;
@@ -385,8 +384,8 @@ Singleton {
         wallpaperChanged(currentWallpaper);
     }
     function cycleWallpaper() {
-        if (_wallpapers.length === 0) return;
-        setWallpaper((currentWallpaperIndex + 1) % _wallpapers.length);
+        if (themeWallpapers.length === 0) return;
+        setWallpaper((currentWallpaperIndex + 1) % themeWallpapers.length);
     }
 
     // ---- Discovery from ~/.config/colors (never this repo) ----
@@ -487,7 +486,7 @@ Singleton {
         if (wallpaperApplied || !presetsResolved || !stateResolved) return;
         wallpaperApplied = true;
         if (currentWallpaper) wallpaperChanged(currentWallpaper);
-        else if (_wallpapers.length === 0) console.warn("Theme: no wallpapers discovered for", currentName);
+        else if (themeWallpapers.length === 0) console.warn("Theme: no wallpapers discovered for", currentName);
         // resolveTheme() has now run with both sides loaded, so currentName is
         // final and this is the one place that knows which theme the desktop
         // should be on at startup. Without it the shell would render the

@@ -98,7 +98,7 @@ Surface {
     // The joined-network card shows the security type and signal beside the
     // SSID. Wifi.strength is the connected network's own signal, but the
     // security string only exists on the `networks` row that nmcli polling
-    // produced — Wifi._syncState() rewrites that list with a
+    // produced — Wifi.syncState() rewrites that list with a
     // {ssid, strength, secured, active} shape and drops it. So the segment is
     // omitted when it is genuinely not exposed instead of being guessed at.
     readonly property var activeNetwork: {
