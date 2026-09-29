@@ -45,12 +45,20 @@ import Quickshell.Io
 Singleton {
     id: root
 
-    property bool reduceMotion: false
-    property real movementMs: 400      // size/position changes — Bar resize, etc.
-    property real fadeMs: 200          // opacity/color transitions
-    property real hoverMs: 150         // hover-triggered feedback
-    property real slideInMs: 260        // panels sliding down into place
-    property real bouncePercent: 40    // spring overshoot amount, 0-100
+    // Read off the adapter below, so there is one copy of each value rather
+    // than a property plus a separately parsed copy of it. Nothing assigns
+    // these directly -- the set*() functions are the only write path, and they
+    // go through the adapter so a save cannot miss a field.
+    readonly property bool reduceMotion: data.reduceMotion
+    readonly property real movementMs: data.movementMs        // size/position changes — Bar resize, etc.
+    readonly property real fadeMs: data.fadeMs                // opacity/color transitions
+    readonly property real hoverMs: data.hoverMs              // hover-triggered feedback
+    readonly property real bouncePercent: data.bouncePercent  // spring overshoot amount, 0-100
+
+    // Not a setting: no slider, and deliberately not in the state file. A
+    // named constant so the two dot panels and the control centre's
+    // drill-down sheets all slide the same distance.
+    readonly property real slideInMs: 260
 
     // Spring "damping" is what actually controls overshoot in QtQuick's
     // SpringAnimation (lower damping = more bounce) — bouncePercent
@@ -61,11 +69,11 @@ Singleton {
     readonly property real springDamping: root.reduceMotion ? 1.0
         : Math.max(0.25, 0.7 - (root.bouncePercent / 100) * 0.4)
 
-    function setReduceMotion(v) { reduceMotion = v; save(); }
-    function setMovementMs(v) { movementMs = v; save(); }
-    function setFadeMs(v) { fadeMs = v; save(); }
-    function setHoverMs(v) { hoverMs = v; save(); }
-    function setBouncePercent(v) { bouncePercent = v; save(); }
+    function setReduceMotion(v) { data.reduceMotion = v; save(); }
+    function setMovementMs(v) { data.movementMs = v; save(); }
+    function setFadeMs(v) { data.fadeMs = v; save(); }
+    function setHoverMs(v) { data.hoverMs = v; save(); }
+    function setBouncePercent(v) { data.bouncePercent = v; save(); }
 
     // The one place "should this animate at all" is decided. Every
     // Behavior/Animation duration in the app calls one of these instead
@@ -88,43 +96,47 @@ Singleton {
     // those should track this slider like fade()/hover() track theirs.
     function movement(scale) { return reduceMotion ? 0 : movementMs * (scale || 1); }
 
-    readonly property string statePath: Quickshell.statePath("motion-config.json")
+    function save() {
+        // Writing before the load resolves would save the declared defaults
+        // straight over the saved config: the file arrives asynchronously, so a
+        // setter called during startup would otherwise get there first. This
+        // file had no such guard.
+        if (!root.resolved) return;
+        state.writeAdapter();
+    }
+
+    // ---- Storage -------------------------------------------------------
+    // True once the file has been read, or once we know there isn't one.
     property bool resolved: false
 
+
+    // One FileView with an adapter on it. The adapter maps each of its
+    // properties to a key in the file and does the parsing and the type
+    // checking itself, which is why there is no hand-written parse and no
+    // `typeof d.x === "number"` guard per field: a missing key leaves the
+    // declared default in place, and one of the wrong type is dropped rather
+    // than throwing on a corrupt file.
+    //
+    // Written with an explicit writeAdapter() from save() rather than
+    // onAdapterUpdated, because loading the file also updates the adapter's
+    // properties, and that would rewrite the file on every start.
     FileView {
-        id: loader
-        path: root.statePath
+        id: state
+        path: Quickshell.statePath("motion-config.json")
+        // Read once at startup. Watching would fight our own writes.
         watchChanges: false
         printErrors: false
-        onLoaded: { root.applyState(text()); root.resolved = true; }
-        onLoadFailed: (err) => { root.resolved = true; }
-    }
-    FileView {
-        id: writer
-        path: root.statePath
-        printErrors: false
-    }
+        onLoaded: root.resolved = true
+        // No saved config yet is the normal first-run case, not an error.
+        onLoadFailed: root.resolved = true
 
-    function applyState(jsonText) {
-        try {
-            const d = JSON.parse(jsonText);
-            if (typeof d.reduceMotion === "boolean") root.reduceMotion = d.reduceMotion;
-            if (typeof d.movementMs === "number") root.movementMs = d.movementMs;
-            if (typeof d.fadeMs === "number") root.fadeMs = d.fadeMs;
-            if (typeof d.hoverMs === "number") root.hoverMs = d.hoverMs;
-            if (typeof d.bouncePercent === "number") root.bouncePercent = d.bouncePercent;
-        } catch (e) {
-            // corrupt/empty state file, ignore
+        JsonAdapter {
+            id: data
+            property bool reduceMotion: false
+            property real movementMs: 400
+            property real fadeMs: 200
+            property real hoverMs: 150
+            property real bouncePercent: 40
         }
-    }
-
-    function save() {
-        writer.setText(JSON.stringify({
-            reduceMotion: root.reduceMotion,
-            movementMs: root.movementMs,
-            fadeMs: root.fadeMs,
-            hoverMs: root.hoverMs,
-            bouncePercent: root.bouncePercent
-        }));
     }
 }
