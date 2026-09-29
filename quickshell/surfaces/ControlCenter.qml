@@ -353,30 +353,13 @@ Surface {
         // The same box the pages use, so the card is always exactly the
         // page's bounds and cannot drift off a page whose content resizes.
         height: root.drillHeight
-        y: baseY + (1 - scale) * pivot.y
 
-
-        // Grow out of the cell that was clicked.
-        //
-        // The pivot is done arithmetically because this Qt build exposes no
-        // pixel transform origin: there is no transformOriginX/Y, no callable
-        // setTransformOrigin(), and `transforms` is not assignable. Handing
-        // transformOrigin an Item is no help either -- measured against a
-        // forced scale of 0.5, the box still pivots on its own centre rather
-        // than on the cell. So the origin is pinned to the top-left and the
-        // pivot is applied by hand: scaling about a point P is identical to
-        // scaling about (0,0) and then translating by (1 - scale) * P, and
-        // that translation is folded into x and y.
-        readonly property point pivot: Qt.point(
-            Math.max(0, Math.min(width,  root.popoverOrigin.x - baseX)),
-            Math.max(0, Math.min(height, root.popoverOrigin.y - baseY)))
-        x: baseX + (1 - scale) * pivot.x
-        transformOrigin: Item.TopLeft
-        scale: root.drillOpen ? 1 : 0.82
+        x: baseX
+        y: baseY + (root.drillOpen ? 0 : -BarConfig.panelSlideIn)
         opacity: root.drillOpen ? 1 : 0
-        Behavior on scale {
+        Behavior on y {
             enabled: !MotionConfig.reduceMotion
-            SpringAnimation { spring: 6.5; damping: MotionConfig.springDamping; mass: 0.75 }
+            NumberAnimation { duration: MotionConfig.slideInMs; easing.type: Easing.OutCubic }
         }
         Behavior on opacity { NumberAnimation { duration: MotionConfig.fade(); easing.type: Easing.OutCubic } }
         radius: 18
@@ -404,7 +387,6 @@ Surface {
         // content still scrolls inside it, so a list taller than the box is
         // reachable rather than silently clipped.
         height: root.drillHeight
-        y: baseY + (1 - scale) * pivot.y
         contentWidth: width
         contentHeight: btFlickContent.implicitHeight
         clip: true
@@ -415,27 +397,12 @@ Surface {
 
         visible: root.view === "bluetooth"
 
-        // Grow out of the cell that was clicked.
-        //
-        // The pivot is done arithmetically because this Qt build exposes no
-        // pixel transform origin: there is no transformOriginX/Y, no callable
-        // setTransformOrigin(), and `transforms` is not assignable. Handing
-        // transformOrigin an Item is no help either -- measured against a
-        // forced scale of 0.5, the box still pivots on its own centre rather
-        // than on the cell. So the origin is pinned to the top-left and the
-        // pivot is applied by hand: scaling about a point P is identical to
-        // scaling about (0,0) and then translating by (1 - scale) * P, and
-        // that translation is folded into x and y.
-        readonly property point pivot: Qt.point(
-            Math.max(0, Math.min(width,  root.popoverOrigin.x - baseX)),
-            Math.max(0, Math.min(height, root.popoverOrigin.y - baseY)))
-        x: baseX + (1 - scale) * pivot.x
-        transformOrigin: Item.TopLeft
-        scale: btFlick.visible ? 1 : 0.82
+        x: baseX
+        y: baseY + (btFlick.visible ? 0 : -BarConfig.panelSlideIn)
         opacity: btFlick.visible ? 1 : 0
-        Behavior on scale {
+        Behavior on y {
             enabled: !MotionConfig.reduceMotion
-            SpringAnimation { spring: 6.5; damping: MotionConfig.springDamping; mass: 0.75 }
+            NumberAnimation { duration: MotionConfig.slideInMs; easing.type: Easing.OutCubic }
         }
         Behavior on opacity { NumberAnimation { duration: MotionConfig.fade(); easing.type: Easing.OutCubic } }
 
@@ -578,7 +545,6 @@ Surface {
         // The shared drill-down box, not a content-derived one; the content
         // still scrolls inside it.
         height: root.drillHeight
-        y: baseY + (1 - scale) * pivot.y
         contentWidth: width
         contentHeight: soundFlickContent.implicitHeight
         clip: true
@@ -589,27 +555,12 @@ Surface {
 
         visible: root.view === "sound"
 
-        // Grow out of the cell that was clicked.
-        //
-        // The pivot is done arithmetically because this Qt build exposes no
-        // pixel transform origin: there is no transformOriginX/Y, no callable
-        // setTransformOrigin(), and `transforms` is not assignable. Handing
-        // transformOrigin an Item is no help either -- measured against a
-        // forced scale of 0.5, the box still pivots on its own centre rather
-        // than on the cell. So the origin is pinned to the top-left and the
-        // pivot is applied by hand: scaling about a point P is identical to
-        // scaling about (0,0) and then translating by (1 - scale) * P, and
-        // that translation is folded into x and y.
-        readonly property point pivot: Qt.point(
-            Math.max(0, Math.min(width,  root.popoverOrigin.x - baseX)),
-            Math.max(0, Math.min(height, root.popoverOrigin.y - baseY)))
-        x: baseX + (1 - scale) * pivot.x
-        transformOrigin: Item.TopLeft
-        scale: soundFlick.visible ? 1 : 0.82
+        x: baseX
+        y: baseY + (soundFlick.visible ? 0 : -BarConfig.panelSlideIn)
         opacity: soundFlick.visible ? 1 : 0
-        Behavior on scale {
+        Behavior on y {
             enabled: !MotionConfig.reduceMotion
-            SpringAnimation { spring: 6.5; damping: MotionConfig.springDamping; mass: 0.75 }
+            NumberAnimation { duration: MotionConfig.slideInMs; easing.type: Easing.OutCubic }
         }
         Behavior on opacity { NumberAnimation { duration: MotionConfig.fade(); easing.type: Easing.OutCubic } }
 
@@ -825,7 +776,6 @@ Surface {
         // The shared drill-down box, not a content-derived one; the content
         // still scrolls inside it.
         height: root.drillHeight
-        y: baseY + (1 - scale) * pivot.y
         contentWidth: width
         contentHeight: dispFlickContent.implicitHeight
         clip: true
@@ -840,27 +790,12 @@ Surface {
             if (visible) Brightness.refreshMonitorInfo()
         }
 
-        // Grow out of the cell that was clicked.
-        //
-        // The pivot is done arithmetically because this Qt build exposes no
-        // pixel transform origin: there is no transformOriginX/Y, no callable
-        // setTransformOrigin(), and `transforms` is not assignable. Handing
-        // transformOrigin an Item is no help either -- measured against a
-        // forced scale of 0.5, the box still pivots on its own centre rather
-        // than on the cell. So the origin is pinned to the top-left and the
-        // pivot is applied by hand: scaling about a point P is identical to
-        // scaling about (0,0) and then translating by (1 - scale) * P, and
-        // that translation is folded into x and y.
-        readonly property point pivot: Qt.point(
-            Math.max(0, Math.min(width,  root.popoverOrigin.x - baseX)),
-            Math.max(0, Math.min(height, root.popoverOrigin.y - baseY)))
-        x: baseX + (1 - scale) * pivot.x
-        transformOrigin: Item.TopLeft
-        scale: dispFlick.visible ? 1 : 0.82
+        x: baseX
+        y: baseY + (dispFlick.visible ? 0 : -BarConfig.panelSlideIn)
         opacity: dispFlick.visible ? 1 : 0
-        Behavior on scale {
+        Behavior on y {
             enabled: !MotionConfig.reduceMotion
-            SpringAnimation { spring: 6.5; damping: MotionConfig.springDamping; mass: 0.75 }
+            NumberAnimation { duration: MotionConfig.slideInMs; easing.type: Easing.OutCubic }
         }
         Behavior on opacity { NumberAnimation { duration: MotionConfig.fade(); easing.type: Easing.OutCubic } }
 
@@ -1014,7 +949,6 @@ Surface {
         // content still scrolls inside it, so a list taller than the box is
         // reachable rather than silently clipped.
         height: root.drillHeight
-        y: baseY + (1 - scale) * pivot.y
         contentWidth: width
         contentHeight: wifiFlickContent.implicitHeight
         clip: true
@@ -1025,27 +959,12 @@ Surface {
 
         visible: root.view === "wifi"
 
-        // Grow out of the cell that was clicked.
-        //
-        // The pivot is done arithmetically because this Qt build exposes no
-        // pixel transform origin: there is no transformOriginX/Y, no callable
-        // setTransformOrigin(), and `transforms` is not assignable. Handing
-        // transformOrigin an Item is no help either -- measured against a
-        // forced scale of 0.5, the box still pivots on its own centre rather
-        // than on the cell. So the origin is pinned to the top-left and the
-        // pivot is applied by hand: scaling about a point P is identical to
-        // scaling about (0,0) and then translating by (1 - scale) * P, and
-        // that translation is folded into x and y.
-        readonly property point pivot: Qt.point(
-            Math.max(0, Math.min(width,  root.popoverOrigin.x - baseX)),
-            Math.max(0, Math.min(height, root.popoverOrigin.y - baseY)))
-        x: baseX + (1 - scale) * pivot.x
-        transformOrigin: Item.TopLeft
-        scale: wifiFlick.visible ? 1 : 0.82
+        x: baseX
+        y: baseY + (wifiFlick.visible ? 0 : -BarConfig.panelSlideIn)
         opacity: wifiFlick.visible ? 1 : 0
-        Behavior on scale {
+        Behavior on y {
             enabled: !MotionConfig.reduceMotion
-            SpringAnimation { spring: 6.5; damping: MotionConfig.springDamping; mass: 0.75 }
+            NumberAnimation { duration: MotionConfig.slideInMs; easing.type: Easing.OutCubic }
         }
         Behavior on opacity { NumberAnimation { duration: MotionConfig.fade(); easing.type: Easing.OutCubic } }
 
