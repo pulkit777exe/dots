@@ -71,9 +71,6 @@ Surface {
     readonly property string errorText:
         _p ? _p.errorText : ""
 
-    readonly property bool responseHidden:
-        _p ? !_p.responseVisible : true
-
     signal authenticateRequested(string password)
     signal cancelled()
 
@@ -284,10 +281,22 @@ Surface {
 
                 verticalAlignment: TextInput.AlignVCenter
 
-                echoMode:
-                    root.responseHidden
-                        ? TextInput.Password
-                        : TextInput.Normal
+                // Always masked, unconditionally.
+                //
+                // This used to be keyed off `responseHidden`, which is
+                // `!_p.responseVisible` -- i.e. "is this a response flow". That
+                // conflates two unrelated things: whether a response is
+                // *needed* says nothing about whether the text should be
+                // legible. Every real password prompt is a response flow, so
+                // that condition was true exactly when it mattered and the
+                // password rendered in plain text, in the one place it must
+                // never be.
+                //
+                // responseHidden had no other use, so it is gone rather than
+                // repurposed. If the field's visibility ever needs to follow
+                // the flow, bind `visible` to isResponseRequired and leave the
+                // echo mode alone.
+                echoMode: TextInput.Password
 
                 color: "#FFFFFF"
 
