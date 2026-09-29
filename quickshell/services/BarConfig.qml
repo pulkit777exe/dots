@@ -71,19 +71,19 @@ Singleton {
     // into it. One value for both panels so they move as a pair.
     property real panelSlideIn: 22
 
-    function setNotchMode(v) { notchMode = v; _persist(); }
-    function setNotchFlare(v) { notchFlare = v; _persist(); }
-    function setBarHeight(v) { barHeight = v; _persist(); }
-    function setCollapsedWidth(v) { collapsedWidth = v; _persist(); }
-    function setExpandedHeight(v) { expandedHeight = v; _persist(); }
-    function setMinimumExpandedWidth(v) { minimumExpandedWidth = v; _persist(); }
-    function setGapFromScreenEdge(v) { gapFromScreenEdge = v; _persist(); }
-    function setExpandedCornerRadius(v) { expandedCornerRadius = v; _persist(); }
-    function setStatusCircleEnabled(v) { statusCircleEnabled = v; _persist(); }
-    function setAlbumArtCircleEnabled(v) { albumArtCircleEnabled = v; _persist(); }
-    function setInnerPadding(v) { innerPadding = v; _persist(); }
-    function setCollapsedCornerRadius(v) { collapsedCornerRadius = v; _persist(); }
-    function setStageLiftOnHover(v) { stageLiftOnHover = v; _persist(); }
+    function setNotchMode(v) { notchMode = v; save(); }
+    function setNotchFlare(v) { notchFlare = v; save(); }
+    function setBarHeight(v) { barHeight = v; save(); }
+    function setCollapsedWidth(v) { collapsedWidth = v; save(); }
+    function setExpandedHeight(v) { expandedHeight = v; save(); }
+    function setMinimumExpandedWidth(v) { minimumExpandedWidth = v; save(); }
+    function setGapFromScreenEdge(v) { gapFromScreenEdge = v; save(); }
+    function setExpandedCornerRadius(v) { expandedCornerRadius = v; save(); }
+    function setStatusCircleEnabled(v) { statusCircleEnabled = v; save(); }
+    function setAlbumArtCircleEnabled(v) { albumArtCircleEnabled = v; save(); }
+    function setInnerPadding(v) { innerPadding = v; save(); }
+    function setCollapsedCornerRadius(v) { collapsedCornerRadius = v; save(); }
+    function setStageLiftOnHover(v) { stageLiftOnHover = v; save(); }
 
     // The single clamped radius the Island actually applies. Exposed as a
     // readonly so the three call sites can't each re-derive (and mis-clamp)
@@ -92,15 +92,15 @@ Singleton {
 
     readonly property string statePath: Quickshell.statePath("bar-config.json")
 
-    property bool _resolved: false
+    property bool resolved: false
 
     FileView {
         id: loader
         path: root.statePath
         watchChanges: false
         printErrors: false
-        onLoaded: { root._applyState(text()); root._resolved = true; }
-        onLoadFailed: (err) => { root._resolved = true; } // no saved config yet, keep defaults
+        onLoaded: { root.applyState(text()); root.resolved = true; }
+        onLoadFailed: (err) => { root.resolved = true; } // no saved config yet, keep defaults
     }
 
     FileView {
@@ -109,7 +109,7 @@ Singleton {
         printErrors: false
     }
 
-    function _applyState(jsonText) {
+    function applyState(jsonText) {
         try {
             const d = JSON.parse(jsonText);
             if (typeof d.notchMode === "boolean") root.notchMode = d.notchMode;
@@ -130,7 +130,7 @@ Singleton {
         }
     }
 
-    function _persist() {
+    function save() {
         writer.setText(JSON.stringify({
             notchMode: root.notchMode,
             notchFlare: root.notchFlare,

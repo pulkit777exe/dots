@@ -62,16 +62,16 @@ Singleton {
     property int wallpaperTransitionDuration: 600          // ms
 
     readonly property string statePath: Quickshell.statePath("settings-config.json")
-    property bool _loaded: false
+    property bool resolved: false
 
     FileView {
         id: loader; path: root.statePath; watchChanges: false; printErrors: false
-        onLoaded: { root._applyState(text()); root._loaded = true }
-        onLoadFailed: root._loaded = true
+        onLoaded: { root.applyState(text()); root.resolved = true }
+        onLoadFailed: root.resolved = true
     }
     FileView { id: writer; path: root.statePath; printErrors: false }
 
-    function _applyState(jsonText: string) {
+    function applyState(jsonText: string) {
         try {
             const d = JSON.parse(jsonText);
             if (typeof d.currentPage === "number") root.currentPage = d.currentPage;
@@ -105,8 +105,8 @@ Singleton {
         } catch(e){}
     }
 
-    function _persist() {
-        if (!root._loaded) return
+    function save() {
+        if (!root.resolved) return
         writer.setText(JSON.stringify({
             currentPage: root.currentPage,
             sidebarWidth: root.sidebarWidth,
@@ -139,32 +139,32 @@ Singleton {
         }))
     }
 
-    function setCurrentPage(v: int){ if(v===root.currentPage) return; root.currentPage=v; _persist() }
-    function setSidebarWidth(v: real){ if(v===root.sidebarWidth) return; root.sidebarWidth=v; _persist() }
-    function setTime24h(v: bool){ root.time24h=v; _persist() }
-    function setShowSeconds(v: bool){ root.showSeconds=v; _persist() }
-    function setFirstDayMonday(v: bool){ root.firstDayMonday=v; _persist() }
-    function setMediaShowMiniPill(v: bool){ root.mediaShowMiniPill=v; _persist() }
-    function setMediaShowToast(v: bool){ root.mediaShowToast=v; _persist() }
-    function setMediaAutoPauseOnLock(v: bool){ root.mediaAutoPauseOnLock=v; _persist() }
-    function setLauncherIncludeCommands(v: bool){ root.launcherIncludeCommands=v; _persist() }
-    function setLauncherMaxResults(v: int){ root.launcherMaxResults=v; _persist() }
-    function setLauncherWidth(v: real){ root.launcherWidth=v; _persist() }
-    function setLauncherRowHeight(v: real){ root.launcherRowHeight=v; _persist() }
-    function setLauncherRowsBeforeScrolling(v: int){ root.launcherRowsBeforeScrolling=v; _persist() }
-    function setNotifSoundEnabled(v: bool){ root.notifSoundEnabled=v; _persist() }
-    function setNotifPopupTimeoutMs(v: int){ root.notifPopupTimeoutMs=v; _persist() }
-    function setNotifUrgentTimeoutMs(v: int){ root.notifUrgentTimeoutMs=v; _persist() }
-    function setNotifWidth(v: real){ root.notifWidth=v; _persist() }
-    function setNotifShowBodyText(v: bool){ root.notifShowBodyText=v; _persist() }
-    function setNotifHistoryHeight(v: real){ root.notifHistoryHeight=v; _persist() }
-    function setOsdOnScreenTimeMs(v: int){ root.osdOnScreenTimeMs=v; _persist() }
-    function setOsdLevelBarThickness(v: real){ root.osdLevelBarThickness=v; _persist() }
-    function setNotifIslandMorph(v: bool){ root.notifIslandMorph=v; _persist() }
-    function setLockscreenTimeoutMins(v: int){ root.lockscreenTimeoutMins=v; _persist() }
-    function setLockscreenShowMedia(v: bool){ root.lockscreenShowMedia=v; _persist() }
-    function setGlassOpacity(v: real){ root.glassOpacity=v; _persist() }
-    function setCornerRadiusPreset(v: int){ root.cornerRadiusPreset=v; _persist() }
-    function setWallpaperTransitionStyle(v: string){ root.wallpaperTransitionStyle=v; _persist() }
-    function setWallpaperTransitionDuration(v: int){ root.wallpaperTransitionDuration=v; _persist() }
+    function setCurrentPage(v: int){ if(v===root.currentPage) return; root.currentPage=v; save() }
+    function setSidebarWidth(v: real){ if(v===root.sidebarWidth) return; root.sidebarWidth=v; save() }
+    function setTime24h(v: bool){ root.time24h=v; save() }
+    function setShowSeconds(v: bool){ root.showSeconds=v; save() }
+    function setFirstDayMonday(v: bool){ root.firstDayMonday=v; save() }
+    function setMediaShowMiniPill(v: bool){ root.mediaShowMiniPill=v; save() }
+    function setMediaShowToast(v: bool){ root.mediaShowToast=v; save() }
+    function setMediaAutoPauseOnLock(v: bool){ root.mediaAutoPauseOnLock=v; save() }
+    function setLauncherIncludeCommands(v: bool){ root.launcherIncludeCommands=v; save() }
+    function setLauncherMaxResults(v: int){ root.launcherMaxResults=v; save() }
+    function setLauncherWidth(v: real){ root.launcherWidth=v; save() }
+    function setLauncherRowHeight(v: real){ root.launcherRowHeight=v; save() }
+    function setLauncherRowsBeforeScrolling(v: int){ root.launcherRowsBeforeScrolling=v; save() }
+    function setNotifSoundEnabled(v: bool){ root.notifSoundEnabled=v; save() }
+    function setNotifPopupTimeoutMs(v: int){ root.notifPopupTimeoutMs=v; save() }
+    function setNotifUrgentTimeoutMs(v: int){ root.notifUrgentTimeoutMs=v; save() }
+    function setNotifWidth(v: real){ root.notifWidth=v; save() }
+    function setNotifShowBodyText(v: bool){ root.notifShowBodyText=v; save() }
+    function setNotifHistoryHeight(v: real){ root.notifHistoryHeight=v; save() }
+    function setOsdOnScreenTimeMs(v: int){ root.osdOnScreenTimeMs=v; save() }
+    function setOsdLevelBarThickness(v: real){ root.osdLevelBarThickness=v; save() }
+    function setNotifIslandMorph(v: bool){ root.notifIslandMorph=v; save() }
+    function setLockscreenTimeoutMins(v: int){ root.lockscreenTimeoutMins=v; save() }
+    function setLockscreenShowMedia(v: bool){ root.lockscreenShowMedia=v; save() }
+    function setGlassOpacity(v: real){ root.glassOpacity=v; save() }
+    function setCornerRadiusPreset(v: int){ root.cornerRadiusPreset=v; save() }
+    function setWallpaperTransitionStyle(v: string){ root.wallpaperTransitionStyle=v; save() }
+    function setWallpaperTransitionDuration(v: int){ root.wallpaperTransitionDuration=v; save() }
 }

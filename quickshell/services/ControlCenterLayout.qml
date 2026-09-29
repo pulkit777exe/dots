@@ -13,7 +13,7 @@ import Quickshell.Io
 // replaces that structure with an explicit list of placed controls on a
 // column grid.
 //
-// Every mutation goes through _commit(), which snapshots the previous state
+// Every mutation goes through commit(), which snapshots the previous state
 // onto the undo stack before applying. Nothing else may assign to `items` --
 // doing so would skip both persistence and undo, which is how the two get out
 // of step with each other.
@@ -42,13 +42,13 @@ Singleton {
 
     property string selectedId: ""
 
-    // NOT readonly. _commit() pushes onto it and undo() pops off it, and a
+    // NOT readonly. commit() pushes onto it and undo() pops off it, and a
     // readonly property makes both throw:
     //
     //   TypeError: Cannot assign to read-only property "undoStack"
     //     at services/ControlCenterLayout.qml[309:-1]
     //
-    // That silently disabled the entire arranger. _commit() runs *before*
+    // That silently disabled the entire arranger. commit() runs *before*
     // the caller writes the new state, so the throw aborted resizeTo, moveTo,
     // remove, setColumns, add, tidy and reset -- each one returned without
     // doing anything, and with no visible error, because the exception was
@@ -162,7 +162,7 @@ Singleton {
         return { col: c, row: r };
     }
 
-    // ---- Mutations (all via _commit) -------------------------------------
+    // ---- Mutations (all via commit) -------------------------------------
 
     function select(id) { root.selectedId = (root.selectedId === id ? "" : id); }
 
@@ -171,7 +171,7 @@ Singleton {
         if (!it) return;
         const p = settle(it, col, row);
         if (p.col === it.col && p.row === it.row) return;
-        _commit();
+        commit();
         root.items = root.items.map(function (x) {
             return x.id === id ? { id: x.id, type: x.type, col: p.col, row: p.row,
                                    colSpan: x.colSpan, rowSpan: x.rowSpan } : x;
@@ -190,7 +190,7 @@ Singleton {
             : settle(wanted, it.col, it.row);
         if (p.col === it.col && p.row === it.row &&
             it.colSpan === colSpan && it.rowSpan === rowSpan) return;
-        _commit();
+        commit();
         root.items = root.items.map(function (x) {
             return x.id === id ? { id: x.id, type: x.type, col: p.col, row: p.row,
                                    colSpan: colSpan, rowSpan: rowSpan } : x;
@@ -219,7 +219,7 @@ Singleton {
 
     function remove(id) {
         if (!byId(id)) return;
-        _commit();
+        commit();
         root.items = root.items.filter(function (x) { return x.id !== id; });
         if (root.selectedId === id) root.selectedId = "";
     }
@@ -234,7 +234,7 @@ Singleton {
         for (let r = 0; r < 64; r++) {
             for (let c = 0; c <= columns - span[0]; c++) {
                 if (fits(probe, c, r)) {
-                    _commit();
+                    commit();
                     const id = type + "-" + (r * 100 + c);
                     root.items = root.items.concat([{ id: id, type: type, col: c, row: r,
                                                       colSpan: span[0], rowSpan: span[1] }]);
@@ -249,7 +249,7 @@ Singleton {
     // Tidy: pack everything up and left in reading order, largest first within
     // each row-band, so a ragged layout closes up without changing any sizes.
     function tidy() {
-        _commit();
+        commit();
         const sorted = root.items.slice().sort(function (a, b) {
             if (a.row !== b.row) return a.row - b.row;
             if (a.col !== b.col) return a.col - b.col;
@@ -281,7 +281,7 @@ Singleton {
     }
 
     function reset() {
-        _commit();
+        commit();
         root.items = defaultItems();
         root.selectedId = "";
     }
@@ -289,7 +289,7 @@ Singleton {
     function setColumns(n) {
         n = Math.max(minColumns, Math.min(maxColumns, n));
         if (n === root.columns) return;
-        _commit();
+        commit();
         // Anything hanging off the right edge is pulled back in; if it still
         // does not fit it is dropped, because a control the grid cannot hold
         // has nowhere sensible to go.
@@ -314,16 +314,16 @@ Singleton {
         // the popped one. That makes repeated undo walk backwards through the
         // whole history instead of getting stuck on the last two states.
         root.undoStack = root.undoStack.slice(0, -1);
-        _commit();
+        commit();
         root.items = prev.items;
         root.columns = prev.columns;
         root.selectedId = "";
     }
 
-    function _commit() {
+    function commit() {
         root.undoStack = root.undoStack.concat([{ items: root.items, columns: root.columns }]);
         if (root.undoStack.length > 50) root.undoStack = root.undoStack.slice(1);
-        // Deferred, not persisted here. Every caller runs _commit() *before*
+        // Deferred, not persisted here. Every caller runs commit() *before*
         // it writes the new state -- resizeTo, moveTo, remove, undo and
         // setColumns all follow this call with their assignment to items --
         // so persisting inline serialised the pre-edit layout and the file
@@ -339,21 +339,21 @@ Singleton {
     Timer {
         id: persistDebounce
         interval: 60
-        onTriggered: root._persist()
+        onTriggered: root.save()
     }
 
     // ---- Persistence -----------------------------------------------------
     readonly property string statePath: Quickshell.statePath("control-center-layout.json")
 
-    property bool _resolved: false
+    property bool resolved: false
 
     FileView {
         id: loader
         path: root.statePath
         watchChanges: false
         printErrors: false
-        onLoaded: { root._applyState(text()); root._resolved = true; }
-        onLoadFailed: { root._resolved = true; }
+        onLoaded: { root.applyState(text()); root.resolved = true; }
+        onLoadFailed: { root.resolved = true; }
     }
 
     FileView {
@@ -362,7 +362,7 @@ Singleton {
         printErrors: false
     }
 
-    function _applyState(jsonText) {
+    function applyState(jsonText) {
         try {
             const d = JSON.parse(jsonText);
             if (typeof d.columns === "number")
@@ -383,7 +383,7 @@ Singleton {
         }
     }
 
-    function _persist() {
+    function save() {
         writer.setText(JSON.stringify({ columns: root.columns, items: root.items }));
     }
 }

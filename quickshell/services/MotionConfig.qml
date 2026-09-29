@@ -61,11 +61,11 @@ Singleton {
     readonly property real springDamping: root.reduceMotion ? 1.0
         : Math.max(0.25, 0.7 - (root.bouncePercent / 100) * 0.4)
 
-    function setReduceMotion(v) { reduceMotion = v; _persist(); }
-    function setMovementMs(v) { movementMs = v; _persist(); }
-    function setFadeMs(v) { fadeMs = v; _persist(); }
-    function setHoverMs(v) { hoverMs = v; _persist(); }
-    function setBouncePercent(v) { bouncePercent = v; _persist(); }
+    function setReduceMotion(v) { reduceMotion = v; save(); }
+    function setMovementMs(v) { movementMs = v; save(); }
+    function setFadeMs(v) { fadeMs = v; save(); }
+    function setHoverMs(v) { hoverMs = v; save(); }
+    function setBouncePercent(v) { bouncePercent = v; save(); }
 
     // The one place "should this animate at all" is decided. Every
     // Behavior/Animation duration in the app calls one of these instead
@@ -89,15 +89,15 @@ Singleton {
     function movement(scale) { return reduceMotion ? 0 : movementMs * (scale || 1); }
 
     readonly property string statePath: Quickshell.statePath("motion-config.json")
-    property bool _resolved: false
+    property bool resolved: false
 
     FileView {
         id: loader
         path: root.statePath
         watchChanges: false
         printErrors: false
-        onLoaded: { root._applyState(text()); root._resolved = true; }
-        onLoadFailed: (err) => { root._resolved = true; }
+        onLoaded: { root.applyState(text()); root.resolved = true; }
+        onLoadFailed: (err) => { root.resolved = true; }
     }
     FileView {
         id: writer
@@ -105,7 +105,7 @@ Singleton {
         printErrors: false
     }
 
-    function _applyState(jsonText) {
+    function applyState(jsonText) {
         try {
             const d = JSON.parse(jsonText);
             if (typeof d.reduceMotion === "boolean") root.reduceMotion = d.reduceMotion;
@@ -118,7 +118,7 @@ Singleton {
         }
     }
 
-    function _persist() {
+    function save() {
         writer.setText(JSON.stringify({
             reduceMotion: root.reduceMotion,
             movementMs: root.movementMs,
