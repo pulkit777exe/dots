@@ -5,35 +5,35 @@ import Quickshell.Io
 
 Singleton {
     id: root
-    property int currentPage: 0
-    property real sidebarWidth: 240
+    readonly property int currentPage: data.currentPage
+    readonly property real sidebarWidth: data.sidebarWidth
 
     // Clock & Date
-    property bool time24h: true
-    property bool showSeconds: false
-    property bool firstDayMonday: true
+    readonly property bool time24h: data.time24h
+    readonly property bool showSeconds: data.showSeconds
+    readonly property bool firstDayMonday: data.firstDayMonday
 
     // Media
-    property bool mediaShowMiniPill: true
-    property bool mediaShowToast: false
-    property bool mediaAutoPauseOnLock: true
+    readonly property bool mediaShowMiniPill: data.mediaShowMiniPill
+    readonly property bool mediaShowToast: data.mediaShowToast
+    readonly property bool mediaAutoPauseOnLock: data.mediaAutoPauseOnLock
 
     // Launcher
-    property bool launcherIncludeCommands: true
-    property int launcherMaxResults: 6
+    readonly property bool launcherIncludeCommands: data.launcherIncludeCommands
+    readonly property int launcherMaxResults: data.launcherMaxResults
     // Reference: 2026-09-20_22-27-53.png, a 1:1 crop of the same session.
     // The launcher panel measures x 204..717 = 514 wide, and the selected row
     // y 90..134 = 45 tall. The old 550x52 was visibly wider and taller than
     // the reference. Neither is persisted, so the defaults take effect as-is.
-    property real launcherWidth: 514
-    property real launcherRowHeight: 46
-    property int launcherRowsBeforeScrolling: 6
+    readonly property real launcherWidth: data.launcherWidth
+    readonly property real launcherRowHeight: data.launcherRowHeight
+    readonly property int launcherRowsBeforeScrolling: data.launcherRowsBeforeScrolling
 
     // Notifications
-    property bool notifSoundEnabled: true
-    property bool notifIslandMorph: true
-    property int notifPopupTimeoutMs: 2000
-    property int notifUrgentTimeoutMs: 6000
+    readonly property bool notifSoundEnabled: data.notifSoundEnabled
+    readonly property bool notifIslandMorph: data.notifIslandMorph
+    readonly property int notifPopupTimeoutMs: data.notifPopupTimeoutMs
+    readonly property int notifUrgentTimeoutMs: data.notifUrgentTimeoutMs
     // 449 is the reference toast's width measured 1:1 on
     // 2026-09-20_22-28-28.png: the card's outer edge falls at x 258.98 and
     // 708.17 (half-way between the wallpaper and the black fill on each
@@ -41,130 +41,118 @@ Singleton {
     // 1920x1080 session -- confirmed by the control-centre panel measuring
     // the same 514px in the Display crop as in the native home capture -- so
     // this is a live pixel count, not a capture pixel count to be scaled.
-    property real notifWidth: 449
-    property bool notifShowBodyText: true
-    property real notifHistoryHeight: 200
+    readonly property real notifWidth: data.notifWidth
+    readonly property bool notifShowBodyText: data.notifShowBodyText
+    readonly property real notifHistoryHeight: data.notifHistoryHeight
 
     // Volume/Brightness OSD
-    property int osdOnScreenTimeMs: 1500
+    readonly property int osdOnScreenTimeMs: data.osdOnScreenTimeMs
     // 5, measured off 2026-09-20_22-28-44.png: the reference's track column
     // reads y 37..41 at x 360. Was 6.
-    property real osdLevelBarThickness: 5
+    readonly property real osdLevelBarThickness: data.osdLevelBarThickness
 
     // Lockscreen
-    property int lockscreenTimeoutMins: 10
-    property bool lockscreenShowMedia: true
+    readonly property int lockscreenTimeoutMins: data.lockscreenTimeoutMins
+    readonly property bool lockscreenShowMedia: data.lockscreenShowMedia
 
     // Appearance
-    property real glassOpacity: 0.95
-    property int cornerRadiusPreset: 20
-    property string wallpaperTransitionStyle: "circleOut"  // "circleOut" | "fade" | "slide" | "slideVertical" | "instant"
-    property int wallpaperTransitionDuration: 600          // ms
+    readonly property real glassOpacity: data.glassOpacity
+    readonly property int cornerRadiusPreset: data.cornerRadiusPreset
+    readonly property string wallpaperTransitionStyle: data.wallpaperTransitionStyle   //"circleOut" | "fade" | "slide" | "slideVertical" | "instant"
+    readonly property int wallpaperTransitionDuration: data.wallpaperTransitionDuration   //ms
 
-    readonly property string statePath: Quickshell.statePath("settings-config.json")
+    // ---- Storage -------------------------------------------------------
+    // True once the file has been read, or once we know there isn't one.
     property bool resolved: false
 
-    FileView {
-        id: loader; path: root.statePath; watchChanges: false; printErrors: false
-        onLoaded: { root.applyState(text()); root.resolved = true }
-        onLoadFailed: root.resolved = true
-    }
-    FileView { id: writer; path: root.statePath; printErrors: false }
-
-    function applyState(jsonText: string) {
-        try {
-            const d = JSON.parse(jsonText);
-            if (typeof d.currentPage === "number") root.currentPage = d.currentPage;
-            if (typeof d.sidebarWidth === "number") root.sidebarWidth = d.sidebarWidth;
-            if (typeof d.time24h === "boolean") root.time24h = d.time24h;
-            if (typeof d.showSeconds === "boolean") root.showSeconds = d.showSeconds;
-            if (typeof d.firstDayMonday === "boolean") root.firstDayMonday = d.firstDayMonday;
-            if (typeof d.mediaShowMiniPill === "boolean") root.mediaShowMiniPill = d.mediaShowMiniPill;
-            if (typeof d.mediaShowToast === "boolean") root.mediaShowToast = d.mediaShowToast;
-            if (typeof d.mediaAutoPauseOnLock === "boolean") root.mediaAutoPauseOnLock = d.mediaAutoPauseOnLock;
-            if (typeof d.launcherIncludeCommands === "boolean") root.launcherIncludeCommands = d.launcherIncludeCommands;
-            if (typeof d.launcherMaxResults === "number") root.launcherMaxResults = d.launcherMaxResults;
-            if (typeof d.launcherWidth === "number") root.launcherWidth = d.launcherWidth;
-            if (typeof d.launcherRowHeight === "number") root.launcherRowHeight = d.launcherRowHeight;
-            if (typeof d.launcherRowsBeforeScrolling === "number") root.launcherRowsBeforeScrolling = d.launcherRowsBeforeScrolling;
-            if (typeof d.notifSoundEnabled === "boolean") root.notifSoundEnabled = d.notifSoundEnabled;
-            if (typeof d.notifPopupTimeoutMs === "number") root.notifPopupTimeoutMs = d.notifPopupTimeoutMs;
-            if (typeof d.notifUrgentTimeoutMs === "number") root.notifUrgentTimeoutMs = d.notifUrgentTimeoutMs;
-            if (typeof d.notifWidth === "number") root.notifWidth = d.notifWidth;
-            if (typeof d.notifShowBodyText === "boolean") root.notifShowBodyText = d.notifShowBodyText;
-            if (typeof d.notifHistoryHeight === "number") root.notifHistoryHeight = d.notifHistoryHeight;
-            if (typeof d.osdOnScreenTimeMs === "number") root.osdOnScreenTimeMs = d.osdOnScreenTimeMs;
-            if (typeof d.osdLevelBarThickness === "number") root.osdLevelBarThickness = d.osdLevelBarThickness;
-            if (typeof d.notifIslandMorph === "boolean") root.notifIslandMorph = d.notifIslandMorph;
-            if (typeof d.lockscreenTimeoutMins === "number") root.lockscreenTimeoutMins = d.lockscreenTimeoutMins;
-            if (typeof d.lockscreenShowMedia === "boolean") root.lockscreenShowMedia = d.lockscreenShowMedia;
-            if (typeof d.glassOpacity === "number") root.glassOpacity = d.glassOpacity;
-            if (typeof d.cornerRadiusPreset === "number") root.cornerRadiusPreset = d.cornerRadiusPreset;
-            if (typeof d.wallpaperTransitionStyle === "string") root.wallpaperTransitionStyle = d.wallpaperTransitionStyle;
-            if (typeof d.wallpaperTransitionDuration === "number") root.wallpaperTransitionDuration = d.wallpaperTransitionDuration;
-        } catch(e){}
-    }
-
+    // Writes the adapter out. Guarded on `resolved` because the file loads
+    // asynchronously: a setter called during startup would otherwise
+    // serialise the defaults straight over the saved config.
     function save() {
-        if (!root.resolved) return
-        writer.setText(JSON.stringify({
-            currentPage: root.currentPage,
-            sidebarWidth: root.sidebarWidth,
-            time24h: root.time24h,
-            showSeconds: root.showSeconds,
-            firstDayMonday: root.firstDayMonday,
-            mediaShowMiniPill: root.mediaShowMiniPill,
-            mediaShowToast: root.mediaShowToast,
-            mediaAutoPauseOnLock: root.mediaAutoPauseOnLock,
-            launcherIncludeCommands: root.launcherIncludeCommands,
-            launcherMaxResults: root.launcherMaxResults,
-            launcherWidth: root.launcherWidth,
-            launcherRowHeight: root.launcherRowHeight,
-            launcherRowsBeforeScrolling: root.launcherRowsBeforeScrolling,
-            notifSoundEnabled: root.notifSoundEnabled,
-            notifPopupTimeoutMs: root.notifPopupTimeoutMs,
-            notifUrgentTimeoutMs: root.notifUrgentTimeoutMs,
-            notifWidth: root.notifWidth,
-            notifShowBodyText: root.notifShowBodyText,
-            notifHistoryHeight: root.notifHistoryHeight,
-            osdOnScreenTimeMs: root.osdOnScreenTimeMs,
-            osdLevelBarThickness: root.osdLevelBarThickness,
-            notifIslandMorph: root.notifIslandMorph,
-            lockscreenTimeoutMins: root.lockscreenTimeoutMins,
-            lockscreenShowMedia: root.lockscreenShowMedia,
-            glassOpacity: root.glassOpacity,
-            cornerRadiusPreset: root.cornerRadiusPreset,
-            wallpaperTransitionStyle: root.wallpaperTransitionStyle,
-            wallpaperTransitionDuration: root.wallpaperTransitionDuration
-        }))
+        if (!root.resolved) return;
+        state.writeAdapter();
     }
 
-    function setCurrentPage(v: int){ if(v===root.currentPage) return; root.currentPage=v; save() }
-    function setSidebarWidth(v: real){ if(v===root.sidebarWidth) return; root.sidebarWidth=v; save() }
-    function setTime24h(v: bool){ root.time24h=v; save() }
-    function setShowSeconds(v: bool){ root.showSeconds=v; save() }
-    function setFirstDayMonday(v: bool){ root.firstDayMonday=v; save() }
-    function setMediaShowMiniPill(v: bool){ root.mediaShowMiniPill=v; save() }
-    function setMediaShowToast(v: bool){ root.mediaShowToast=v; save() }
-    function setMediaAutoPauseOnLock(v: bool){ root.mediaAutoPauseOnLock=v; save() }
-    function setLauncherIncludeCommands(v: bool){ root.launcherIncludeCommands=v; save() }
-    function setLauncherMaxResults(v: int){ root.launcherMaxResults=v; save() }
-    function setLauncherWidth(v: real){ root.launcherWidth=v; save() }
-    function setLauncherRowHeight(v: real){ root.launcherRowHeight=v; save() }
-    function setLauncherRowsBeforeScrolling(v: int){ root.launcherRowsBeforeScrolling=v; save() }
-    function setNotifSoundEnabled(v: bool){ root.notifSoundEnabled=v; save() }
-    function setNotifPopupTimeoutMs(v: int){ root.notifPopupTimeoutMs=v; save() }
-    function setNotifUrgentTimeoutMs(v: int){ root.notifUrgentTimeoutMs=v; save() }
-    function setNotifWidth(v: real){ root.notifWidth=v; save() }
-    function setNotifShowBodyText(v: bool){ root.notifShowBodyText=v; save() }
-    function setNotifHistoryHeight(v: real){ root.notifHistoryHeight=v; save() }
-    function setOsdOnScreenTimeMs(v: int){ root.osdOnScreenTimeMs=v; save() }
-    function setOsdLevelBarThickness(v: real){ root.osdLevelBarThickness=v; save() }
-    function setNotifIslandMorph(v: bool){ root.notifIslandMorph=v; save() }
-    function setLockscreenTimeoutMins(v: int){ root.lockscreenTimeoutMins=v; save() }
-    function setLockscreenShowMedia(v: bool){ root.lockscreenShowMedia=v; save() }
-    function setGlassOpacity(v: real){ root.glassOpacity=v; save() }
-    function setCornerRadiusPreset(v: int){ root.cornerRadiusPreset=v; save() }
-    function setWallpaperTransitionStyle(v: string){ root.wallpaperTransitionStyle=v; save() }
-    function setWallpaperTransitionDuration(v: int){ root.wallpaperTransitionDuration=v; save() }
+    // One FileView with an adapter on it. The adapter maps each of its
+    // properties to a key in the file and does the parsing and the type
+    // checking itself, so there is no hand-written parse and no
+    // `typeof d.x === "number"` guard per field: a missing key leaves the
+    // declared default in place, and one of the wrong type is dropped
+    // rather than throwing on a corrupt file.
+    //
+    // Written with an explicit writeAdapter() from save() rather than
+    // onAdapterUpdated, because loading the file also updates the adapter's
+    // properties, and that would rewrite the file on every start.
+    FileView {
+        id: state
+        path: Quickshell.statePath("settings-config.json")
+        // Read once at startup. Watching would fight our own writes.
+        watchChanges: false
+        printErrors: false
+        onLoaded: root.resolved = true
+        // No saved config yet is the normal first-run case, not an error.
+        onLoadFailed: root.resolved = true
+
+        JsonAdapter {
+            id: data
+            property int cornerRadiusPreset: 20
+            property int currentPage: 0
+            property bool firstDayMonday: true
+            property real glassOpacity: 0.95
+            property bool launcherIncludeCommands: true
+            property int launcherMaxResults: 6
+            property real launcherRowHeight: 46
+            property int launcherRowsBeforeScrolling: 6
+            property real launcherWidth: 514
+            property bool lockscreenShowMedia: true
+            property int lockscreenTimeoutMins: 10
+            property bool mediaAutoPauseOnLock: true
+            property bool mediaShowMiniPill: true
+            property bool mediaShowToast: false
+            property real notifHistoryHeight: 200
+            property bool notifIslandMorph: true
+            property int notifPopupTimeoutMs: 2000
+            property bool notifShowBodyText: true
+            property bool notifSoundEnabled: true
+            property int notifUrgentTimeoutMs: 6000
+            property real notifWidth: 449
+            property real osdLevelBarThickness: 5
+            property int osdOnScreenTimeMs: 1500
+            property bool showSeconds: false
+            property real sidebarWidth: 240
+            property bool time24h: true
+            property int wallpaperTransitionDuration: 600
+            property string wallpaperTransitionStyle: "circleOut"
+        }
+    }
+
+
+    function setCurrentPage(v: int){ if(v===root.currentPage) return; data.currentPage=v; save(); }
+    function setSidebarWidth(v: real){ if(v===root.sidebarWidth) return; data.sidebarWidth=v; save(); }
+    function setTime24h(v: bool){ data.time24h=v; save(); }
+    function setShowSeconds(v: bool){ data.showSeconds=v; save(); }
+    function setFirstDayMonday(v: bool){ data.firstDayMonday=v; save(); }
+    function setMediaShowMiniPill(v: bool){ data.mediaShowMiniPill=v; save(); }
+    function setMediaShowToast(v: bool){ data.mediaShowToast=v; save(); }
+    function setMediaAutoPauseOnLock(v: bool){ data.mediaAutoPauseOnLock=v; save(); }
+    function setLauncherIncludeCommands(v: bool){ data.launcherIncludeCommands=v; save(); }
+    function setLauncherMaxResults(v: int){ data.launcherMaxResults=v; save(); }
+    function setLauncherWidth(v: real){ data.launcherWidth=v; save(); }
+    function setLauncherRowHeight(v: real){ data.launcherRowHeight=v; save(); }
+    function setLauncherRowsBeforeScrolling(v: int){ data.launcherRowsBeforeScrolling=v; save(); }
+    function setNotifSoundEnabled(v: bool){ data.notifSoundEnabled=v; save(); }
+    function setNotifPopupTimeoutMs(v: int){ data.notifPopupTimeoutMs=v; save(); }
+    function setNotifUrgentTimeoutMs(v: int){ data.notifUrgentTimeoutMs=v; save(); }
+    function setNotifWidth(v: real){ data.notifWidth=v; save(); }
+    function setNotifShowBodyText(v: bool){ data.notifShowBodyText=v; save(); }
+    function setNotifHistoryHeight(v: real){ data.notifHistoryHeight=v; save(); }
+    function setOsdOnScreenTimeMs(v: int){ data.osdOnScreenTimeMs=v; save(); }
+    function setOsdLevelBarThickness(v: real){ data.osdLevelBarThickness=v; save(); }
+    function setNotifIslandMorph(v: bool){ data.notifIslandMorph=v; save(); }
+    function setLockscreenTimeoutMins(v: int){ data.lockscreenTimeoutMins=v; save(); }
+    function setLockscreenShowMedia(v: bool){ data.lockscreenShowMedia=v; save(); }
+    function setGlassOpacity(v: real){ data.glassOpacity=v; save(); }
+    function setCornerRadiusPreset(v: int){ data.cornerRadiusPreset=v; save(); }
+    function setWallpaperTransitionStyle(v: string){ data.wallpaperTransitionStyle=v; save(); }
+    function setWallpaperTransitionDuration(v: int){ data.wallpaperTransitionDuration=v; save(); }
 }
