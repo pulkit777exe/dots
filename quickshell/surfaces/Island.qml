@@ -68,23 +68,27 @@ Item {
         readonly property real collapsedCentre: collapsedX + root.barHeight / 2
 
         // Position: collapsed, immediately left of the centre notch.
-        // Expanded, the panel is centred on THIS DOT's centre, then clamped to
-        // stay on screen. It used to be hardcoded to
-        // `root.width / 2 - width - 8`, which put the panel's right edge at
-        // the screen's top middle -- so the dot visibly flew to the middle and
-        // the panel grew from there instead of opening from where it sits.
-        // Expanded: centred on the island root, matching the control centre
-        // on the right. See the right dot's x for the measurement and for why
-        // this is derived from root.width rather than the notch.
         //
-        // INFERRED, not measured: no full-screen reference shows the media
-        // panel expanded, so the reference set does not pin its anchor. It is
-        // centred for consistency with the control centre, which is
-        // evidence-backed. Revert to `collapsedCentre - width / 2` if the
-        // reference actually dot-anchors it.
+        // Expanded, the panel is RIGHT-ALIGNED to this dot -- its right edge
+        // stays at the dot's right edge, so the panel grows leftward out of
+        // the dot and ends up hugging the notch. It used to be centred on the
+        // dot, and then (for a while) centred on the island root; both put
+        // the panel under or across the notch, which the reference does not
+        // do.
+        //
+        // Measured off 2026-09-20_22-25-23, which unlike the other media
+        // captures still contains the notch ("00:47") and the Wi-Fi dot, so
+        // the crop's offset from the screen's centre is recoverable. The
+        // notch is screen-centred, and in the crop the panel's black frame
+        // spans x 40..448 while the notch begins at x 468: the panel ends
+        // ~20px to the LEFT of the notch. Centred-on-root put it at 757..1163
+        // and centred-on-dot at ~688..1094 -- both wrong, and both overlapping
+        // the notch. Right-aligning the dot reproduces the reference's
+        // relationship, which is the part that is actually pinned by it.
         x: isExpanded
             ? Math.max(root.gapFromEdge,
-                Math.min((root.width - width) / 2, root.width - width - root.gapFromEdge))
+                Math.min(collapsedX + root.barHeight - width,
+                         root.width - width - root.gapFromEdge))
             : collapsedX
 
         Behavior on width {
