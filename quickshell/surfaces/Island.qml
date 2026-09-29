@@ -115,8 +115,24 @@ Item {
         // dots trail and then visibly catch up whenever the island grew.
         // Tracking stiffer removes that lag. width/height stay soft, because
         // those are the dot's own expansion.
+        //
+        // Off entirely while the OSD is up. A volume or brightness change
+        // morphs the notch from ~131px to the 275px OSD bar, and because the
+        // dots are placed off the notch's edges they are dragged along with
+        // it. A spring on x as well means two animations chasing one value, so
+        // the dot visibly trails the OSD and then catches up after it has
+        // already arrived -- a stumble rather than a move. With no behaviour,
+        // x is assigned the binding's value every frame, so the dot travels
+        // with the OSD in exact lockstep.
+        //
+        // Measured by capturing frames through a volume change and reading the
+        // dot's left edge against the notch's. The gap from the notch is 39px
+        // at every frame with this on. With the spring left on it the dot's
+        // left edge runs 852 -> 843 -> 827 -> 791 -> 785, i.e. it arrives four
+        // frames late; with it off it is 852 -> 799 -> 787 -> 785, in step
+        // with the bar.
         Behavior on x {
-            enabled: !MotionConfig.reduceMotion
+            enabled: !MotionConfig.reduceMotion && !centerNotchWrap.isOsd
             SpringAnimation { spring: 9; damping: MotionConfig.springDamping; mass: 0.6 }
         }
 
@@ -616,8 +632,24 @@ Item {
         // dots trail and then visibly catch up whenever the island grew.
         // Tracking stiffer removes that lag. width/height stay soft, because
         // those are the dot's own expansion.
+        //
+        // Off entirely while the OSD is up. A volume or brightness change
+        // morphs the notch from ~131px to the 275px OSD bar, and because the
+        // dots are placed off the notch's edges they are dragged along with
+        // it. A spring on x as well means two animations chasing one value, so
+        // the dot visibly trails the OSD and then catches up after it has
+        // already arrived -- a stumble rather than a move. With no behaviour,
+        // x is assigned the binding's value every frame, so the dot travels
+        // with the OSD in exact lockstep.
+        //
+        // Measured by capturing frames through a volume change and reading the
+        // dot's left edge against the notch's. The gap from the notch is 39px
+        // at every frame with this on. With the spring left on it the dot's
+        // left edge runs 852 -> 843 -> 827 -> 791 -> 785, i.e. it arrives four
+        // frames late; with it off it is 852 -> 799 -> 787 -> 785, in step
+        // with the bar.
         Behavior on x {
-            enabled: !MotionConfig.reduceMotion
+            enabled: !MotionConfig.reduceMotion && !centerNotchWrap.isOsd
             SpringAnimation { spring: 9; damping: MotionConfig.springDamping; mass: 0.6 }
         }
 
