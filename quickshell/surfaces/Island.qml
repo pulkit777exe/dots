@@ -566,23 +566,25 @@ Item {
         // The notch is used rather than `root.width / 2` so the panel tracks
         // the notch if it is ever off-centre, and is clamped so a panel wider
         // than the screen still stays on it.
-        // Expanded: centred on the island root, which spans the screen.
+        // Expanded: LEFT-ALIGNED to this dot, so the panel grows rightward out
+        // of the dot and stays on the right-hand side of the screen.
         //
-        // Measured off 2026-09-20_22-27-14, a 1920x1077 full-screen capture
-        // with the control centre open: the panel's margins sit at x ~706 and
-        // ~1214, so it spans ~509px centred on 960. Verified by hardcoding 703
-        // and measuring the render at 704..1215.
+        // This was centred on the island root, which put the panel across the
+        // middle with the dot flying to meet it -- the dot visibly left the bar
+        // and the panel opened somewhere it had no relationship to. It is now
+        // the mirror of the left dot, which is right-aligned to its own dot so
+        // it grows leftward: each panel expands outward, away from the notch,
+        // and neither one crosses the centre.
         //
-        // Centred on root.width rather than on the notch's live x/width. The
-        // notch-relative form was tried first and evaluated to 1041, not 703:
-        // the notch is wider than BarConfig.collapsedWidth and its geometry
-        // is not what a collapsed-width arithmetic assumes. Deriving from
-        // root.width also drops a chained binding onto the notch's *animating*
-        // x and width -- the same fragility the dot positions already have to
-        // work around.
+        // NOTE: this departs from 2026-09-20_22-27-14, which shows the control
+        // centre spanning x ~706..1214, i.e. genuinely screen-centred (it was
+        // the only full-screen capture with a dot panel expanded, which is why
+        // it was followed until now). Centring is what the reference shows;
+        // dot-anchoring is what was asked for, because the dot should not
+        // appear to jump. Revert to `(root.width - width) / 2` to go back.
         x: isExpanded
             ? Math.max(root.gapFromEdge,
-                Math.min((root.width - width) / 2, root.width - width - root.gapFromEdge))
+                Math.min(collapsedX, root.width - width - root.gapFromEdge))
             : collapsedX
 
         Behavior on width {
