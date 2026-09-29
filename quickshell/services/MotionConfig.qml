@@ -49,6 +49,7 @@ Singleton {
     property real movementMs: 400      // size/position changes — Bar resize, etc.
     property real fadeMs: 200          // opacity/color transitions
     property real hoverMs: 150         // hover-triggered feedback
+    property real slideInMs: 260        // panels sliding down into place
     property real bouncePercent: 40    // spring overshoot amount, 0-100
 
     // Spring "damping" is what actually controls overshoot in QtQuick's

@@ -229,11 +229,27 @@ Item {
             }
 
             // ---- Expanded Media Player Content (Reference 3) ----
-            MediaPlayerSurface {
+            //
+            // Slides down into place rather than scaling out of the dot.
+            // The slide lives on a wrapper Item, not on MediaPlayerSurface
+            // itself: that one is anchors.fill, and an explicit y on an
+            // anchored item silently overrides the anchor, which would drop
+            // the panel out of its Surface entirely.
+            Item {
+                id: mediaSlide
                 anchors.fill: parent
                 visible: leftDotWrap.isExpanded
-                opacity: leftDotWrap.isExpanded ? 1 : 0
-                Behavior on opacity { NumberAnimation { duration: MotionConfig.fade(); easing.type: Easing.OutCubic } }
+                y: leftDotWrap.isExpanded ? 0 : -BarConfig.panelSlideIn
+                Behavior on y {
+                    enabled: !MotionConfig.reduceMotion
+                    NumberAnimation { duration: MotionConfig.slideInMs; easing.type: Easing.OutCubic }
+                }
+
+                MediaPlayerSurface {
+                    anchors.fill: parent
+                    opacity: leftDotWrap.isExpanded ? 1 : 0
+                    Behavior on opacity { NumberAnimation { duration: MotionConfig.fade(); easing.type: Easing.OutCubic } }
+                }
             }
         }
     }
@@ -732,30 +748,30 @@ Item {
             }
 
             // ---- Expanded Control Center Content (Reference 2) ----
-            ControlCenter {
-                id: controlCenterContent
+            //
+            // Slides down into place. The slide lives on this wrapper, not on
+            // the ControlCenter itself: that one is anchors.fill, and an
+            // explicit y on an anchored item silently overrides the anchor,
+            // which would drop the content out of its Surface.
+            Item {
+                id: controlCenterSlide
                 anchors.fill: parent
                 visible: rightDotWrap.isExpanded
-                opacity: rightDotWrap.isExpanded ? 1 : 0
-                Behavior on opacity { NumberAnimation { duration: MotionConfig.fade(); easing.type: Easing.OutCubic } }
-                shadow: false
-                borderWidth: 0
-                backgroundColor: "transparent"
 
-                // Originate from the dot. rightDotWrap already springs from
-                // the 33px dot out to the full panel, but the contents were
-                // simply faded in on top of it, so the panel read as a
-                // separate centred sheet that appeared rather than as
-                // something growing out of the dot.
-                //
-                // Scaling from Item.Left pins the origin to the edge the dot
-                // sits on, so the panel unfolds out of the dot instead of
-                // popping in at the top middle.
-                transformOrigin: Item.Left
-                scale: rightDotWrap.isExpanded ? 1 : 0.06
-                Behavior on scale {
+                y: rightDotWrap.isExpanded ? 0 : -BarConfig.panelSlideIn
+                Behavior on y {
                     enabled: !MotionConfig.reduceMotion
-                    SpringAnimation { spring: 5; damping: MotionConfig.springDamping; mass: 0.7 }
+                    NumberAnimation { duration: MotionConfig.slideInMs; easing.type: Easing.OutCubic }
+                }
+
+                ControlCenter {
+                    id: controlCenterContent
+                    anchors.fill: parent
+                    opacity: rightDotWrap.isExpanded ? 1 : 0
+                    Behavior on opacity { NumberAnimation { duration: MotionConfig.fade(); easing.type: Easing.OutCubic } }
+                    shadow: false
+                    borderWidth: 0
+                    backgroundColor: "transparent"
                 }
             }
         }

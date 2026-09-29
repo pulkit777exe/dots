@@ -67,6 +67,9 @@ Singleton {
     // Island.qml used a fixed 1px nudge *down* instead, which read as a
     // press rather than a lift.
     property real stageLiftOnHover: 7
+    // How far a dot panel starts above its resting place and slides down
+    // into it. One value for both panels so they move as a pair.
+    property real panelSlideIn: 22
 
     function setNotchMode(v) { notchMode = v; _persist(); }
     function setNotchFlare(v) { notchFlare = v; _persist(); }
