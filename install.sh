@@ -239,6 +239,75 @@ check_session() {
         fi
     fi
 
+    # ---- Runtime surface: IPC targets and global shortcuts -------------
+    #
+    # The file checks above all pass while the shell is completely
+    # unreachable. Keybinds is a `pragma Singleton` instantiated by exactly
+    # one reference in shell.qml; delete that reference and the singleton is
+    # never constructed, so its IpcHandlers never register, `qs ipc call
+    # shell` answers "Target not found", and every surface is gone -- with no
+    # error and no warning anywhere. This is the check that catches it.
+
+    if command -v qs >/dev/null 2>&1; then
+        if ipc_show="$(qs -p "$CONFIG_DIR/quickshell" ipc show 2>/dev/null)" && [ -n "$ipc_show" ]; then
+            missing_targets=""
+            for t in shell uis; do
+                if ! printf '%s\n' "$ipc_show" | grep -qx "target $t"; then
+                    missing_targets="$missing_targets $t"
+                fi
+            done
+            if [ -n "$missing_targets" ]; then
+                err "qs ipc show: no target for$missing_targets -- every overlay will be unreachable"
+                err "  Keybinds registers these. Check that shell.qml still references it:"
+                err "  grep -n 'Keybinds' $CONFIG_DIR/quickshell/shell.qml"
+                fail=1
+            else
+                n=$(printf '%s\n' "$ipc_show" | grep -c '^target ')
+                log "qs ipc show: shell + uis present ($n targets)"
+            fi
+        else
+            # Not a failure: a fresh install has not launched the shell yet.
+            warn "qs ipc show: no running instance -- skipping the IPC target check"
+        fi
+    else
+        warn "qs not on PATH -- skipping the IPC target check"
+    fi
+
+    if command -v hyprctl >/dev/null 2>&1; then
+        if binds="$(hyprctl globalshortcuts 2>/dev/null)"; then
+            n=$(printf '%s\n' "$binds" | grep -c 'quickshell:')
+            if [ "$n" -eq 0 ]; then
+                err "hyprctl globalshortcuts: no quickshell:* bindings -- the keybinds will not be loaded"
+                fail=1
+            else
+                log "hyprctl globalshortcuts: $n quickshell:* binding(s)"
+            fi
+        else
+            warn "hyprctl globalshortcuts failed -- skipping"
+        fi
+    else
+        warn "hyprctl not on PATH -- skipping the globalshortcut check"
+    fi
+
+    # Quickshell's Qt6 minor is not derivable from outside -- Qt6 keeps the
+    # soname at libQt6Core.so.6 whatever the minor is. What is meaningful is
+    # *where* it resolves from: a build carrying its own Qt next to a
+    # different system Qt is the mismatch worth warning about.
+    if qs_bin="$(command -v quickshell)" && [ -n "$qs_bin" ]; then
+        qtlib="$(ldd "$qs_bin" 2>/dev/null | grep -oE '/[^ ]*libQt6Core\.so\.[0-9]+' | head -1)"
+        if [ -n "$qtlib" ]; then
+            case "$qtlib" in
+                /usr/lib*|/lib*|/usr/bin/../lib*)
+                    log "Qt6: resolves to system lib ($qtlib)"
+                    ;;
+                *)
+                    warn "Qt6: $qtlib is outside the system library path --"
+                    warn "  a bundled Qt may not match the system Qt6 your other apps use"
+                    ;;
+            esac
+        fi
+    fi
+
     if [ "${#MISSING[@]}" -gt 0 ]; then
         echo
         err "missing REQUIRED: ${MISSING[*]}"
