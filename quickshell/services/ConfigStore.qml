@@ -6,7 +6,7 @@ import Quickshell.Io
 Singleton {
     id: root
     readonly property int currentPage: data.currentPage
-    readonly property real sidebarWidth: data.sidebarWidth
+
 
     // Clock & Date
     readonly property bool time24h: data.time24h
@@ -19,7 +19,7 @@ Singleton {
     readonly property bool mediaAutoPauseOnLock: data.mediaAutoPauseOnLock
 
     // Launcher
-    readonly property bool launcherIncludeCommands: data.launcherIncludeCommands
+
     readonly property int launcherMaxResults: data.launcherMaxResults
     // Reference: 2026-09-20_22-27-53.png, a 1:1 crop of the same session.
     // The launcher panel measures x 204..717 = 514 wide, and the selected row
@@ -31,7 +31,7 @@ Singleton {
 
     // Notifications
     readonly property bool notifSoundEnabled: data.notifSoundEnabled
-    readonly property bool notifIslandMorph: data.notifIslandMorph
+
     readonly property int notifPopupTimeoutMs: data.notifPopupTimeoutMs
     readonly property int notifUrgentTimeoutMs: data.notifUrgentTimeoutMs
     // 449 is the reference toast's width measured 1:1 on
@@ -99,7 +99,6 @@ Singleton {
             property int currentPage: 0
             property bool firstDayMonday: true
             property real glassOpacity: 0.95
-            property bool launcherIncludeCommands: true
             property int launcherMaxResults: 6
             property real launcherRowHeight: 46
             property int launcherRowsBeforeScrolling: 6
@@ -110,7 +109,6 @@ Singleton {
             property bool mediaShowMiniPill: true
             property bool mediaShowToast: false
             property real notifHistoryHeight: 200
-            property bool notifIslandMorph: true
             property int notifPopupTimeoutMs: 2000
             property bool notifShowBodyText: true
             property bool notifSoundEnabled: true
@@ -119,7 +117,6 @@ Singleton {
             property real osdLevelBarThickness: 5
             property int osdOnScreenTimeMs: 1500
             property bool showSeconds: false
-            property real sidebarWidth: 240
             property bool time24h: true
             property int wallpaperTransitionDuration: 600
             property string wallpaperTransitionStyle: "circleOut"
@@ -128,14 +125,12 @@ Singleton {
 
 
     function setCurrentPage(v: int){ if(v===root.currentPage) return; data.currentPage=v; save(); }
-    function setSidebarWidth(v: real){ if(v===root.sidebarWidth) return; data.sidebarWidth=v; save(); }
     function setTime24h(v: bool){ data.time24h=v; save(); }
     function setShowSeconds(v: bool){ data.showSeconds=v; save(); }
     function setFirstDayMonday(v: bool){ data.firstDayMonday=v; save(); }
     function setMediaShowMiniPill(v: bool){ data.mediaShowMiniPill=v; save(); }
     function setMediaShowToast(v: bool){ data.mediaShowToast=v; save(); }
     function setMediaAutoPauseOnLock(v: bool){ data.mediaAutoPauseOnLock=v; save(); }
-    function setLauncherIncludeCommands(v: bool){ data.launcherIncludeCommands=v; save(); }
     function setLauncherMaxResults(v: int){ data.launcherMaxResults=v; save(); }
     function setLauncherWidth(v: real){ data.launcherWidth=v; save(); }
     function setLauncherRowHeight(v: real){ data.launcherRowHeight=v; save(); }
@@ -148,7 +143,6 @@ Singleton {
     function setNotifHistoryHeight(v: real){ data.notifHistoryHeight=v; save(); }
     function setOsdOnScreenTimeMs(v: int){ data.osdOnScreenTimeMs=v; save(); }
     function setOsdLevelBarThickness(v: real){ data.osdLevelBarThickness=v; save(); }
-    function setNotifIslandMorph(v: bool){ data.notifIslandMorph=v; save(); }
     function setLockscreenTimeoutMins(v: int){ data.lockscreenTimeoutMins=v; save(); }
     function setLockscreenShowMedia(v: bool){ data.lockscreenShowMedia=v; save(); }
     function setGlassOpacity(v: real){ data.glassOpacity=v; save(); }

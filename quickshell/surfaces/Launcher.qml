@@ -7,7 +7,6 @@ import "../services"
 Surface {
     id: root
 
-    width: ConfigStore.launcherWidth
     cornerRadius: 20
     backgroundColor: Theme.panelFill
 
