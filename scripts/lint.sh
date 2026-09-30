@@ -18,6 +18,13 @@
 #   implicitHeight     A column or layout with no height of its own is how
 #                      the settings page once collapsed to 72px.
 #
+# and one check that needs to parse whole files rather than match lines:
+#
+#   IpcHandler scope   A function declared inside an IpcHandler is reachable
+#                      over `qs ipc call` but is not a method on the
+#                      singleton, so `Foo.bar()` from QML does nothing and
+#                      logs nothing. scripts/ipc-audit.py.
+#
 # Comments and Markdown are stripped before matching, so that the very
 # documentation recording these traps does not trip the linter.
 #
@@ -161,6 +168,25 @@ sys.exit(1)
 PY
 else
     echo "${YEL}  python3 not found — skipping the grep rules${RST}"
+fi
+
+# ------------------------------------------------------------------ ipc audit
+# A separate script, not another rule above, because it needs to parse
+# brace depth across whole files rather than match lines. It is the only
+# check that can see the Round 7 bug class: qmllint proves every
+# Service.member resolves, so a missing member cannot survive a clean
+# lint, but nothing else knows that a function declared inside an
+# IpcHandler is not a method on the singleton.
+if have python3 && [ -x "$REPO/scripts/ipc-audit.py" ]; then
+    echo
+    echo "${DIM}ipc scope${RST}"
+    "$REPO/scripts/ipc-audit.py" "$QML_DIR" | sed 's/^/ /'
+    case "${PIPESTATUS[0]}" in
+        0) ;;
+        # 2 is the parser saying it does not trust itself. Not a pass.
+        2) echo "${RED}  ipc scope: parser could not verify the tree${RST}"; fail=1 ;;
+        *) echo "${RED}  ipc scope: IpcHandler-only members referenced from QML${RST}"; fail=1 ;;
+    esac
 fi
 
 # ------------------------------------------------------------------- qmllint
