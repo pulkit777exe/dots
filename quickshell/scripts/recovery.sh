@@ -1,12 +1,64 @@
 #!/usr/bin/env bash
 # Quickshell / Hyprland Recovery Utility
-# Usage: ./recovery.sh [backup|restore|reset|reload]
+# Usage: ./recovery.sh [backup|restore|reset|stop|reload]
 
 STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/quickshell"
 CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/quickshell"
 BACKUP_DIR="$STATE_DIR/backups"
 
 mkdir -p "$BACKUP_DIR"
+
+# Stop the shell without leaking its watchers.
+#
+# Three of the services run a process that never exits on its own:
+# Clipboard's `wl-paste --watch cliphist store`, Wifi's `nmcli monitor`,
+# and Bluetooth's `bluetoothctl monitor`. Quickshell does not take those
+# down when it exits -- they are reparented to init and keep running.
+#
+# That is invisible until it is not. Each restart left one more of each
+# behind, so 42 stale `wl-paste --watch` processes were holding the
+# clipboard watch open while the live one also watched it. The symptom
+# was the clipboard history staying empty with no error anywhere:
+# cliphist had 750 entries on disk and the service's own list was
+# always [].
+#
+# So: SIGTERM first and wait for a real exit, so the shell gets to close
+# its own pipes, and only then kill whatever is still holding a watch.
+# A bare `pkill` skips the graceful part and orphans them faster.
+stop_shell() {
+    if pgrep -x quickshell >/dev/null 2>&1; then
+        pkill -TERM -x quickshell 2>/dev/null || true
+        for _ in $(seq 1 20); do
+            pgrep -x quickshell >/dev/null 2>&1 || break
+            sleep 0.25
+        done
+        pkill -KILL -x quickshell 2>/dev/null || true
+        sleep 0.5
+    fi
+
+    local left=0
+    for pat in "wl-paste --watch cliphist" "nmcli monitor" "bluetoothctl monitor"; do
+        # Only processes reparented to init, i.e. left behind by a shell
+        # that has already exited. Never touch a live one.
+        for pid in $(pgrep -f "$pat" 2>/dev/null); do
+            if [ "$(ps -o ppid= -p "$pid" 2>/dev/null | tr -d ' ')" = "1" ]; then
+                kill -TERM "$pid" 2>/dev/null && left=$((left + 1))
+            fi
+        done
+    done
+    [ "$left" -gt 0 ] && sleep 0.5
+    for pat in "wl-paste --watch cliphist" "nmcli monitor" "bluetoothctl monitor"; do
+        for pid in $(pgrep -f "$pat" 2>/dev/null); do
+            if [ "$(ps -o ppid= -p "$pid" 2>/dev/null | tr -d ' ')" = "1" ]; then
+                kill -KILL "$pid" 2>/dev/null || true
+            fi
+        done
+    done
+
+    if [ "$left" -gt 0 ]; then
+        echo "  reaped $left orphaned watcher(s) from a previous run"
+    fi
+}
 
 case "${1:-status}" in
     backup)
@@ -29,13 +81,15 @@ case "${1:-status}" in
         rm -f "$STATE_DIR"/*.json 2>/dev/null || true
         echo "Reset state files to defaults."
         ;;
+    stop)
+        stop_shell
+        ;;
     reload)
         echo "Reloading Hyprland and restarting Quickshell..."
         if command -v hyprctl >/dev/null 2>&1; then
             hyprctl reload
         fi
-        pkill -x quickshell 2>/dev/null || true
-        sleep 1
+        stop_shell
         # setsid, not a bare &: a backgrounded child of this script gets
         # SIGHUP when the script's terminal goes away, so the shell would
         # die the moment the user closed the window that started recovery.
