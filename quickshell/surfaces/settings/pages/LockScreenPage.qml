@@ -31,7 +31,7 @@ ColumnLayout {
         }
     }
 
-    // Security Quick Action
+    
     Surface {
         Layout.fillWidth: true
         implicitHeight: 64

@@ -3,17 +3,17 @@ import QtQuick.Layouts
 import "../../../components"
 import "../../../services"
 
-// BarIslandPage
-// The reference's row set, in its order, with nothing added:
-//   Notch mode, Bar height, Collapsed width, Expanded height, Gap from screen
-//   edge, Inner padding, Corner radius, Corner radius (expanded), Status
-//   circle, Album art circle, Stage lift on hover.
-//
-// Every row is separated by a SettingsDivider -- that is the reference's own
-// rhythm, not a fence around just the toggles.
-//
-// "Notch flare" used to sit second. It is a real BarConfig setting and still
-// one, but the reference has no row for it, so the page no longer shows it.
+
+
+
+
+
+
+
+
+
+
+
 ColumnLayout {
     id: root
     spacing: 12
@@ -79,8 +79,8 @@ ColumnLayout {
         SettingsDivider {}
 
         SettingsSliderRow {
-            // Clamped to barHeight / 2 downstream (effectiveCollapsedRadius),
-            // so the dot can't be given a radius larger than its own half-height.
+            
+            
             label: "Corner radius"
             value: BarConfig.collapsedCornerRadius
             from: 0; to: 40; suffix: " px"

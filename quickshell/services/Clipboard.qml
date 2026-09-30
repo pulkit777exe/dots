@@ -4,24 +4,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 
-/*
-  Clipboard service.
 
-  Wraps cliphist + wl-clipboard.
-
-  The watcher keeps cliphist populated for the lifetime of the shell.
-
-  Clipboard entries:
-    {
-        id,
-        preview,
-        rawPreview,
-        isImage,
-        isBinary,
-        thumbnail,
-        thumbnailReady
-    }
-*/
 
 Singleton {
     id: root
@@ -47,9 +30,9 @@ Singleton {
     signal entryCopied(string preview)
     signal imagesDecoded()
 
-    // ------------------------------------------------------------
-    // Public API
-    // ------------------------------------------------------------
+    
+    
+    
 
     function refresh() {
         if (!available)
@@ -105,9 +88,9 @@ Singleton {
         root.entries = []
     }
 
-    // ------------------------------------------------------------
-    // Parse cliphist list
-    // ------------------------------------------------------------
+    
+    
+    
 
     Process {
         id: listProc
@@ -229,9 +212,9 @@ Singleton {
         }
     }
 
-    // ------------------------------------------------------------
-    // Thumbnail decoding
-    // ------------------------------------------------------------
+    
+    
+    
 
     function decodeThumbnails(items) {
         const imageIds =
@@ -332,9 +315,9 @@ Singleton {
         }
     }
 
-    // ------------------------------------------------------------
-    // Copy / delete / wipe processes
-    // ------------------------------------------------------------
+    
+    
+    
 
     Process {
         id: copyProc
@@ -354,9 +337,9 @@ Singleton {
             root.refresh()
     }
 
-    // ------------------------------------------------------------
-    // cliphist watcher
-    // ------------------------------------------------------------
+    
+    
+    
 
     Process {
         id: watcher
@@ -372,9 +355,9 @@ Singleton {
             root.available
     }
 
-    // ------------------------------------------------------------
-    // Dependency probe
-    // ------------------------------------------------------------
+    
+    
+    
 
     Process {
         id: probe
@@ -402,9 +385,9 @@ Singleton {
     Component.onCompleted:
         probe.running = true
 
-    // ------------------------------------------------------------
-    // IPC
-    // ------------------------------------------------------------
+    
+    
+    
 
     IpcHandler {
         target: "clipboard"

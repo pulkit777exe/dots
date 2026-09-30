@@ -1,38 +1,12 @@
 pragma Singleton
-// qmllint disable import
-// qmllint disable signal-handler-parameters
+
+
 
 import QtQuick
 import Quickshell
 import Quickshell.Io
 
-/*
-  NightLight service.
 
-  Wraps hyprsunset — the Hyprland-ecosystem blue-light/color-temperature
-  daemon — via `hyprctl hyprsunset ...`.
-
-  IMPORTANT — this is NOT the same shape as the other services:
-    - hyprsunset must already be RUNNING as its own daemon (typically
-      started once via `exec-once = hyprsunset` in hyprland.conf) for
-      `hyprctl hyprsunset ...` to have any effect. This service does not
-      launch it. (Theme.qml's wallpaper daemon is a counter-example —
-      it owns swaybg itself — but swaybg is a self-contained one-off
-      child process, not a session-long stateful IPC peer the way
-      hyprsunset is.)
-    - There is no documented `hyprctl hyprsunset get`/status query, so
-      unlike Wifi/Bluetooth/PowerProfile (which stay in sync via a
-      monitor process), `enabled` here is optimistic local state, not
-      a confirmed read-back — if hyprsunset isn't actually running,
-      the toggle will silently do nothing and this service has no way
-      to know that. `available` is only a binary-presence check
-      (`command -v hyprsunset`), not proof the daemon is live.
-
-  On why this exists instead of a wallpaper-colour extractor: those tools
-  are either X11-only or need an external daemon we don't want in the
-  loop, and colours are now purely static anyway. hyprsunset is the
-  Wayland/Hyprland-native equivalent.
-*/
 
 Singleton {
     id: root
@@ -69,7 +43,7 @@ Singleton {
 
     Process { id: setter; onExited: (code) => { if (code !== 0) console.warn("NightLight: redshift set failed (exit", code, ")") } }
 
-    // Best-effort presence check only — see docstring above.
+    
     Process {
         id: probe
         command: ["bash", "-c", "command -v hyprsunset >/dev/null && echo yes || echo no"]

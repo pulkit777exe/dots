@@ -4,23 +4,14 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 
-/*
-  AppLauncher service — thin adapter over Quickshell DesktopEntries.
 
-  DesktopEntries owns discovery, watching, and .desktop parsing.
-  This service only normalizes state for the Launcher surface.
-
-  Consumer API (unchanged):
-    allApps, query, results
-    setQuery(text), launch(result), refresh()
-*/
 
 Singleton {
     id: root
 
     property string query: ""
-    property var allApps: []     // kept for compat, populated from DesktopEntries
-    property var results: []     // filtered, shaped for Launcher.qml
+    property var allApps: []     
+    property var results: []     
 
     signal launched(var app)
     signal launchFailed(string command)
@@ -36,7 +27,7 @@ Singleton {
             launchFailed(result.title ?? "");
             return;
         }
-        // Use DesktopEntry.execute() — handles working dir, env, etc.
+        
         const entry = findEntry(result.title);
         if (entry) {
             entry.execute();
@@ -55,10 +46,10 @@ Singleton {
         function onLauncherMaxResultsChanged() { root.refilter(); }
     }
 
-    // ── Native desktop entries ──────────────────────────────────────
-    // UntypedObjectModel exposes `values` (a QObjectList) — there is no
-    // .count/.get(i) API on it, so the old count/get loop silently
-    // produced an empty index (launcher showed no apps).
+    
+    
+    
+    
     readonly property var entries: DesktopEntries.applications.values
 
     function findEntry(name) {
@@ -118,7 +109,7 @@ Singleton {
         return "apps";
     }
 
-    // Rebuild when the desktop entries model changes (installs/uninstalls)
+    
     Connections {
         target: DesktopEntries
         function onApplicationsChanged() { root.buildIndex() }

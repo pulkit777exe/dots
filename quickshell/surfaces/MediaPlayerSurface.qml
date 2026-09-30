@@ -19,20 +19,20 @@ Item {
         border.width: 1
         clip: true
 
-        // Album-art backdrop.
-        //
-        // The reference (2026-09-20_22-25-23) fills the whole card with the
-        // artwork, *blurred* and heavily washed: interior samples run
-        // (45,75,145), (122,134,168), (159,114,98) -- recognisably the record
-        // cover, not a flat dark. This was 0.08, which is nearly invisible.
-        //
-        // Qt cannot blur here on purpose: GraphicalEffects is not installed on
-        // the target machine and already crashed once (see ARCHITECTURE.md, and
-        // the same note on the art clip below), so the blur itself is not
-        // reproducible. Raising the opacity and laying a dark scrim over it gets
-        // the *value* of a blurred backdrop right, which is most of the read,
-        // without pretending to the blur. Sharp detail under the scrim is the
-        // visible cost.
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
         Image {
             anchors.fill: parent
             source: Media.artUrl
@@ -52,11 +52,11 @@ Item {
             anchors.margins: 16
             spacing: 16
 
-            // ── Left: Album Art, rounded via native clip (no
-            // Qt5Compat dependency — see ARCHITECTURE.md: it isn't
-            // installed on the target machine and already crashed
-            // once; Surface.qml's shadow was rewritten to avoid it,
-            // this follows the same rule) ─────────────────────────
+            
+            
+            
+            
+            
             Item {
                 Layout.preferredWidth: 124
                 Layout.preferredHeight: 124
@@ -80,7 +80,7 @@ Item {
                     }
                 }
 
-                // Fallback icon placeholder if no album art
+                
                 Rectangle {
                     anchors.fill: parent
                     radius: 16
@@ -97,7 +97,7 @@ Item {
                     }
                 }
 
-                // Thin border overlay around artwork
+                
                 Rectangle {
                     anchors.fill: parent
                     radius: 16
@@ -107,14 +107,14 @@ Item {
                 }
             }
 
-            // ── Right: Track Metadata + Interactive Controls ──────────
+            
             ColumnLayout {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 Layout.alignment: Qt.AlignVCenter
                 spacing: 2
 
-                // Track Title
+                
                 StyledText {
                     Layout.fillWidth: true
                     text: Media.title || "No media playing"
@@ -124,14 +124,14 @@ Item {
                     elide: Text.ElideRight
                 }
 
-                // Artist
-                //
-                // Muted, not Theme.colors.accent. In 2026-09-20_22-25-23 the
-                // artist line is a soft grey-green -- its peak sample is
-                // (151,170,159) -- while the accent is #3ed0af, far more
-                // saturated. The reference's exact value is not recoverable
-                // because its text is antialiased over a *blurred, variable*
-                // backdrop, so this matches the register rather than a number.
+                
+                
+                
+                
+                
+                
+                
+                
                 StyledText {
                     Layout.fillWidth: true
                     text: Media.artist || "Unknown artist"
@@ -141,7 +141,7 @@ Item {
                     elide: Text.ElideRight
                 }
 
-                // Album / Identity badge
+                
                 RowLayout {
                     Layout.fillWidth: true
                     spacing: 6
@@ -175,7 +175,7 @@ Item {
 
                 Item { Layout.preferredHeight: 6 }
 
-                // ── Interactive Scrubbable Progress Bar ───────────────
+                
                 Item {
                     id: progressContainer
                     Layout.fillWidth: true
@@ -212,7 +212,7 @@ Item {
                     }
                 }
 
-                // ── Timestamps (Real-time) ────────────────────────────
+                
                 RowLayout {
                     Layout.fillWidth: true
                     Layout.topMargin: -2
@@ -234,7 +234,7 @@ Item {
                     }
                 }
 
-                // ── Transport Playback Controls ───────────────────────
+                
                 RowLayout {
                     Layout.alignment: Qt.AlignHCenter
                     Layout.topMargin: 2
@@ -249,13 +249,13 @@ Item {
                         onClicked: Media.previous()
                     }
 
-                    // Not accent-filled. In 2026-09-20_22-25-23 the play
-                    // button's disc samples (50,71,64) against a surrounding
-                    // backdrop of (48,72,64) -- it is a *barely* lighter
-                    // frosted disc, not a teal button -- while the glyph inside
-                    // is (245,241,215), a warm cream. A solid accent circle here
-                    // was the loudest thing on the card and read as a different
-                    // design entirely.
+                    
+                    
+                    
+                    
+                    
+                    
+                    
                     Rectangle {
                         Layout.preferredWidth: 38
                         Layout.preferredHeight: 38

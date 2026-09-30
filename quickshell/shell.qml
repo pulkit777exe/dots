@@ -7,33 +7,37 @@ import qs.services
 import qs.surfaces
 import qs.modules
 
-// shell.qml
-// Entry point: `quickshell -c /path/to/this/dir` (or symlink this whole
-// directory to ~/.config/quickshell/<name>/ and run `qs -c <name>`).
-//
-// Four layer-shell windows per screen:
-//   WallpaperWindow - Background layer, wallpaper crossfade.
-//   BackdropWindow  - Top layer (BELOW Overlay), fullscreen dark scrim.
-//                     Separate from Island's Overlay window — the Island
-//                     simply renders above it, no mask-subtraction needed,
-//                     which is the architectural fix for the seam artifact.
-//   BarWindow       - Overlay, top strip, Island morphing surface.
-//   OverlayWindow   - Overlay, full-screen, notifications/OSD/auth.
-//
-// Every surface is mounted once and simply reacts to UiState / service
-// properties — there is no polling anywhere in this file either.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 ShellRoot {
     id: shellRoot
 
-    // Do not delete this as unused. Keybinds is a `pragma Singleton`, and
-    // this reference is the only thing in the tree that instantiates it. It
-    // looks like a plain alias because nothing reads it, but constructing the
-    // singleton is what registers its IpcHandlers -- and those are the shell's
-    // entire control surface, `shell` and `uis`. Removing this line loads the
-    // config cleanly, logs nothing, and leaves every surface unreachable.
+    
+    
+    
+    
+    
+    
+    // Only reference to Keybinds in the tree. It is a `pragma Singleton`, so
+    // this line is what constructs it -- and constructing it is what registers
+    // the shell/uis IpcHandlers. Delete this and every overlay is unreachable,
+    // with no error and no warning anywhere.
     property var keybinds: Keybinds
 
-    // ---- Wallpaper: Background layer with macOS-like crossfade ----
+    
     Variants {
         model: Quickshell.screens
         PanelWindow {
@@ -50,7 +54,7 @@ ShellRoot {
             readonly property real progress: Theme.wallpaperProgress
             readonly property bool isTransitioning: Theme.wallpaperTransitioning
 
-            // Base outgoing wallpaper
+            
             Image {
                 id: wallFrom
                 anchors.fill: parent
@@ -71,7 +75,7 @@ ShellRoot {
                 y: wallWin.transitionStyle === "slideVertical" ? (-height * wallWin.progress) : 0
             }
 
-            // Base incoming wallpaper
+            
             Image {
                 id: wallTo
                 anchors.fill: parent
@@ -92,15 +96,15 @@ ShellRoot {
                 y: wallWin.transitionStyle === "slideVertical" ? (height * (1 - wallWin.progress)) : 0
             }
 
-            // Circle Out / Radial Wipe — proper circular reveal using MultiEffect + mask
-            // circleMaskItem is a growing rounded-rectangle rendered off-screen;
-            // wallpaperCircle uses it as a mask source through MultiEffect.
+            
+            
+            
             Item {
                 id: circleWipeContainer
                 anchors.fill: parent
                 visible: wallWin.transitionStyle === "circleOut" && wallWin.isTransitioning
 
-                // Old wallpaper underneath
+                
                 Image {
                     anchors.fill: parent
                     source: Theme.wallpaperFrom
@@ -110,11 +114,11 @@ ShellRoot {
                     smooth: true
                 }
 
-                // Circle mask — grows from 0 to cover the full diagonal
+                
                 Item {
                     id: circleMaskItem
                     anchors.fill: parent
-                    visible: false  // rendered only as mask source
+                    visible: false  
 
                     Rectangle {
                         readonly property real diagLen: Math.sqrt(
@@ -127,7 +131,7 @@ ShellRoot {
                     }
                 }
 
-                // New wallpaper revealed through the growing circle mask
+                
                 Image {
                     id: wallpaperCircle
                     anchors.fill: parent
@@ -147,7 +151,7 @@ ShellRoot {
                 }
             }
 
-            // Fallback solid color while wallpapers load or if none
+            
             Rectangle {
                 anchors.fill: parent
                 color: Theme.colors.background
@@ -158,11 +162,11 @@ ShellRoot {
         }
     }
 
-    // ---- Backdrop scrim: WlrLayer.Top — dedicated window BELOW Overlay ----
-    // The Island lives on WlrLayer.Overlay; this window on WlrLayer.Top.
-    // Compositors render Top below Overlay, so the Island always paints
-    // cleanly above the scrim — zero mask-subtraction, zero seam artifacts.
-    // Clicking the scrim dismisses the open surface.
+    
+    
+    
+    
+    
     Variants {
         model: Quickshell.screens
         PanelWindow {
@@ -174,7 +178,7 @@ ShellRoot {
             WlrLayershell.layer: WlrLayer.Top
             WlrLayershell.namespace: "quickshell-backdrop"
             WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
-            // Pass through pointer events when no popup is open
+            
             mask: Region { item: UiState.anyOpen ? backdropClickTarget : null }
 
             Rectangle {
@@ -202,7 +206,7 @@ ShellRoot {
         }
     }
 
-    // ---- Island / Bar: Overlay layer ----
+    
     Variants {
         model: Quickshell.screens
 
@@ -212,9 +216,9 @@ ShellRoot {
             screen: modelData
 
             anchors { top: true; left: true; right: true }
-            // Keep exclusiveZone at collapsed pill height so tiled windows
-            // don't jump when island expands — expanded island overlays,
-            // like macOS Dynamic Island.
+            
+            
+            
             exclusiveZone: island.barHeight + (island.notchMode ? 0 : island.gapFromEdge)
             color: "transparent"
 
@@ -223,10 +227,10 @@ ShellRoot {
             focusable: Auth.pending === null && UiState.anyOpen
             WlrLayershell.keyboardFocus: Auth.pending !== null ? WlrKeyboardFocus.None : (UiState.anyOpen ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None)
 
-            // Settings is a full-height panel: the reference measures it
-            // 1346x971 sitting at y 75..1045. The generic 700 for "any
-            // surface open" clipped it, so settings gets its own height --
-            // 75 (its top offset) + 971 (its height).
+            
+            
+            
+            
             implicitHeight: UiState.settingsOpen ? 1045
                 : (UiState.anyOpen ? 700 : (island.barHeight + (island.notchMode ? 0 : island.gapFromEdge) + 16))
 
@@ -254,7 +258,7 @@ ShellRoot {
         }
     }
 
-    // ---- Overlay: Notifications, OSD, Auth ----
+    
     Variants {
         model: Quickshell.screens
 
@@ -276,12 +280,12 @@ ShellRoot {
 
             mask: Region {
                 Region { item: Notifications.active.length > 0 ? notifWrap : null }
-                // No OSD region: the OSD lives in the island's own window now,
-                // so this overlay has nothing to punch through for it.
+                
+                
                 Region { item: Auth.pending !== null ? authWrap : null }
             }
 
-            // ---- Notifications: top-right stack ----
+            
             Item {
                 id: notifWrap
                 anchors.top: parent.top
@@ -293,14 +297,14 @@ ShellRoot {
                 NotificationStack { id: stack }
             }
 
-            // The volume/brightness OSD is NOT here. It is the island's
-            // centre notch morphed into a 275x43 bar -- see OSD.qml and
-            // centerNotchWrap in Island.qml. It used to be a window in this
-            // overlay, which put it on a different layer from the bar, so the
-            // bar's clock drew over it and it could not occlude the island
-            // the way 2026-09-20_22-28-44.png shows.
+            
+            
+            
+            
+            
+            
 
-            // ---- Auth prompt: full-window scrim + centered dialog ----
+            
             Item {
                 id: authWrap
                 anchors.fill: parent

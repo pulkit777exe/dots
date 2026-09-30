@@ -4,7 +4,7 @@ import "../services"
 Icon {
     id: root
 
-    property int level: 100      // 0-100
+    property int level: 100      
     property bool charging: false
     property bool available: true
 

@@ -13,7 +13,7 @@ ColumnLayout {
         subtitle: "Player controls, background visualizer, and mini-pill behaviors."
     }
 
-    // Live Player Preview Card
+    
     Surface {
         Layout.fillWidth: true
         implicitHeight: 90
@@ -100,7 +100,7 @@ ColumnLayout {
         }
     }
 
-    // Behavior Toggles
+    
     RowLayout {
         Layout.fillWidth: true
         StyledText { variant: "mediaTitle"; font.pixelSize: 13; text: "Show mini-pill when on other workspaces" }

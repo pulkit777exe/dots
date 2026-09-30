@@ -3,14 +3,14 @@ import QtQuick.Layouts
 import "../../../components"
 import "../../../services"
 
-// NotificationsPage
-// The reference splits the page in two: popup geometry and body text above,
-// OSD timing below, separated by a section caption.
-//
-// Dropped to match it, all still real and still applied:
-//   Do Not Disturb, Morph Island on Incoming Notification, Play Audio Tone,
-//   and the "Clear all" card. Notifications.dnd and ConfigStore's sound flag
-//   are unchanged -- they just have no row here.
+
+
+
+
+
+
+
+
 ColumnLayout {
     id: root
     spacing: 12

@@ -6,22 +6,12 @@ import Quickshell
 import Quickshell.Services.Pipewire
 import Quickshell.Io
 
-/*
-  Volume service — thin adapter over Quickshell.Services.Pipewire.
 
-  Consumer API:
-    volume, volumePercent, muted, setVolume(pct), toggleMute()
-    micVolume, micVolumePercent, micMuted, setMicVolume(pct)
-    sinkAvailable, sink, sourceAvailable, source
-    iconName, osdRequested(percent)
-
-  Pipewire owns all state. This service only normalizes it.
-*/
 
 Singleton {
     id: root
 
-    // ── Core properties ─────────────────────────────────────────────
+    
     readonly property PwNode sink: Pipewire.defaultAudioSink
     readonly property PwNode source: Pipewire.defaultAudioSource
 
@@ -32,10 +22,10 @@ Singleton {
     readonly property bool muted: sinkAvailable ? sink.audio.muted : true
     readonly property int volumePercent: Math.round(volume * 100)
 
-    // PwObjectTracker binds the sink/source nodes — without it Pipewire
-    // reports them as "unbound" and audio.volume/muted read invalid (0).
-    // This is why volume keys/OSD silently did nothing: external wpctl
-    // changes came in, but Quickshell never saw them.
+    
+    
+    
+    
     PwObjectTracker {
         objects: [root.sink, root.source]
     }
@@ -56,7 +46,7 @@ Singleton {
     onVolumePercentChanged: osdRequested(volumePercent)
     onMutedChanged: osdRequested(volumePercent)
 
-    // ── Controls ────────────────────────────────────────────────────
+    
     function setVolume(pct: real): void {
         if (!sinkAvailable) return;
         sink.audio.muted = false;
@@ -74,18 +64,18 @@ Singleton {
         source.audio.volume = Math.max(0, Math.min(1, pct / 100.0));
     }
 
-    // ── Device + stream enumeration (Control Centre "Sound" page) ────
-    //
-    // Per the Quickshell 0.3.1 Pipewire API:
-    //   PwNode.isSink  — true when the node ACCEPTS audio from other
-    //                    nodes, i.e. an output/sink device.
-    //   PwNode.isStream — true when the node is a program rather than
-    //                    hardware, i.e. an application stream.
-    // So: hardware + isSink = output, hardware + !isSink = input,
-    // isStream = an app. That is the three groups the Sound page shows.
-    //
-    // Filtered once here rather than in the view, so the panel stays a
-    // visual leaf and the Pipewire knowledge stays in the service.
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
 
     readonly property var allNodes: Pipewire.nodes
 
@@ -93,15 +83,15 @@ Singleton {
         return n !== null && n !== undefined && n.audio !== null;
     }
 
-    // Hardware output devices.
+    
     readonly property var sinks: filterNodes(n => !n.isStream && n.isSink && isAudioNode(n))
-    // Hardware input devices.
+    
     readonly property var sources: filterNodes(n => !n.isStream && !n.isSink && isAudioNode(n))
-    // Application streams.
+    
     readonly property var streams: filterNodes(n => n.isStream && isAudioNode(n))
 
-    // Pipewire.nodes is an ObjectModel; build a plain array so views can
-    // bind to it directly. Recomputed whenever the node list changes.
+    
+    
     function filterNodes(pred) {
         const out = [];
         const model = allNodes;
@@ -113,14 +103,14 @@ Singleton {
         return out;
     }
 
-    // Nodes must be bound for `.properties` (media.name, application.name)
-    // to be valid, so keep every enumerated node tracked.
+    
+    
     PwObjectTracker {
         objects: root.trackedNodes
     }
     readonly property var trackedNodes: sinks.concat(sources, streams)
 
-    // Human label, preferring the friendlier of nickname/description.
+    
     function displayName(n) {
         if (!n) return "";
         const d = n.description || "";
@@ -147,7 +137,7 @@ Singleton {
         return node !== null && node !== undefined && node === Pipewire.defaultAudioSource;
     }
 
-    // ── IPC ─────────────────────────────────────────────────────────
+    
     IpcHandler {
         target: "audio"
         function getVolume(): int { return root.volumePercent; }

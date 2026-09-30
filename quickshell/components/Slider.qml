@@ -2,21 +2,21 @@ import QtQuick
 import QtQuick.Layouts
 import "../services"
 
-// Slider
-// Pill-shaped slider: filled track, optional leading icon, optional
-// trailing value label. Drag or click anywhere on the track to set value.
-// Scroll wheel also adjusts value by scrollStepSize.
+
+
+
+
 Item {
     id: root
 
-    property real value: 50        // 0-100
+    property real value: 50        
     property real minimumValue: 0
     property real maximumValue: 100
     property string icon: ""
     property bool showValueLabel: true
     property string valueSuffix: "%"
     property bool enabled: true
-    property real scrollStepSize: 5  // scroll wheel step (in value units)
+    property real scrollStepSize: 5  
 
     property color accentColor: Theme.colors.accent
     property color trackColor: Theme.colors.surfaceAlt
@@ -30,8 +30,8 @@ Item {
     opacity: enabled ? 1 : 0.4
     Behavior on opacity { OpacityAnimator { duration: MotionConfig.fade(); easing.type: Easing.OutCubic } }
 
-    // press feedback: a slight, springy squeeze — the same motion
-    // family macOS Control Center sliders use on touch/click
+    
+    
     scale: dragArea.pressed ? 0.985 : 1.0
     Behavior on scale { enabled: !MotionConfig.reduceMotion; SpringAnimation { spring: 5; damping: MotionConfig.springDamping; mass: 0.5 } }
 
@@ -58,7 +58,7 @@ Item {
         }
     }
 
-    // subtle hover highlight, independent of the fill
+    
     Rectangle {
         anchors.fill: track
         radius: track.radius
@@ -108,7 +108,7 @@ Item {
         onPressed: (mouse) => updateFromX(mouse.x)
         onPositionChanged: (mouse) => { if (pressed) updateFromX(mouse.x) }
 
-        // Scroll wheel: adjust value up/down by scrollStepSize
+        
         onWheel: (wheel) => {
             if (!root.enabled) return;
             const delta = (wheel.angleDelta.y > 0 ? 1 : -1) * root.scrollStepSize;

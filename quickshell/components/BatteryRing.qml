@@ -37,7 +37,7 @@ Item {
             const r = (Math.min(width, height) - root.strokeWidth) / 2;
             if (r <= 0) return;
 
-            // Draw subtle background full circle
+            
             ctx.lineWidth = root.strokeWidth;
             ctx.strokeStyle = root.trackColor;
             ctx.lineCap = "round";
@@ -45,7 +45,7 @@ Item {
             ctx.arc(cx, cy, r, 0, 2 * Math.PI);
             ctx.stroke();
 
-            // Progress from top (-PI/2) symmetrically down both sides
+            
             const frac = Math.max(0.01, Math.min(1.0, root.animatedPercentage / 100.0));
             const startAngle = -Math.PI / 2 - (frac * Math.PI);
             const endAngle = -Math.PI / 2 + (frac * Math.PI);

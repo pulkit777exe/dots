@@ -92,8 +92,8 @@ Surface {
 
                 onAccepted: if (text.length > 0 && !root.connecting) root.submitted(text)
 
-                // Same robust-focus retry as AuthDialog.qml — see file
-                // header for why this specific pattern, not a simpler one.
+                
+                
                 Timer {
                     id: focusRetry
                     interval: 80

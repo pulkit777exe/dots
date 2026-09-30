@@ -2,43 +2,43 @@ import QtQuick
 import QtQuick.Layouts
 import "../services"
 
-// ControlPreview
-// Renders one Control Center control at whatever size the arranger has placed
-// it, from live service state -- the arranger's canvas is a picture of the
-// real panel, not a mock-up, so anything that can change in the popover
-// changes here too.
-//
-// Sizes are expressed in grid cells and resolved by the caller; this component
-// only ever fills whatever box it is given. Which of the shapes a control takes
-// is decided by its type, not by its span: a 1x1 is a bare disc, a wide pill is
-// a labelled pill, and sound / display / notifications keep their own layouts
-// at any span.
-//
-// The four shapes are declared as inline components and then instantiated as
-// ordinary children gated on `visible`, rather than picked through a Loader's
-// sourceComponent. QML has no `return Type { ... }` form, so a switch inside a
-// JS binding cannot build a typed inline component -- that is a parse error at
-// the brace, not a runtime one.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 Item {
     id: root
 
     property string controlType: ""
     property int colSpan: 1
     property int rowSpan: 1
-    // True when the arranger has this control selected: draws the teal ring
-    // and the remove badge.
+    
+    
     property bool selected: false
 
-    // ---- The four shapes -------------------------------------------------
+    
 
     component StatusPill: Item {
         id: pill
         property string title: ""
         property string subtitle: ""
         property string iconName: ""
-        // Named isOn, not on: `on` is QML's signal-handler keyword, so a
-        // property called `on` does not parse -- `on:` reads as the start of a
-        // handler declaration and the parser then wants an identifier.
+        
+        
+        
         property bool isOn: false
         property bool showSubtitle: true
 
@@ -59,8 +59,8 @@ Item {
                 Layout.preferredWidth: 36
                 Layout.preferredHeight: 36
                 radius: 18
-                // Filled accent when on, a flat wash when off -- the same
-                // treatment the settings nav uses at 44%.
+                
+                
                 color: pill.isOn ? Theme.colors.accent : Qt.rgba(1, 1, 1, 0.07)
 
                 Icon {
@@ -113,7 +113,7 @@ Item {
         }
     }
 
-    // A full-width drill-down: title row with a chevron, then a slider.
+    
     component SliderCard: Item {
         id: card
         property string title: ""
@@ -181,8 +181,8 @@ Item {
                 size: 15
                 iconColor: Theme.colors.accent
             }
-            // The chip rides on the fill, exactly as the reference shows the
-            // "Night Light" pill sitting inside the Sound card's slider.
+            
+            
             Rectangle {
                 visible: card.chipText.length > 0
                 anchors.verticalCenter: parent.verticalCenter
@@ -206,8 +206,8 @@ Item {
 
     component NotificationList: Item {
         id: list
-        // Two entries at most: the arranger's cell is 52px tall per row, so a
-        // taller list would push the grid's aspect away from the popover's.
+        
+        
         readonly property var shown: Notifications.active.slice(0, 2)
         implicitHeight: 40 + Math.max(1, shown.length) * 64
 
@@ -247,8 +247,8 @@ Item {
             anchors.rightMargin: 12
             spacing: 8
 
-            // One null placeholder when the stack is empty, so the card keeps
-            // its height instead of collapsing to a bare header.
+            
+            
             Repeater {
                 model: list.shown.length ? list.shown : [null]
 
@@ -326,15 +326,15 @@ Item {
         }
     }
 
-    // ---- One instance per shape, gated on the control's type -------------
+    
 
     StatusPill {
-        // Fill the slot the arranger gives this control. Without it the
-        // shape fell back to its implicit size, and StatusPill and
-        // SliderCard declare only an implicitHeight -- so they rendered
-        // 0px wide and the icon disc sat on top of the title instead of
-        // beside it. DiscButton happened to look right only because its
-        // 52x52 implicit size is close to a 1x1 cell.
+        
+        
+        
+        
+        
+        
         anchors.fill: parent
         visible: root.controlType === "wifi"
         title: "Wi-Fi"; iconName: "wifi"; isOn: Wifi.connected
@@ -342,12 +342,12 @@ Item {
     }
 
     StatusPill {
-        // Fill the slot the arranger gives this control. Without it the
-        // shape fell back to its implicit size, and StatusPill and
-        // SliderCard declare only an implicitHeight -- so they rendered
-        // 0px wide and the icon disc sat on top of the title instead of
-        // beside it. DiscButton happened to look right only because its
-        // 52x52 implicit size is close to a 1x1 cell.
+        
+        
+        
+        
+        
+        
         anchors.fill: parent
         visible: root.controlType === "bluetooth"
         title: "Bluetooth"; iconName: "bluetooth"; isOn: Bluetooth.enabled
@@ -355,12 +355,12 @@ Item {
     }
 
     StatusPill {
-        // Fill the slot the arranger gives this control. Without it the
-        // shape fell back to its implicit size, and StatusPill and
-        // SliderCard declare only an implicitHeight -- so they rendered
-        // 0px wide and the icon disc sat on top of the title instead of
-        // beside it. DiscButton happened to look right only because its
-        // 52x52 implicit size is close to a 1x1 cell.
+        
+        
+        
+        
+        
+        
         anchors.fill: parent
         visible: root.controlType === "focus"
         title: "Focus"; iconName: "do_not_disturb_on"; isOn: Notifications.dnd
@@ -368,12 +368,12 @@ Item {
     }
 
     StatusPill {
-        // Fill the slot the arranger gives this control. Without it the
-        // shape fell back to its implicit size, and StatusPill and
-        // SliderCard declare only an implicitHeight -- so they rendered
-        // 0px wide and the icon disc sat on top of the title instead of
-        // beside it. DiscButton happened to look right only because its
-        // 52x52 implicit size is close to a 1x1 cell.
+        
+        
+        
+        
+        
+        
         anchors.fill: parent
         visible: root.controlType === "gameMode"
         title: "Game Mode"; iconName: "sports_esports"
@@ -382,12 +382,12 @@ Item {
     }
 
     StatusPill {
-        // Fill the slot the arranger gives this control. Without it the
-        // shape fell back to its implicit size, and StatusPill and
-        // SliderCard declare only an implicitHeight -- so they rendered
-        // 0px wide and the icon disc sat on top of the title instead of
-        // beside it. DiscButton happened to look right only because its
-        // 52x52 implicit size is close to a 1x1 cell.
+        
+        
+        
+        
+        
+        
         anchors.fill: parent
         visible: root.controlType === "nowPlaying"
         title: Media.hasPlayer ? (Media.title || "Now Playing") : "Nothing playing"
@@ -397,12 +397,12 @@ Item {
     }
 
     StatusPill {
-        // Fill the slot the arranger gives this control. Without it the
-        // shape fell back to its implicit size, and StatusPill and
-        // SliderCard declare only an implicitHeight -- so they rendered
-        // 0px wide and the icon disc sat on top of the title instead of
-        // beside it. DiscButton happened to look right only because its
-        // 52x52 implicit size is close to a 1x1 cell.
+        
+        
+        
+        
+        
+        
         anchors.fill: parent
         visible: root.controlType === "clipboard"
         title: "Clipboard"; iconName: "content_paste"
@@ -411,24 +411,24 @@ Item {
     }
 
     DiscButton {
-        // Fill the slot the arranger gives this control. Without it the
-        // shape fell back to its implicit size, and StatusPill and
-        // SliderCard declare only an implicitHeight -- so they rendered
-        // 0px wide and the icon disc sat on top of the title instead of
-        // beside it. DiscButton happened to look right only because its
-        // 52x52 implicit size is close to a 1x1 cell.
+        
+        
+        
+        
+        
+        
         anchors.fill: parent
         visible: root.controlType === "lock"
         iconName: "lock"
     }
 
     DiscButton {
-        // Fill the slot the arranger gives this control. Without it the
-        // shape fell back to its implicit size, and StatusPill and
-        // SliderCard declare only an implicitHeight -- so they rendered
-        // 0px wide and the icon disc sat on top of the title instead of
-        // beside it. DiscButton happened to look right only because its
-        // 52x52 implicit size is close to a 1x1 cell.
+        
+        
+        
+        
+        
+        
         anchors.fill: parent
         visible: root.controlType === "nightLight"
         iconName: "dark_mode"
@@ -436,12 +436,12 @@ Item {
     }
 
     DiscButton {
-        // Fill the slot the arranger gives this control. Without it the
-        // shape fell back to its implicit size, and StatusPill and
-        // SliderCard declare only an implicitHeight -- so they rendered
-        // 0px wide and the icon disc sat on top of the title instead of
-        // beside it. DiscButton happened to look right only because its
-        // 52x52 implicit size is close to a 1x1 cell.
+        
+        
+        
+        
+        
+        
         anchors.fill: parent
         visible: root.controlType === "idleInhibit"
         iconName: "coffee"
@@ -449,12 +449,12 @@ Item {
     }
 
     DiscButton {
-        // Fill the slot the arranger gives this control. Without it the
-        // shape fell back to its implicit size, and StatusPill and
-        // SliderCard declare only an implicitHeight -- so they rendered
-        // 0px wide and the icon disc sat on top of the title instead of
-        // beside it. DiscButton happened to look right only because its
-        // 52x52 implicit size is close to a 1x1 cell.
+        
+        
+        
+        
+        
+        
         anchors.fill: parent
         visible: root.controlType === "battery"
         iconName: Battery.charging ? "battery_charging_full" : "battery_std"
@@ -462,30 +462,30 @@ Item {
     }
 
     SliderCard {
-        // Fill the slot the arranger gives this control. Without it the
-        // shape fell back to its implicit size, and StatusPill and
-        // SliderCard declare only an implicitHeight -- so they rendered
-        // 0px wide and the icon disc sat on top of the title instead of
-        // beside it. DiscButton happened to look right only because its
-        // 52x52 implicit size is close to a 1x1 cell.
+        
+        
+        
+        
+        
+        
         anchors.fill: parent
         visible: root.controlType === "sound"
         title: "Sound"
         iconName: Volume.iconName || "volume_up"
-        // Volume exposes `volume` (0..1) and `volumePercent`; there is no
-        // `level`. The reference's Sound card fills its slider from this.
+        
+        
         fraction: Volume.volume
         chipText: "Night Light"
         chipOn: NightLight.enabled
     }
 
     SliderCard {
-        // Fill the slot the arranger gives this control. Without it the
-        // shape fell back to its implicit size, and StatusPill and
-        // SliderCard declare only an implicitHeight -- so they rendered
-        // 0px wide and the icon disc sat on top of the title instead of
-        // beside it. DiscButton happened to look right only because its
-        // 52x52 implicit size is close to a 1x1 cell.
+        
+        
+        
+        
+        
+        
         anchors.fill: parent
         visible: root.controlType === "display"
         title: "Display"
@@ -494,17 +494,17 @@ Item {
     }
 
     NotificationList {
-        // Fill the slot the arranger gives this control. Without it the
-        // shape fell back to its implicit size, and StatusPill and
-        // SliderCard declare only an implicitHeight -- so they rendered
-        // 0px wide and the icon disc sat on top of the title instead of
-        // beside it. DiscButton happened to look right only because its
-        // 52x52 implicit size is close to a 1x1 cell.
+        
+        
+        
+        
+        
+        
         anchors.fill: parent
         visible: root.controlType === "notifications"
     }
 
-    // ---- Selection chrome (the arranger's, not the control's) -----------
+    
 
     Rectangle {
         anchors.fill: parent
@@ -515,8 +515,8 @@ Item {
         visible: root.selected
     }
 
-    // The remove affordance, on the selected control's top-left, half outside
-    // so it reads as a badge rather than a button sitting inside the control.
+    
+    
     Rectangle {
         visible: root.selected
         width: 20; height: 20; radius: 10

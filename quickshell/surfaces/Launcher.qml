@@ -15,10 +15,10 @@ Surface {
     property int selectedIndex: 0
     property int hoverIndex: -1
 
-    // Reference (2026-09-20_22-27-53.png) budgets exactly 366:
-    //   21 top pad + 32 field + 8 + 1 divider + 11 + 6 rows of 46 (276) + 17
-    //   = 366, with the panel's top edge at y 16 and the first row at y 89.
-    // The column is inset 12 left and right, and 21/17 top and bottom.
+    
+    
+    
+    
     implicitHeight: column.implicitHeight + 38
 
     transformOrigin: Item.Center
@@ -28,9 +28,9 @@ Surface {
 
     signal activated(var result)
 
-    // ─────────────────────────────────────────────
-    // SEARCH DEBOUNCE
-    // ─────────────────────────────────────────────
+    
+    
+    
 
     Timer {
         id: searchDebounce
@@ -44,8 +44,8 @@ Surface {
     }
 
     function queueSearch() {
-        // Do not animate while the user is typing.
-        // Just wait until typing pauses.
+        
+        
         searchDebounce.restart()
     }
 
@@ -58,14 +58,14 @@ Surface {
         resultsArea.opacity = 1
     }
 
-    // ─────────────────────────────────────────────
-    // SEARCH TRANSITION
-    // ─────────────────────────────────────────────
+    
+    
+    
 
     SequentialAnimation {
         id: searchTransition
 
-        // Quickly hide the old result set.
+        
         NumberAnimation {
             target: resultsArea
             property: "opacity"
@@ -76,7 +76,7 @@ Surface {
             easing.type: Easing.OutQuad
         }
 
-        // Replace the result model while hidden.
+        
         ScriptAction {
             script: {
                 AppLauncher.setQuery(searchField.text)
@@ -86,7 +86,7 @@ Surface {
             }
         }
 
-        // Quickly reveal the new result set.
+        
         NumberAnimation {
             target: resultsArea
             property: "opacity"
@@ -99,9 +99,9 @@ Surface {
         }
     }
 
-    // ─────────────────────────────────────────────
-    // SELECTION
-    // ─────────────────────────────────────────────
+    
+    
+    
 
     function moveSelection(delta) {
         if (results.length === 0)
@@ -125,9 +125,9 @@ Surface {
         root.activated(results[selectedIndex])
     }
 
-    // ─────────────────────────────────────────────
-    // FOCUS
-    // ─────────────────────────────────────────────
+    
+    
+    
 
     function searchFieldFocus() {
         searchField.text = ""
@@ -163,9 +163,9 @@ Surface {
         }
     }
 
-    // ─────────────────────────────────────────────
-    // PANEL OPEN ANIMATION
-    // ─────────────────────────────────────────────
+    
+    
+    
 
     ParallelAnimation {
         id: appearAnimation
@@ -192,9 +192,9 @@ Surface {
         }
     }
 
-    // ─────────────────────────────────────────────
-    // CONTENT
-    // ─────────────────────────────────────────────
+    
+    
+    
 
     ColumnLayout {
         id: column
@@ -202,20 +202,20 @@ Surface {
         anchors.fill: parent
         anchors.leftMargin: 12
         anchors.rightMargin: 12
-        // 21 above and 17 below, from the reference's 366px budget. These
-        // were a uniform 12, which made the panel 26 short.
+        
+        
         anchors.topMargin: 21
         anchors.bottomMargin: 17
 
         spacing: 0
 
-        // ─────────────────────────────────────────
-        // SEARCH FIELD
-        // ─────────────────────────────────────────
+        
+        
+        
 
         RowLayout {
             Layout.fillWidth: true
-            // Reference: the field's fill (38,36,36) spans y 46..77, so 32 tall.
+            
             Layout.preferredHeight: 32
 
             Layout.leftMargin: 8
@@ -263,17 +263,17 @@ Surface {
             }
         }
 
-        // ─────────────────────────────────────────
-        // DIVIDER
-        // ─────────────────────────────────────────
+        
+        
+        
 
         Rectangle {
             Layout.fillWidth: true
             Layout.preferredHeight: 1
 
-            // Reference: the divider sits at y 76..77 and the first row starts
-            // at y 89, so 8px above it and 11px below. This was 8/8, which
-            // put the rows hard against the divider.
+            
+            
+            
             Layout.topMargin: 8
             Layout.bottomMargin: 11
 
@@ -283,20 +283,16 @@ Surface {
                 root.results.length > 0
         }
 
-        // ─────────────────────────────────────────
-        // RESULTS
-        // ─────────────────────────────────────────
+        
+        
+        
 
         Item {
             id: resultsArea
 
             Layout.fillWidth: true
 
-            /*
-             * Grows to fit results up to `launcherRowsBeforeScrolling`
-             * rows tall; beyond that the area holds still and the
-             * Flickable below scrolls instead.
-             */
+            
             Layout.preferredHeight:
                 Math.min(
                     Math.max(1, root.results.length),
@@ -324,9 +320,9 @@ Surface {
                 contentWidth: width
                 contentHeight: Math.max(1, root.results.length) * ConfigStore.launcherRowHeight
 
-            // ─────────────────────────────────────
-            // MOVING SELECTION SURFACE
-            // ─────────────────────────────────────
+            
+            
+            
 
             Rectangle {
                 id: selectionSurface
@@ -346,11 +342,11 @@ Surface {
 
                 y: targetIndex * ConfigStore.launcherRowHeight
 
-                // Reference: the selected row's fill is (43,39,37) = #2b2725,
-                // a dark neutral. This was Theme.colors.surfaceAlt, which in
-                // ariadne is #06ccae — a bright teal that filled the entire
-                // row and read as a solid accent block. The reference carries
-                // the accent on the 3px bar alone.
+                
+                
+                
+                
+                
                 color: "#2b2725"
 
                 visible:
@@ -365,8 +361,8 @@ Surface {
                     }
                 }
 
-                // Accent indicator. Reference: a 3px teal bar 22 tall
-                // (x 231..233, y 101..122).
+                
+                
                 Rectangle {
                     width: 3
                     height: 22
@@ -381,9 +377,9 @@ Surface {
                 }
             }
 
-            // ─────────────────────────────────────
-            // RESULT ROWS
-            // ─────────────────────────────────────
+            
+            
+            
 
             Repeater {
                 model: root.results
@@ -411,11 +407,7 @@ Surface {
                     selected:
                         index === root.selectedIndex
 
-                    /*
-                     * Never stagger search results.
-                     * Otherwise every search feels like the launcher
-                     * is rebuilding itself.
-                     */
+                    
                     animateAppearance: false
 
                     onHovered: {
@@ -431,20 +423,20 @@ Surface {
                 }
             }
 
-            // Clear hover highlight when pointer leaves.
+            
             HoverHandler {
                 onHoveredChanged: {
                     if (!hovered)
                         root.hoverIndex = -1
                 }
             }
-            } // resultsFlick
+            } 
         }
     }
 
-    // ─────────────────────────────────────────────
-    // INITIALIZATION
-    // ─────────────────────────────────────────────
+    
+    
+    
 
     Component.onCompleted: {
         if (MotionConfig.reduceMotion) {

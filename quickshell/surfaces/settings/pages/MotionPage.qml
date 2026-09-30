@@ -3,10 +3,10 @@ import QtQuick.Layouts
 import "../../../components"
 import "../../../services"
 
-// MotionPage
-// Live MotionConfig sliders. Honest scope note (also in MotionConfig.qml
-// itself): these currently drive Bar.qml, Slider.qml, and ListRow.qml's
-// animations specifically — not literally every animation in the app.
+
+
+
+
 ColumnLayout {
     id: root
     spacing: 12
@@ -26,8 +26,8 @@ ColumnLayout {
 
         SettingsDivider {}
 
-        // Grouped in one ColumnLayout so the whole group dims together when
-        // Reduce motion is on, rather than each row fading independently.
+        
+        
         ColumnLayout {
             Layout.fillWidth: true
             spacing: 0

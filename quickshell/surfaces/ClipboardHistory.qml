@@ -4,9 +4,9 @@ import QtQuick.Layouts
 import "../components"
 import "../services"
 
-// ClipboardHistory
-// Spotlight-style clipboard manager matching Launcher.qml layout and aesthetics.
-// Supports both image thumbnails and text previews with smooth keyboard navigation.
+
+
+
 
 Surface {
     id: root
@@ -31,9 +31,9 @@ Surface {
 
     signal closeRequested()
 
-    // ------------------------------------------------------------
-    // Selection
-    // ------------------------------------------------------------
+    
+    
+    
 
     function moveSelection(delta) {
         if (results.length === 0)
@@ -81,9 +81,9 @@ Surface {
         return search.hasFocus
     }
 
-    // ------------------------------------------------------------
-    // Visibility
-    // ------------------------------------------------------------
+    
+    
+    
 
     onVisibleChanged: {
         if (visible) {
@@ -111,9 +111,9 @@ Surface {
         }
     }
 
-    // ------------------------------------------------------------
-    // Appearance
-    // ------------------------------------------------------------
+    
+    
+    
 
     ParallelAnimation {
         id: appearAnimation
@@ -137,9 +137,9 @@ Surface {
         }
     }
 
-    // ------------------------------------------------------------
-    // Layout
-    // ------------------------------------------------------------
+    
+    
+    
 
     ColumnLayout {
         id: column
@@ -149,9 +149,9 @@ Surface {
 
         spacing: 0
 
-        // --------------------------------------------------------
-        // Search
-        // --------------------------------------------------------
+        
+        
+        
 
         RowLayout {
             Layout.fillWidth: true
@@ -243,9 +243,9 @@ Surface {
             }
         }
 
-        // --------------------------------------------------------
-        // Divider
-        // --------------------------------------------------------
+        
+        
+        
 
         Rectangle {
             Layout.fillWidth: true
@@ -266,9 +266,9 @@ Surface {
                 Clipboard.entries.length > 0
         }
 
-        // --------------------------------------------------------
-        // Empty state
-        // --------------------------------------------------------
+        
+        
+        
 
         StyledText {
             Layout.fillWidth: true
@@ -322,9 +322,9 @@ Surface {
                 "cliphist is not installed or available."
         }
 
-        // --------------------------------------------------------
-        // List
-        // --------------------------------------------------------
+        
+        
+        
 
         ListView {
             id: listView
@@ -367,9 +367,9 @@ Surface {
                 readonly property bool isHovered:
                     rowHover.hovered
 
-                // ------------------------------------------------
-                // Selection background
-                // ------------------------------------------------
+                
+                
+                
 
                 Rectangle {
                     anchors.fill: parent
@@ -398,9 +398,9 @@ Surface {
                     }
                 }
 
-                // ------------------------------------------------
-                // Active accent
-                // ------------------------------------------------
+                
+                
+                
 
                 Rectangle {
                     width: 3
@@ -433,9 +433,9 @@ Surface {
                     }
                 }
 
-                // ------------------------------------------------
-                // Content
-                // ------------------------------------------------
+                
+                
+                
 
                 RowLayout {
                     anchors.fill: parent
@@ -445,15 +445,15 @@ Surface {
 
                     spacing: 12
 
-                    // ------------------------------------------------
-                    // Thumbnail / icon
-                    // ------------------------------------------------
+                    
+                    
+                    
 
                     Item {
                         Layout.preferredWidth: 34
                         Layout.preferredHeight: 34
 
-                        // Image thumbnail
+                        
 
                         Rectangle {
                             anchors.fill: parent
@@ -494,8 +494,8 @@ Surface {
                                 cache: true
                             }
 
-                            // Only show an icon while
-                            // the thumbnail is unavailable.
+                            
+                            
 
                             Icon {
                                 anchors.centerIn: parent
@@ -533,9 +533,9 @@ Surface {
                             }
                         }
 
-                        // ------------------------------------------------
-                        // Text content icon
-                        // ------------------------------------------------
+                        
+                        
+                        
 
                         Rectangle {
                             anchors.fill: parent
@@ -572,9 +572,9 @@ Surface {
                         }
                     }
 
-                    // ------------------------------------------------
-                    // Text
-                    // ------------------------------------------------
+                    
+                    
+                    
 
                     ColumnLayout {
                         Layout.fillWidth: true
@@ -642,9 +642,9 @@ Surface {
                         }
                     }
 
-                    // ------------------------------------------------
-                    // Delete
-                    // ------------------------------------------------
+                    
+                    
+                    
 
                     IconButton {
                         icon: "close"
@@ -693,9 +693,9 @@ Surface {
         }
     }
 
-    // ------------------------------------------------------------
-    // Startup
-    // ------------------------------------------------------------
+    
+    
+    
 
     Component.onCompleted: {
         Clipboard.refresh()

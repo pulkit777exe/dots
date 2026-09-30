@@ -12,7 +12,7 @@ ColumnLayout {
         subtitle: "Time formatting, calendar layout, and display preferences."
     }
 
-    // Live Clock Preview Card
+    
     Surface {
         Layout.fillWidth: true
         implicitHeight: 100
@@ -39,7 +39,7 @@ ColumnLayout {
         }
     }
 
-    // Toggles
+    
     RowLayout {
         Layout.fillWidth: true
         StyledText { variant: "mediaTitle"; font.pixelSize: 13; text: "24-Hour Time Format" }

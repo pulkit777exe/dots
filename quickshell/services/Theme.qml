@@ -1,28 +1,12 @@
 pragma Singleton
-// qmllint disable import
-// qmllint disable signal-handler-parameters
+
+
 
 import QtQuick
 import Quickshell
 import Quickshell.Io
 
-/*
-  Theme service — v0.3.0 + KISS + system-driven.
 
-  Color/theme data lives in ~/.config/colors (hand-authored palettes +
-  wallpaper catalogs). Nothing in this Quickshell tree is a palette source
-  of truth.
-
-  Discovery via scripts/list-themes.py (no hardcoded names). The script outputs
-  the same shape as the old central themes.json but generated live:
-    { "default": "everforest", "current": "everforest", "themes": { "ariadne": { "name": "...", "wallpapers": [...], "colors": {...} } } }
-
-  Colors: purely static. The active theme's own
-  colors/themes/<name>/colors.json *is* the palette — there is no wallpaper
-  sampling, no generator, and no dynamic override. ThemePicker/settings/IPC
-  pick a name; that file's colors are applied in-shell and published out to
-  ~/.config/colors for the rest of the desktop by scripts/publish-colors.py.
-*/
 
 Singleton {
     id: root
@@ -37,42 +21,42 @@ Singleton {
     property var wallpaperIndex: ({})
 
     readonly property var current: presets[currentName] ? presets[currentName] : null
-    // Colors: the active theme's own static palette, with a last-resort
-    // fallback if discovery hasn't landed (or the theme has no colors.json).
+    
+    
     readonly property var targetColors: (current && current.colors) ? current.colors : fallbackColors
     property var fromColors: fallbackColors
     property var displayedColors: targetColors
     property real colorProgress: 1
     readonly property var colors: displayedColors
 
-    // ── Dark-surface tokens ───────────────────────────────────────────
-    //
-    // `colors.background` and `colors.surface` are NOT usable as the fill for
-    // this shell's panels and cards. In ariadne they are #046e5e and #059d86 --
-    // saturated teals, authored for a *light* theme's page and card
-    // backgrounds. Every surface that used them rendered teal: the power menu's
-    // "inactive" tiles, the launcher, the clipboard, the Wi-Fi and audio
-    // dialogs, and Surface's own default backgroundColor.
-    //
-    // These three are derived from the theme's `foreground` instead, so they
-    // stay warm or cool with the theme rather than hardcoding ariadne's cast:
-    //
-    //   panelFill     #000000        the panel body -- measured off
-    //                                 2026-09-20_22-25-51 and 22-28-15
-    //   surfaceCard   foreground@6.3%  -> (16,14,12) in ariadne; the settings
-    //                                 app's cards (2026-09-20_22-30-18)
-    //   surfaceRaised foreground@10.5% -> (24,22,20) in ariadne; the control
-    //                                 centre's cards and the power menu's
-    //                                 tiles (2026-09-20_22-28-15)
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
     readonly property color panelFill: "#000000"
     readonly property color surfaceRaised: Qt.alpha(colors.foreground, 0.105)
 
-    // Tide compatibility — KISS aliases used by Tide-style SettingsApp
+    
     readonly property bool darkMode: isDarkPreset()
-    // Back-compat for surfaces that cache colors.accent etc.
+    
     readonly property string displayName: current ? current.name : currentName
 
-    // Wallpaper — system-discovered, not hardcoded, with crossfade
+    
     readonly property var themeWallpapers: (current && current.wallpapers) ? current.wallpapers : []
     readonly property int currentWallpaperIndex: Math.min((wallpaperIndex[currentName] !== undefined ? wallpaperIndex[currentName] : 0), Math.max(0, themeWallpapers.length - 1))
     function fileUrl(path) {
@@ -86,10 +70,10 @@ Singleton {
     readonly property string currentWallpaper: themeWallpapers.length > 0
         ? fileUrl(themeWallpapers[currentWallpaperIndex])
         : ""
-    // For QML wallpaper view crossfade
+    
     property string wallpaperFrom: ""
     property string wallpaperTo: currentWallpaper
-    property real wallpaperProgress: 1  // 0→1 during crossfade
+    property real wallpaperProgress: 1  
     property bool wallpaperTransitioning: wallpaperProgress < 1
 
     readonly property var pickerModel: {
@@ -104,13 +88,13 @@ Singleton {
                 accent: accent,
                 cardColor: bg,
                 selected: key === currentName,
-                // Real per-theme data only has 3-4 distinct accent-family
-                // hues (accent/danger/warning/success), often with
-                // duplicates — not enough for an honest hand-authored
-                // multi-color palette. Derived instead of invented: hue-
-                // rotated around the theme's real accent, so it's an
-                // actual reflection of that theme's color, not a guess
-                // at colors the theme doesn't define.
+                
+                
+                
+                
+                
+                
+                
                 swatchColors: [
                     (t.colors && t.colors.accent) ? t.colors.accent : accent,
                     (t.colors && t.colors.success) ? t.colors.success : accent,
@@ -124,18 +108,18 @@ Singleton {
         return out;
     }
 
-    // Six hue-rotated variants of a base accent color — same lightness/
-    // saturation family, spread around the color wheel. Used for the
-    // theme picker's multi-dot preview (see pickerModel above).
-    // A plain JS array, not a ListModel.
-    //
-    // WallpaperPicker reads its list as an array -- `wallpapers.length`,
-    // `wallpapers[i].selected`, a for-loop over it -- and a ListModel has no
-    // `length`, so passing one left the picker holding `undefined`: the grid
-    // rendered empty and the footer fell through to its zero branch and showed
-    // "0/0" instead of the reference's "6/12 · Enter to apply".
-    //
-    // Reassigned rather than mutated, so bindings on it re-evaluate.
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
     property var wallpaperPickerModel: []
 
     function rebuildPickerModel() {
@@ -193,9 +177,7 @@ Singleton {
     }
     Process { id: wallpaperApply }
 
-    // --- macOS-like smooth color interpolation ---
     function lerpHex(a, b, t) {
-        // Interpolate two hex colors (with optional alpha #AARRGGBB)
         let hasAlpha = a.length === 9 || b.length === 9;
         let ah = a, bh = b;
         let aAlpha = 1, bAlpha = 1;
@@ -245,9 +227,7 @@ Singleton {
         wallpaperAnim.restart();
     }
 
-    // Color transition — duration follows the Motion page's "Fades &
-    // colour" slider (MotionConfig.fadeMs), same as every color fade
-    // elsewhere in the app. Snaps instantly when Reduce Motion is on.
+    
     NumberAnimation {
         id: colorAnim
         target: root
@@ -263,10 +243,10 @@ Singleton {
     }
     onTargetColorsChanged: startColorTransition()
 
-    // Wallpaper crossfade — also a "fade", same slider. Runs a little
-    // longer than a plain color fade reads as (1.6x) since it's
-    // dissolving a whole image, not a swatch — proportional to the
-    // live setting rather than a second fixed constant.
+    
+    
+    
+    
     NumberAnimation {
         id: wallpaperAnim
         target: root
@@ -285,7 +265,7 @@ Singleton {
     }
 
     function isDarkPreset() {
-        // Static palette only — no dynamic override to consult.
+        
         let bg = "#202020";
         if (targetColors && targetColors.background) bg = targetColors.background;
         return hexLightness(bg) < 0.5;
@@ -306,9 +286,9 @@ Singleton {
         const pad = (v) => clamp(v).toString(16).padStart(2, "0");
         return "#" + pad(r) + pad(g) + pad(b);
     }
-    // Public: translucent variant of any theme color. Accepts "#RRGGBB",
-    // "#AARRGGBB" (alpha replaced), or a color object. Surfaces use this
-    // for icon washes and near-opaque panel backgrounds.
+    
+    
+    
     function withAlpha(c, alpha01) {
         let h = String(c).replace("#", "");
         if (h.length === 8) h = h.slice(2);
@@ -316,11 +296,11 @@ Singleton {
         return "#" + a.toString(16).padStart(2, "0") + h;
     }
 
-    // ---- Publish the active theme's static palette to the rest of the
-    // desktop (~/.config/colors: hyprland.conf, colors.css/.sh, gtk.css).
-    // This is the whole "apply theme" story now: the hand-authored
-    // colors/themes/<name>/colors.json is both what the shell renders and
-    // what gets written out for Hyprland/GTK. ----
+    
+    
+    
+    
+    
     readonly property string publishScript: Quickshell.shellDir + "/scripts/publish-colors.py"
 
     function publish(themeName) {
@@ -342,19 +322,19 @@ Singleton {
         if (!presets[name] || name === currentName) return;
 
         currentName = name;
-        // Keep savedTheme in step. It is what applyPresets() treats
-        // as the authoritative selection, and discovery re-runs whenever
-        // anything under colors/ changes — including this theme's own
-        // publish-colors.py output. Left stale, the next re-run would snap
-        // the shell back to the theme it booted with.
+        
+        
+        
+        
+        
         savedTheme = name;
         rebuildPickerModel();
         saveState();
 
-        // Push this theme's own static colors out to Hyprland/GTK/CSS —
-        // without this, only Theme.qml's own in-shell `colors` binding
-        // ever changed, and border colors and GTK apps kept whatever
-        // theme was last actually published.
+        
+        
+        
+        
         publish(name);
 
         themeChanged(name);
@@ -386,7 +366,7 @@ Singleton {
         setWallpaper((currentWallpaperIndex + 1) % themeWallpapers.length);
     }
 
-    // ---- Discovery from ~/.config/colors (never this repo) ----
+    
     Process {
         id: discovery
         command: ["python3", root.scriptPath]
@@ -431,20 +411,20 @@ Singleton {
         onFileChanged: discovery.running = true
     }
 
-    // ---- Startup ordering ----
-    // The theme list and the saved state arrive independently and in either
-    // order, so nothing may decide currentName until both have landed.
-    // resolveTheme() is the single decider and simply does nothing until
-    // then; whichever side arrives second triggers it. That replaces a
-    // four-branch chain which had to re-check the same conditions in
-    // different combinations.
+    
+    
+    
+    
+    
+    
+    
     property bool presetsResolved: false
     property bool stateResolved: false
     property bool wallpaperApplied: false
-    // The theme theme-state.json holds, or the one just picked in ThemePicker.
+    
     property string savedTheme: ""
-    // colors/index.json's `current`, with `default` as its seed. Declarative
-    // only: it sets the theme on a machine that has never chosen one.
+    
+    
     property string declaredTheme: ""
 
     FileView {
@@ -458,17 +438,17 @@ Singleton {
     FileView {
         id: stateWriter
         path: root.statePath
-        // writer-only: don't duplicate read error (loader already shows it)
+        
         printErrors: false
     }
 
-    // The one place the active theme is decided. Precedence, highest first:
-    //   1. savedTheme     — what theme-state.json holds, or was just picked
-    //   2. declaredTheme  — colors/index.json's `current`, the declarative knob
-    //   3. the first theme that exists
-    // Does nothing until both the theme list and the saved state have
-    // arrived, so the order they turn up in cannot change the answer, and a
-    // saved theme that no longer exists (a rename) falls through on its own.
+    
+    
+    
+    
+    
+    
+    
     function resolveTheme() {
         if (!presetsResolved || !stateResolved) return;
         const keys = Object.keys(presets);
@@ -485,11 +465,11 @@ Singleton {
         wallpaperApplied = true;
         if (currentWallpaper) wallpaperChanged(currentWallpaper);
         else if (themeWallpapers.length === 0) console.warn("Theme: no wallpapers discovered for", currentName);
-        // resolveTheme() has now run with both sides loaded, so currentName is
-        // final and this is the one place that knows which theme the desktop
-        // should be on at startup. Without it the shell would render the
-        // saved theme while hyprland.conf/gtk/css still held the last
-        // published one.
+        
+        
+        
+        
+        
         publish(currentName);
     }
 
@@ -510,8 +490,8 @@ Singleton {
     function applyState(jsonText) {
         try {
             const data = JSON.parse(jsonText);
-            // Only record the choice here. resolveTheme() owns currentName, so
-            // that it can check the theme still exists before adopting it.
+            
+            
             if (data.theme) savedTheme = data.theme;
             if (data.wallpaperIndex) wallpaperIndex = data.wallpaperIndex;
             rebuildPickerModel();
@@ -528,12 +508,12 @@ Singleton {
 
     IpcHandler {
         target: "theme"
-        // Every read goes through `root.` on purpose. Qualified reads return
-        // live values; unqualified ones inside IpcHandler resolve against a
-        // context that doesn't see later assignments, so `get` reported the
-        // startup theme forever. Likewise a handler must not call a
-        // same-named function unqualified — `cycleWallpaper` recursed into
-        // itself until RangeError. Don't undo either.
+        
+        
+        
+        
+        
+        
         function get(): string { return root.currentName; }
         function set(name: string): void { setTheme(name); }
         function cycle(): void { cycleTheme(); }

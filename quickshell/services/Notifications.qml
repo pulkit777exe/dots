@@ -1,54 +1,28 @@
 pragma Singleton
 pragma ComponentBehavior: Bound
 
-// qmllint disable import
-// qmllint disable unresolved-type
-// qmllint disable missing-property
+
+
+
 
 import QtQuick
 import Quickshell
 import Quickshell.Services.Notifications
 import Quickshell.Io
 
-/*
-  Notifications service — Caelestia Notifs pattern.
 
-  Flat API:
-    active: [{id,appName,appIcon,summary,body,urgency,actions,image}]
-    notificationAdded/notificationRemoved
-    dismiss(id)
-    invokeAction(id,actionId)
-    clearAll()
-
-  System event triggers:
-    - Battery: charging, low, critical
-    - Bluetooth: enabled/disabled
-    - Wi-Fi: connected/disconnected
-    - Power profile changes
-    - Night light toggle
-    - Idle inhibit toggle
-    - Theme changed
-    - Volume mute/unmute
-    - Media track change
-    - Clipboard copy
-
-  DND via PersistentProperties reloadableId:"notifs"
-
-  Persistence:
-    ${state}/notifs.json
-*/
 
 Singleton {
     id: root
 
-    // ── Compat flat list ─────────────────────────────────────────────
+    
 
     property var active: []
 
     signal notificationAdded(var notification)
     signal notificationRemoved(int id)
 
-    // ── Caelestia additions ──────────────────────────────────────────
+    
 
     property alias dnd: props.dnd
 
@@ -92,13 +66,13 @@ Singleton {
         return true
     }
 
-    // "Play sound" toggle in Settings — was declared, persisted, had a
-    // working switch, and nothing anywhere ever actually played a
-    // sound regardless of its state. canberra-gtk-play respects
-    // whatever XDG sound theme the user has configured (rather than
-    // hardcoding one specific .oga file that may not exist on their
-    // theme); paplay with a standard freedesktop-theme path is the
-    // fallback for systems without libcanberra installed.
+    
+    
+    
+    
+    
+    
+    
     function playNotifySound(): void {
         if (!ConfigStore.notifSoundEnabled) return
         soundPlayer.command = [
@@ -170,7 +144,7 @@ Singleton {
         property bool dnd: false
     }
 
-    // ── Notification server ─────────────────────────────────────────
+    
 
     NotificationServer {
         id: server
@@ -255,12 +229,12 @@ Singleton {
                             )
                     )
 
-            // Armed unconditionally, not just when the notification popped
-            // up. The old `shouldPopup || !root.dnd` skipped the timer
-            // whenever DND was on and nothing was allowed to popup, which
-            // left the entry in Notifications.active forever: the stack grew
-            // without bound and nothing but a restart cleared it. Suppressing
-            // the popup is not a reason to suppress expiry.
+            
+            
+            
+            
+            
+            
             expireTimerComponent.createObject(
                 root,
                 {
@@ -289,7 +263,7 @@ Singleton {
         }
     }
 
-    // ── Notification actions ─────────────────────────────────────────
+    
 
     function dismiss(id: int): void {
         const idx =
@@ -309,7 +283,7 @@ Singleton {
 
         root.notificationRemoved(id)
 
-        // qmllint disable missing-property
+        
 
         const handle =
             Array.from(
@@ -326,7 +300,7 @@ Singleton {
         id: int,
         actionId: string
     ): void {
-        // qmllint disable missing-property
+        
 
         const handle =
             Array.from(
@@ -346,7 +320,7 @@ Singleton {
             dismiss(n.id)
     }
 
-    // ── Persistent storage ───────────────────────────────────────────
+    
 
     FileView {
         id: storage
@@ -434,7 +408,7 @@ Singleton {
         }
     }
 
-    // ── Internal notify helper ───────────────────────────────────────
+    
 
     function notify(
         summary,
@@ -444,10 +418,10 @@ Singleton {
         urgency,
         actions
     ) {
-        // Defaults for the trailing arguments, which most call sites omit.
-        // These need names of their own: `const appName = appName || ...`
-        // would shadow the parameter and read it in its own initialiser,
-        // which is a ReferenceError the moment notify() is called.
+        
+        
+        
+        
         const name =
             appName || "System"
 
@@ -513,12 +487,12 @@ Singleton {
             root.playNotifySound()
         }
 
-        // Armed unconditionally, for the same reason as the server path
-        // above. This is the path every internally-generated toast takes --
-        // battery, Wi-Fi, clipboard, volume -- and it skipped the timer
-        // whenever shouldShowPopup() was false, i.e. when the launcher or
-        // control centre was open. That is what left the Wi-Fi toasts on
-        // screen indefinitely instead of for their 2s timeout.
+        
+        
+        
+        
+        
+        
         expireTimerComponent.createObject(
             root,
             {
@@ -530,9 +504,9 @@ Singleton {
         return notifId
     }
 
-    // ── System Event Triggers ────────────────────────────────────────
+    
 
-    // Battery
+    
     Connections {
         target: Battery
 
@@ -643,7 +617,7 @@ Singleton {
             root.systemNotifsReady = true
     }
 
-    // Bluetooth
+    
     Connections {
         target: Bluetooth
 
@@ -683,7 +657,7 @@ Singleton {
         }
     }
 
-    // Wi-Fi
+    
     Connections {
         target: Wifi
 
@@ -730,7 +704,7 @@ Singleton {
         }
     }
 
-    // Power profile
+    
     Connections {
         target: PowerProfile
 
@@ -765,7 +739,7 @@ Singleton {
         }
     }
 
-    // Night light
+    
     Connections {
         target: NightLight
 
@@ -791,7 +765,7 @@ Singleton {
         }
     }
 
-    // Idle inhibit
+    
     Connections {
         target: IdleInhibit
 
@@ -830,7 +804,7 @@ Singleton {
         }
     }
 
-    // Theme changed
+    
     Connections {
         target: Theme
 
@@ -867,7 +841,7 @@ Singleton {
         }
     }
 
-    // Volume
+    
     Connections {
         target: Volume
 
@@ -918,7 +892,7 @@ Singleton {
         }
     }
 
-    // Media
+    
     Connections {
         target: Media
 
@@ -996,10 +970,10 @@ Singleton {
         }
     }
 
-    // Clipboard
-    //
-    // IMPORTANT:
-    // Clipboard emits entryCopied(string preview).
+    
+    
+    
+    
     Connections {
         target: Clipboard
 
@@ -1028,7 +1002,7 @@ Singleton {
         }
     }
 
-    // ── IPC ──────────────────────────────────────────────────────────
+    
 
     IpcHandler {
         target: "notifs"

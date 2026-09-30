@@ -3,13 +3,13 @@ import QtQuick.Layouts
 import "../../../components"
 import "../../../services"
 
-// LauncherPage
-// The reference's row set: Width, Row height, Rows before scrolling.
-//
-// Dropped to match it, all three still real ConfigStore settings and still
-// applied by the launcher:
-//   Maximum Visible Results, Include Shell Commands & Binaries, and the
-//   "Super + D" hotkey card.
+
+
+
+
+
+
+
 ColumnLayout {
     id: root
     spacing: 12

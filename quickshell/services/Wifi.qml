@@ -6,28 +6,20 @@ import Quickshell
 import Quickshell.Networking
 import Quickshell.Io
 
-/*
-  Wifi & Networking service — adapted from Caelestia + Quickshell.Networking hybrid.
-  Features:
-  - Event-driven live updates via `nmcli monitor` + Quickshell.Networking native fallback
-  - Robust SSID parsing with colon escaping (\:) and signal deduplication
-  - Automatic physical ethernet interface detection (/sys/class/net/$i/device)
-  - Full support for dynamic interface names (wlo1, wlan0, etc. without hardcoding)
-  - Saved connection profile lookup and password handling
-*/
+
 
 Singleton {
     id: root
 
-    // ── Public Flat Properties (100% UI compat) ──────────────────────
+    
     property bool enabled: true
     property bool connected: false
     property string ssid: ""
     property int strength: 0
     property bool scanning: false
-    property var networks: [] // [{ssid, strength, secured, active, frequency, bssid, security}]
+    property var networks: [] 
     
-    // Ethernet support from Caelestia
+    
     property var ethernetInterfaces: []
     property string activeInterface: ""
     property string activeConnection: ""
@@ -45,7 +37,7 @@ Singleton {
     signal scanFinished()
     signal connectionFailed(string ssid)
 
-    // ── Native Quickshell.Networking Device (Fast path) ─────────────
+    
     readonly property var devices: Networking.devices
     property var wifiDevice: null
 
@@ -58,7 +50,7 @@ Singleton {
         return null;
     }
 
-    // ── Public Actions ──────────────────────────────────────────────
+    
     function toggle() {
         enableWifi(!root.enabled);
     }
@@ -106,7 +98,7 @@ Singleton {
         forgetProc.running = true;
     }
 
-    // ── Internal Helpers ─────────────────────────────────────────────
+    
     function isConnectedState(state) {
         if (!state) return false;
         return state === "100 (connected)" || state === "connected" || state.startsWith("connected");
@@ -200,9 +192,9 @@ Singleton {
         }
     }
 
-    // ── Processes ───────────────────────────────────────────────────
+    
 
-    // Monitor for live NetworkManager events
+    
     Process {
         id: monitorProc
         running: true
@@ -218,7 +210,7 @@ Singleton {
     }
     Timer { id: monitorRestartTimer; interval: 2000; onTriggered: monitorProc.running = true }
 
-    // Status polling
+    
     Process {
         id: statusProc
         command: ["nmcli", "-t", "-f", "DEVICE,TYPE,STATE,CONNECTION", "device", "status"]
@@ -266,7 +258,7 @@ Singleton {
         }
     }
 
-    // Detailed network list polling
+    
     Process {
         id: getNetworksProc
         command: ["nmcli", "-g", "ACTIVE,SIGNAL,FREQ,SSID,BSSID,SECURITY", "d", "w"]
@@ -287,7 +279,7 @@ Singleton {
         }
     }
 
-    // Toggle Wi-Fi radio
+    
     Process {
         id: toggleProc
         property string cmdState: "on"
@@ -298,7 +290,7 @@ Singleton {
         }
     }
 
-    // Scan trigger
+    
     Process {
         id: rescanProc
         command: ["nmcli", "dev", "wifi", "list", "--rescan", "yes"]
@@ -309,14 +301,14 @@ Singleton {
         }
     }
 
-    // Disconnect (uses deviceType "wifi" to avoid hardcoding interface name)
+    
     Process {
         id: disconnectProc
         command: ["nmcli", "device", "disconnect", root.activeInterface || "wifi"]
         onExited: root.refreshStatus()
     }
 
-    // Forget network profile
+    
     Process {
         id: forgetProc
         property string ssidArg: ""
@@ -324,7 +316,7 @@ Singleton {
         onExited: root.refreshStatus()
     }
 
-    // Custom connection process with error / password detection
+    
     Process {
         id: connectCustomProc
         property var cb: null
@@ -394,7 +386,7 @@ Singleton {
         refreshStatus();
     }
 
-    // ── IPC compatibility ───────────────────────────────────────────
+    
     IpcHandler {
         target: "wifi"
         function status(): string { return JSON.stringify({enabled: root.enabled, connected: root.connected, ssid: root.ssid, strength: root.strength}); }

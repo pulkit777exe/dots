@@ -1,10 +1,10 @@
 import QtQuick
 import "../services"
 
-// StyledRect
-// Bare themed rounded rectangle — the generic building block for small
-// content blocks (album art, cell backgrounds) that don't need Surface's
-// shadow/border machinery.
+
+
+
+
 Rectangle {
     id: root
 

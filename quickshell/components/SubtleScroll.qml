@@ -1,50 +1,50 @@
 import QtQuick
 import "../services"
 
-// SubtleScroll
-// A deliberately quiet vertical scroll indicator.
-//
-// The Control Center's scrollable areas were left on the Flickable default,
-// which draws nothing: a list taller than its box is simply sliced mid-card,
-// so a truncated notification list read as a rendering fault rather than as a
-// list with more below. A styled ScrollBar would need QtQuick.Controls, which
-// this project does not use anywhere, so this is hand-rolled from a Rectangle
-// rather than introducing a new import for one widget.
-//
-// The look: 3px wide, no groove, no border, fully rounded. White at 18% at
-// rest, rising to 55% while the list is moving or the pointer is on it, and
-// easing back down over 260ms. Accent only on hover, so it never competes
-// with the content it sits over.
-//
-// Non-interactive by design: it observes hover with a HoverHandler and takes
-// no buttons, so drags pass straight through to the Flickable underneath and
-// nothing can be swallowed by an invisible 3px strip.
-//
-// Height comes from the parent's anchors (top + bottom); the width is fixed.
-// Place it as:
-//
-//     SubtleScroll {
-//         flickable: someFlickable
-//         anchors.right: parent.right
-//         anchors.top: parent.top
-//         anchors.bottom: parent.bottom
-//     }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 Item {
     id: ind
 
-    // Not `required`: the Control Center binds this to whichever
-    // drill-down page is open, which is null on the home page. Every use below
-    // is guarded so a null flickable simply hides the indicator.
+    
+    
+    
     property Flickable flickable
 
-    // Gap from the flickable's own edge, so the bar never touches a card.
+    
     property int inset: 3
 
     readonly property bool needed:
         flickable !== null && flickable.contentHeight > flickable.height + 1
     readonly property real track: Math.max(1, height - inset * 2)
-    // Proportional to the visible fraction, but never so small it is hard to
-    // see or grab.
+    
+    
     readonly property real barSize: Math.max(20, track *
         (flickable ? flickable.height / Math.max(1, flickable.contentHeight) : 1))
     readonly property real travel:

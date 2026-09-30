@@ -9,7 +9,7 @@ Item {
     property int flipDuration: 280
     property int spacing: 0
 
-    // Width of the widest digit in the current font.
+    
     StyledText {
         id: digitMeasure
 
@@ -92,7 +92,7 @@ Item {
                     horizontalAlignment: Text.AlignHCenter
                     verticalAlignment: Text.AlignVCenter
 
-                    // Important for transformed text.
+                    
                     renderType: Text.QtRendering
 
                     transform: Rotation {

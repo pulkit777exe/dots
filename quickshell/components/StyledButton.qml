@@ -1,15 +1,15 @@
 import QtQuick
 import "../services"
 
-// StyledButton
-// Pill-shaped button. variant: "filled" (solid accent, dark text) or
-// "ghost" (transparent, subtle hover) — matches dialog action pairs
-// like Cancel / Authenticate.
+
+
+
+
 Item {
     id: root
 
     property string text: ""
-    property string variant: "filled"   // "filled" | "ghost"
+    property string variant: "filled"   
     property color accentColor: Theme.colors.accent
     property color filledTextColor: Theme.colors.accentText
     property color ghostTextColor: Qt.rgba(1, 1, 1, 0.85)

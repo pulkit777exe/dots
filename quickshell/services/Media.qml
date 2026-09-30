@@ -5,14 +5,7 @@ import Quickshell
 import Quickshell.Services.Mpris
 import Quickshell.Io
 
-/*
-  Media service — real-time MPRIS player integration.
-  - Live track metadata (title, artist, album, artUrl)
-  - Real-time position tracking and smooth progress ticker (500ms intervals)
-  - Interactive seeking (seek, seekSeconds)
-  - Play, pause, togglePlay, next, previous, stop
-  - Multi-player priority (currently playing wins, fallback to last active)
-*/
+
 
 Singleton {
     id: root
@@ -25,11 +18,11 @@ Singleton {
         { from: "spotify", to: "Spotify" }
     ]
 
-    // ── Active Player ───────────────────────────────────────────────
+    
     property MprisPlayer active: null
     readonly property bool hasPlayer: active !== null
 
-    // ── Metadata Properties ─────────────────────────────────────────
+    
     property string title: active ? (active.trackTitle || "") : ""
     property string artist: active ? (active.trackArtist || "") : ""
     property string album: active ? (active.trackAlbum || "") : ""
@@ -40,7 +33,7 @@ Singleton {
     property string artUrl: active ? getArtUrl(active) : ""
     property string identity: active ? getIdentity(active) : ""
 
-    // Length in seconds
+    
     property real length: {
         if (!active) return 0;
         if (active.length && active.length > 0) return active.length;
@@ -49,11 +42,11 @@ Singleton {
         return 0;
     }
 
-    // Position in seconds (locally ticked in real-time)
+    
     property real position: 0
     property real progress: (length > 0) ? Math.max(0, Math.min(1, position / length)) : 0
 
-    // ── Real-Time Position Ticker ───────────────────────────────────
+    
     Timer {
         id: positionTicker
         interval: 500
@@ -61,12 +54,12 @@ Singleton {
         running: root.playing && root.hasPlayer
         onTriggered: {
             if (root.active) {
-                // If Quickshell native position is valid and updating, use it
+                
                 const nativePos = root.active.position;
                 if (!isNaN(nativePos) && nativePos > 0 && Math.abs(nativePos - root.position) > 2) {
                     root.position = nativePos;
                 } else {
-                    // Smooth local increment
+                    
                     if (root.length > 0 && root.position < root.length) {
                         root.position = Math.min(root.length, root.position + 0.5);
                     } else if (root.length === 0) {
@@ -77,7 +70,7 @@ Singleton {
         }
     }
 
-    // Sync position with playerctl periodically to ensure 0 drift
+    
     Timer {
         id: syncTimer
         interval: 2500
@@ -107,7 +100,7 @@ Singleton {
         return m + ":" + (s < 10 ? "0" : "") + s;
     }
 
-    // ── Helpers ─────────────────────────────────────────────────────
+    
     function getIdentity(player) {
         if (!player) return "";
         const id = player.identity || "";
@@ -131,7 +124,7 @@ Singleton {
         return "";
     }
 
-    // ── Public Controls ─────────────────────────────────────────────
+    
     function togglePlay() {
         if (active && active.canTogglePlaying) {
             active.togglePlaying();
@@ -180,14 +173,14 @@ Singleton {
         posProc.running = true;
     }
 
-    // ── Player Selection ────────────────────────────────────────────
+    
     function pickBest() {
         const players = Mpris.players.values;
         if (!players || players.length === 0) {
             active = null;
             return;
         }
-        // First priority: player that is currently playing
+        
         for (let i = 0; i < players.length; i++) {
             if (players[i].isPlaying) {
                 active = players[i];
@@ -195,7 +188,7 @@ Singleton {
                 return;
             }
         }
-        // Second priority: default player name match
+        
         if (defaultPlayer && defaultPlayer.length > 0) {
             const pref = players.find(p => getIdentity(p) === defaultPlayer);
             if (pref) {
@@ -204,7 +197,7 @@ Singleton {
                 return;
             }
         }
-        // Fallback: most recently added player
+        
         active = players[players.length - 1];
         syncTrack();
     }
@@ -251,7 +244,7 @@ Singleton {
         posProc.running = true;
     }
 
-    // ── IPC Compatibility ───────────────────────────────────────────
+    
     IpcHandler {
         target: "mpris"
         function play() { root.togglePlay(); }

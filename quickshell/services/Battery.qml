@@ -1,20 +1,12 @@
 pragma Singleton
-// qmllint disable import
+
 
 import QtQuick
 import Quickshell
 import Quickshell.Io
 import Quickshell.Services.UPower
 
-/*
-  Battery service.
 
-  UPower/Quickshell.Services.UPower is dbus-signal driven already — no
-  polling required. This wraps the primary "display device" (the one
-  UPower itself aggregates across all batteries) into flat properties,
-  plus a couple of derived conveniences (icon name, low-battery signal)
-  that surfaces care about.
-*/
 
 Singleton {
     id: root
@@ -22,7 +14,7 @@ Singleton {
     readonly property bool available: UPower.displayDevice !== null
     readonly property var device: UPower.displayDevice
 
-    // UPowerDevice.percentage is documented as 0-100, but some Quickshell builds expose 0-1 (e.g. 0.8 → round=1, seen live as 1% vs 80% upower). Handle both.
+    
     readonly property int percentage: {
         if (!device) return 0;
         const p = device.percentage;
@@ -32,15 +24,15 @@ Singleton {
     readonly property bool charging: device ? (device.state === UPowerDeviceState.Charging || device.state === UPowerDeviceState.PendingCharge || device.state === UPowerDeviceState.FullyCharged) : false
     readonly property bool plugged: device ? (device.state !== UPowerDeviceState.Discharging) : true
 
-    // seconds -> null when unknown/charging fully etc.
+    
     readonly property real timeToEmpty: device ? device.timeToEmpty : 0
     readonly property real timeToFull: device ? device.timeToFull : 0
 
     readonly property bool low: available && !plugged && percentage <= 20
     readonly property bool critical: available && !plugged && percentage <= 5
 
-    // Semantic status slug (logging/tooltips) — NOT a Material ligature.
-    // For a glyph, bind components/BatteryIcon.qml to percentage/charging/available.
+    
+    
     readonly property string iconName: {
         if (!available) return "battery-missing";
         if (charging) return "battery-charging";

@@ -13,7 +13,7 @@ ColumnLayout {
         subtitle: "Theme presets, wallpaper picker, surface glass opacity, and geometry."
     }
 
-    // Quick Pickers
+    
     Surface {
         Layout.fillWidth: true
         implicitHeight: 110
@@ -43,7 +43,7 @@ ColumnLayout {
         }
     }
 
-    // Sliders
+    
     SettingsSliderRow {
         label: "Surface Glass Opacity"
         value: ConfigStore.glassOpacity * 100
@@ -58,7 +58,7 @@ ColumnLayout {
         onMoved: (v) => ConfigStore.setCornerRadiusPreset(Math.round(v))
     }
 
-    // Wallpaper Transition Configuration
+    
     Surface {
         Layout.fillWidth: true
         implicitHeight: transCol.implicitHeight + 24

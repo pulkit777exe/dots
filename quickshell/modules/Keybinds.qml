@@ -5,13 +5,13 @@ import Quickshell.Io
 import Quickshell.Hyprland
 import qs.services
 
-// Central keybind hub — KISS: one place, explicit types, dual portable path
-// IpcHandler (qs ipc call shell <name>) works on any compositor (Sway/Mutter)
-// GlobalShortcut (global, quickshell:<name>) is Hyprland-only, zero-fork, low-spec
+
+
+
 Singleton {
     id: root
 
-    // UiState toggles — single IpcHandler per target (multiple handlers for same target collide; only last survives)
+    
     IpcHandler {
         target: "shell"
         function toggleLauncher(): void { UiState.toggleLauncher() }
@@ -24,7 +24,7 @@ Singleton {
         function toggleWallpaperPicker(): void { UiState.toggleWallpaperPicker() }
         function toggleCalendar(): void { UiState.toggleCalendar() }
         function toggleMedia(): void { UiState.toggleMedia() }
-        // Portability aliases for Hyprland-only actions (also via GlobalShortcut)
+        
         function brightnessUp(): void { Brightness.increaseBrightness() }
         function brightnessDown(): void { Brightness.decreaseBrightness() }
         function mediaToggle(): void { Media.togglePlay() }
@@ -34,15 +34,15 @@ Singleton {
         function bluetoothToggle(): void { Bluetooth.toggle() }
         function nightLightToggle(): void { NightLight.toggle() }
         function clearNotifs(): void { Notifications.clearAll() }
-        // Opens a Control Center drill-down without a click. The drill-downs
-        // have no keybind of their own and `hyprctl dispatch` cannot synthesise
-        // a pointer on this Hyprland, so this is the only way to compare them
-        // against their references.
-        //
-        // One no-arg function per view, not one taking a name: an IPC handler
-        // argument has to cross a QVariant boundary, and
-        // `function setCcView(v)` fails to parse with "Type of argument 1
-        // (v: QVariant) cannot be used across IPC".
+        
+        
+        
+        
+        
+        
+        
+        
+        
         function ccHome(): void { openCcView("home") }
         function ccWifi(): void { openCcView("wifi") }
         function ccBluetooth(): void { openCcView("bluetooth") }
@@ -63,9 +63,9 @@ Singleton {
         function isMediaOpen(): bool { return UiState.mediaOpen; }
     }
 
-    // Outside the IpcHandler on purpose: every function declared inside one is
-    // treated as an IPC entry point, so a helper with a parameter fails to
-    // parse with "Type of argument 1 (v: QVariant) cannot be used across IPC".
+    
+    
+    
     function openCcView(v) {
         if (!UiState.controlCenterOpen) UiState.toggleControlCenter();
         UiState.ccView = v;

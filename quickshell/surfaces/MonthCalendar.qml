@@ -3,22 +3,22 @@ import QtQuick.Layouts
 import "../components"
 import "../services"
 
-// MonthCalendar
-// The month grid from 2026-09-20_22-25-42, which the shell had no equivalent
-// of at all: Calendar.qml renders only a clock and a 7-day strip.
-//
-// 341 x 281, measured off the reference the same way as the other panels --
-// long dark runs only, so the crop's own rounded corners cannot pull the box
-// outward. The grid is 7 columns on a 44px pitch with 6 date rows on a 31.5px
-// pitch, both centred, which is what leaves the reference's ~38px side margins
-// inside a 341px card.
+
+
+
+
+
+
+
+
+
 Item {
     id: root
 
     implicitWidth: 341
     implicitHeight: 281
 
-    // Paged by the header's arrows. `shown` is the first of the displayed month.
+    
     property var shown: firstOfMonth(new Date())
     readonly property var today: new Date()
 
@@ -34,12 +34,12 @@ Item {
             && a.getDate() === b.getDate();
     }
 
-    // Six weeks starting on the Sunday on or before the 1st, so the grid is
-    // always 6 rows tall and the card never changes height month to month --
-    // the same guarantee the reference's fixed 281px implies.
+    
+    
+    
     readonly property var grid: {
         const first = root.shown
-        const lead = first.getDay()                       // 0 = Sunday
+        const lead = first.getDay()                       
         const start = new Date(first)
         start.setDate(1 - lead)
         const cells = []
@@ -59,7 +59,7 @@ Item {
         root.shown = new Date(root.shown.getFullYear(), root.shown.getMonth() + delta, 1)
     }
 
-    // Clicking the grid's body (not an arrow) drops back to the week strip.
+    
     MouseArea {
         anchors.fill: parent
         onClicked: UiState.showCalendarWeek()
@@ -70,14 +70,14 @@ Item {
         anchors.margins: 18
         spacing: 0
 
-        // ---- Header: ‹  "September 2026"  › ----
+        
         Item {
             Layout.fillWidth: true
             implicitHeight: 30
 
-            // The reference puts ‹ hard left and › hard right with the title
-            // between them. Both arrows used to sit in a Row on the left, which
-            // read as a pair of controls rather than a pager.
+            
+            
+            
             component PageArrow: Rectangle {
                 id: arrow
                 property string glyph: ""
@@ -119,7 +119,7 @@ Item {
 
         Item { Layout.preferredHeight: 14; Layout.fillWidth: true }
 
-        // ---- Weekday letters ----
+        
         RowLayout {
             Layout.fillWidth: true
             spacing: 0
@@ -139,17 +139,17 @@ Item {
 
         Item { Layout.preferredHeight: 10; Layout.fillWidth: true }
 
-        // ---- Six rows of dates ----
-        //
-        // A Grid over the flat 42-cell model rather than nested Repeaters.
-        // Nested Repeaters cannot reach the outer delegate's index from the
-        // inner one (`row is not defined`, and the inner `index` shadows the
-        // outer), which is what threw 210 TypeErrors on load.
-        //
-        // 7 columns on a 44px pitch and 6 rows on a 31.5px pitch come off the
-        // reference: its column centres are 43.9px apart and its date rows
-        // 31.5px apart, and 7 x 44 = 308 leaves the reference's ~16px side
-        // margins inside a 341px card.
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
         Grid {
             Layout.fillWidth: true
             Layout.topMargin: 8

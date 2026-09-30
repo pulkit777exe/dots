@@ -4,34 +4,14 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 
-/*
-  Brightness service — upgraded to Caelestia multi-monitor pattern.
 
-  Keeps your existing single-device API 100% compat:
-    - level (0-100), available, iconName, osdRequested,
-      setBrightness(pct), step(delta)
-
-  Adds Caelestia additions alongside:
-    - DDC per-monitor via ddcutil detect --brief
-    - Apple Studio Display via asdbctl get/set
-    - Variants<Monitor> per Quickshell.screens
-    - getMonitor(query) / increase/decreaseBrightness
-    - IpcHandler target:"brightness" with get/getFor/set/setFor
-    - CustomShortcut brightnessUp/brightnessDown
-    - queuedBrightness + 500ms coalesce Timer for DDC
-
-  Event source stays inotify on sysfs for the legacy single-device path;
-  per-monitor Monitors handle their own init via ddcutil/brightnessctl/asdbctl.
-
-  Any writer (brightnessctl/hotkey/this service) touching sysfs wakes inotifywait.
-*/
 
 Singleton {
     id: root
 
-    // ------------------------------------------------------------
-    // Legacy single-device compatibility
-    // ------------------------------------------------------------
+    
+    
+    
 
     property string device: ""
     property int max: 100
@@ -59,8 +39,8 @@ Singleton {
     onLevelChanged:
         osdRequested(level)
 
-    // Event-driven: don't set level optimistically.
-    // Let inotify / per-monitor readback drive it.
+    
+    
     function setBrightness(pct) {
         const clamped = Math.max(
             1,
@@ -89,9 +69,9 @@ Singleton {
         setBrightness(level + delta)
     }
 
-    // ------------------------------------------------------------
-    // Multi-monitor
-    // ------------------------------------------------------------
+    
+    
+    
 
     property var ddcMonitors: []
 
@@ -115,7 +95,7 @@ Singleton {
             return null
 
         if (query === "active") {
-            // Without Hyprland service, active = first available.
+            
             return monitors[0]
         }
 
@@ -187,28 +167,28 @@ Singleton {
         ddcProc.running = true
     }
 
-    // ------------------------------------------------------------
-    // Legacy single-device discovery
-    // ------------------------------------------------------------
+    
+    
+    
 
-    // ── Refresh rates ──────────────────────────────────────────────
-    // Quickshell.screens carries width/height/model but NOT refresh rate, so
-    // the control centre's monitor subtitle rendered "NaN Hz". Hyprland does
-    // report it, via `hyprctl monitors -j`. Keyed by output name, which is
-    // the same key Quickshell.screens uses and the same key
-    // getMonitor() matches on.
-    //
-    // A missing entry is normal (non-Hyprland, or the call failed) — callers
-    // must omit the segment rather than print NaN.
+    
+    
+    
+    
+    
+    
+    
+    
+    
     property var refreshRates: ({})
 
-    // ── Output scale ──────────────────────────────────────────────
-    // Quickshell.screens does not expose a per-output scale in this build
-    // either, so `modelData.scale` is undefined and the Display page's
-    // spec line silently lost its "· 1.0x" segment and no scale chip ever
-    // lit up. Hyprland reports it, and the probe above already runs, so
-    // collect it in the same pass. A missing entry is normal — callers must
-    // omit the segment rather than print a guess.
+    
+    
+    
+    
+    
+    
+    
     property var outputScales: ({})
 
     Process {
@@ -223,9 +203,9 @@ Singleton {
                     const scales = {};
                     for (const m of parsed) {
                         if (!m || !m.name) continue;
-                        // This Hyprland reports `refreshRate` (a float, e.g.
-                        // 144.00301). Older builds used `refresh`, and some
-                        // report millihertz, so accept both.
+                        
+                        
+                        
                         let hz = (typeof m.refreshRate === "number") ? m.refreshRate : m.refresh;
                         if (typeof hz === "number" && hz > 1000) hz = hz / 1000;
                         if (typeof hz === "number" && isFinite(hz) && hz > 0)
@@ -237,8 +217,8 @@ Singleton {
                     root.refreshRates = map;
                     root.outputScales = scales;
                 } catch (e) {
-                    // Leave the previous map alone; an unreadable response is
-                    // not worth clearing good data over.
+                    
+                    
                 }
             }
         }
@@ -280,9 +260,9 @@ Singleton {
         }
     }
 
-    // Re-read refresh rates and scales on demand. The probe only fires once
-    // at startup, which is fine for the static values but leaves a scale the
-    // user just changed through the Display page reading stale.
+    
+    
+    
     function refreshMonitorInfo(): void {
         monitorProbe.running = true;
     }
@@ -365,9 +345,9 @@ Singleton {
         }
     }
 
-    // ------------------------------------------------------------
-    // Per-monitor variants
-    // ------------------------------------------------------------
+    
+    
+    
 
     Variants {
         id: variants
@@ -406,9 +386,9 @@ Singleton {
         }
     }
 
-    // ------------------------------------------------------------
-    // DDC discovery
-    // ------------------------------------------------------------
+    
+    
+    
 
     Process {
         id: ddcProc
@@ -466,9 +446,9 @@ Singleton {
         }
     }
 
-    // ------------------------------------------------------------
-    // IPC
-    // ------------------------------------------------------------
+    
+    
+    
 
     IpcHandler {
         target: "brightness"

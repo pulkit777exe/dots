@@ -3,9 +3,9 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 
-// DeviceProfile — portability + low-spec detection
-// Event-driven, no polling. Determines if device is low-spec to reduce
-// animations, cava framerate, shadow quality etc.
+
+
+
 
 Singleton {
     id: root
@@ -15,7 +15,7 @@ Singleton {
     property int memKB: 0
     property int cpuCount: 0
 
-    // Expose for MotionConfig to reduce motion on low-spec
+    
 
     Process {
         id: memProbe
@@ -24,7 +24,7 @@ Singleton {
             onStreamFinished: {
                 let v = parseInt(text.trim()) || 0
                 root.memKB = v
-                root.isLowMem = v > 0 && v < 4000000 // <4GB
+                root.isLowMem = v > 0 && v < 4000000 
                 root.updateLowSpec()
             }
         }
@@ -42,7 +42,7 @@ Singleton {
         }
     }
     function updateLowSpec() {
-        // Low-spec if low mem or low cpu, or manually forced via env
+        
         let forced = Quickshell.env("QUICKSHELL_LOW_SPEC") === "1"
         root.lowSpec = forced || root.isLowMem || root.isLowCpu
         if (root.lowSpec) console.log("DeviceProfile: low-spec mode enabled (mem", root.memKB, "KB, cpu", root.cpuCount, ")")
@@ -51,7 +51,7 @@ Singleton {
     Component.onCompleted: {
         memProbe.running = true
         cpuProbe.running = true
-        // Also check for manual reduce motion env
+        
         if (Quickshell.env("QUICKSHELL_REDUCE_MOTION") === "1") {
             console.log("DeviceProfile: reduce motion forced via env")
         }

@@ -20,7 +20,7 @@ Item {
     property bool selected: false
     property bool solidBackground: false
 
-    // Controls whether this row performs its entrance animation.
+    
     property bool animateAppearance: true
     property int appearDelay: 0
 
@@ -51,9 +51,9 @@ Item {
 
     opacity: animateAppearance ? 0 : 1
 
-    // ─────────────────────────────────────────────
-    // APPEAR
-    // ─────────────────────────────────────────────
+    
+    
+    
 
     SequentialAnimation {
         id: appearAnimation
@@ -79,9 +79,9 @@ Item {
         }
     }
 
-    // ─────────────────────────────────────────────
-    // NORMAL BACKGROUND
-    // ─────────────────────────────────────────────
+    
+    
+    
 
     Rectangle {
         anchors.fill: parent
@@ -94,9 +94,9 @@ Item {
                 : "transparent"
     }
 
-    // ─────────────────────────────────────────────
-    // CONTENT
-    // ─────────────────────────────────────────────
+    
+    
+    
 
     RowLayout {
         anchors.fill: parent
@@ -192,9 +192,9 @@ Item {
         }
     }
 
-    // ─────────────────────────────────────────────
-    // POINTER
-    // ─────────────────────────────────────────────
+    
+    
+    
 
     HoverHandler {
         id: hoverHandler
@@ -216,9 +216,9 @@ Item {
         }
     }
 
-    // ─────────────────────────────────────────────
-    // PRESS FEEDBACK
-    // ─────────────────────────────────────────────
+    
+    
+    
 
     scale:
         tapHandler.pressed

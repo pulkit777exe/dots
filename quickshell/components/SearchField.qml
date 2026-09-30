@@ -2,10 +2,10 @@ import QtQuick
 import QtQuick.Layouts
 import "../services"
 
-// SearchField
-// Icon + text input row. No background of its own — it's meant to sit
-// inside a Surface (the launcher, control center, etc.) which supplies
-// the panel behind it.
+
+
+
+
 Item {
     id: root
 
@@ -20,7 +20,7 @@ Item {
     signal navigateRight()
     signal navigateUp()
     signal navigateDown()
-    // when true, arrow keys trigger navigate signals instead of moving cursor
+    
     property bool externalNavigation: false
 
     implicitHeight: 40
@@ -29,8 +29,8 @@ Item {
 
     function focusInput() {
         input.forceActiveFocus()
-        // Qt docs: forceActiveFocus is async if window not active yet — HyprlandFocusGrab
-        // makes this succeed only after barWindow gains Exclusive focus; Island timers retry.
+        
+        
         if (!input.activeFocus) Qt.callLater(() => input.forceActiveFocus())
     }
 

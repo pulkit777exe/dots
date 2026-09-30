@@ -3,34 +3,34 @@ import QtQuick.Layouts
 import "../../../components"
 import "../../../services"
 
-// ControlCenterArranger
-// The Control Center editor from 2026-09-20_22-29-19: a live canvas of the
-// real controls on a column grid, plus the chrome around it (column count,
-// Tidy / Undo / Reset, the "Add a control" palette and the two hint lines).
-//
-// The canvas shows the real ControlPreview at the real grid metrics and is
-// centred in the content column rather than stretched -- the reference leaves
-// roughly 280px of empty content either side of the grid.
-//
-// Every edit goes through ControlCenterLayout, which owns the undo stack and
-// persistence. This file only turns pointer and key events into calls on it.
-//
-// The root is the ColumnLayout itself rather than an Item wrapping one: an
-// Item whose implicitHeight came from a child ColumnLayout that was in turn
-// `anchors.fill`-ing that Item is a circular binding, and QML resolves it by
-// collapsing the whole column to near-zero width.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 ColumnLayout {
     id: root
 
     spacing: 10
 
-    // This root's implicitWidth is NOT zeroed here, deliberately. A
-    // ColumnLayout regenerates its own implicitWidth during layout, so an
-    // `implicitWidth: 0` binding on it is inert -- it reads back as 728, the
-    // width of the widest child (the two unwrapped hint lines). The width
-    // demand is zeroed by the parent instead, via Layout.preferredWidth: 0 on
-    // this component, which is the mechanism a ColumnLayout parent does
-    // respect. See ControlCenterPage.qml.
+    
+    
+    
+    
+    
+    
+    
 
     readonly property int cols: ControlCenterLayout.columns
 
@@ -67,11 +67,11 @@ ColumnLayout {
         }
     }
 
-    // ---- "Layout" caption ------------------------------------------------
+    
 
     SettingsSectionLabel { label: "Layout" }
 
-    // ---- Column selector, Tidy / Undo / Reset, hint ----------------------
+    
 
     Item {
         Layout.fillWidth: true
@@ -166,12 +166,12 @@ ColumnLayout {
         }
     }
 
-    // ---- The canvas -------------------------------------------------------
+    
 
     Item {
         Layout.fillWidth: true
         Layout.topMargin: 4
-        // The grid plus one extra row of empty slots below it.
+        
         implicitHeight: root.canvasH + ControlCenterLayout.cellH + ControlCenterLayout.gapV
 
         Item {
@@ -180,32 +180,32 @@ ColumnLayout {
             height: parent.height
             anchors.horizontalCenter: parent.horizontalCenter
 
-            // Bare canvas: clears the selection. Declared first so it sits
-            // behind the controls rather than swallowing their clicks.
+            
+            
             MouseArea {
-                // Suspend the canvas while the size menu is up. The menu draws over its
-                // neighbours -- it is pinned to the selected control's top-right and is
-                // 130px wide -- but a press still reached the slot underneath, so
-                // right-clicking a size row selected whichever control happened to be
-                // behind the menu instead of resizing anything. A MouseArea under a
-                // TapHandler takes the press and cancels the tap, so the rows could never
-                // win; disabling the canvas is what makes the menu modal.
+                
+                
+                
+                
+                
+                
+                
                 enabled: !sizeMenu.visible
                 anchors.fill: parent
-                // Left button only. This area's whole job is "click empty space
-                // to deselect", and it spans the entire canvas including the
-                // controls. Accepting the right button too put it in direct
-                // competition with each slot's own right-click handler, which
-                // selects the control and opens this same menu: whichever ran
-                // last won, and a right-click over a control could leave
-                // nothing selected at all. Right-click belongs to the slots.
+                
+                
+                
+                
+                
+                
+                
                 acceptedButtons: Qt.LeftButton
                 onPressed: { ControlCenterLayout.select(""); root.takeFocus(); }
             }
 
-            // Empty slots: one row of 1x1 discs below the last placed control,
-            // one per column, so the grid's width stays legible even when the
-            // bottom rows are short.
+            
+            
+            
             Row {
                 anchors.top: parent.top
                 anchors.topMargin: root.cellY(root.rowCount)
@@ -224,7 +224,7 @@ ColumnLayout {
                 }
             }
 
-            // Placed controls.
+            
             Repeater {
                 model: ControlCenterLayout.items
 
@@ -251,15 +251,15 @@ ColumnLayout {
                         selected: slot.isSelected
                     }
 
-                    // ---- Drag to move ----
+                    
                     MouseArea {
-                        // Suspend the canvas while the size menu is up. The menu draws over its
-                        // neighbours -- it is pinned to the selected control's top-right and is
-                        // 130px wide -- but a press still reached the slot underneath, so
-                        // right-clicking a size row selected whichever control happened to be
-                        // behind the menu instead of resizing anything. A MouseArea under a
-                        // TapHandler takes the press and cancels the tap, so the rows could never
-                        // win; disabling the canvas is what makes the menu modal.
+                        
+                        
+                        
+                        
+                        
+                        
+                        
                         enabled: !sizeMenu.visible
                         id: grab
                         anchors.fill: parent
@@ -275,9 +275,9 @@ ColumnLayout {
                         onPressed: (m) => {
                             root.takeFocus();
                             if (!slot.isSelected) ControlCenterLayout.select(slot.modelData.id);
-                            // Re-read after selecting: a click on an unselected
-                            // control selects it first, and the model may have
-                            // settled it somewhere else on the way in.
+                            
+                            
+                            
                             const it = ControlCenterLayout.byId(slot.modelData.id);
                             grab.anchorCol = it.col;
                             grab.anchorRow = it.row;
@@ -290,9 +290,9 @@ ColumnLayout {
                                 slot.modelData.id,
                                 grab.anchorCol + root.colAt(m.x - grab.grabX),
                                 grab.anchorRow + root.rowAt(m.y - grab.grabY));
-                            // Re-anchor to the settled cell, so the control
-                            // keeps following the pointer instead of jumping a
-                            // whole cell on every move event.
+                            
+                            
+                            
                             const it = ControlCenterLayout.byId(slot.modelData.id);
                             if (!it) return;
                             grab.anchorCol = it.col;
@@ -304,15 +304,15 @@ ColumnLayout {
                         }
                     }
 
-                    // ---- Right-click for sizes ----
+                    
                     MouseArea {
-                        // Suspend the canvas while the size menu is up. The menu draws over its
-                        // neighbours -- it is pinned to the selected control's top-right and is
-                        // 130px wide -- but a press still reached the slot underneath, so
-                        // right-clicking a size row selected whichever control happened to be
-                        // behind the menu instead of resizing anything. A MouseArea under a
-                        // TapHandler takes the press and cancels the tap, so the rows could never
-                        // win; disabling the canvas is what makes the menu modal.
+                        
+                        
+                        
+                        
+                        
+                        
+                        
                         enabled: !sizeMenu.visible
                         anchors.fill: parent
                         anchors.margins: -4
@@ -323,7 +323,7 @@ ColumnLayout {
                         }
                     }
 
-                    // ---- Corner to resize ----
+                    
                     Rectangle {
                         id: handle
                         visible: slot.isSelected
@@ -336,13 +336,13 @@ ColumnLayout {
                         z: 20
 
                         MouseArea {
-                            // Suspend the canvas while the size menu is up. The menu draws over its
-                            // neighbours -- it is pinned to the selected control's top-right and is
-                            // 130px wide -- but a press still reached the slot underneath, so
-                            // right-clicking a size row selected whichever control happened to be
-                            // behind the menu instead of resizing anything. A MouseArea under a
-                            // TapHandler takes the press and cancels the tap, so the rows could never
-                            // win; disabling the canvas is what makes the menu modal.
+                            
+                            
+                            
+                            
+                            
+                            
+                            
                             enabled: !sizeMenu.visible
                             anchors.fill: parent
                             anchors.margins: -8
@@ -358,11 +358,11 @@ ColumnLayout {
                                 if (!pressed) return;
                                 const it = ControlCenterLayout.byId(slot.modelData.id);
                                 if (!it) return;
-                                // Snap to the nearest width the control
-                                // actually offers. The reference never lets a
-                                // control take an arbitrary size -- right-click
-                                // lists a fixed set, and a corner drag steps
-                                // through the same set.
+                                
+                                
+                                
+                                
+                                
                                 const want = handleResize.fromSpan + root.colAt(m.x);
                                 const sizes = ControlCenterLayout.catalogue[it.type].sizes;
                                 let best = sizes[0], bestD = 1e9;
@@ -377,19 +377,19 @@ ColumnLayout {
                 }
             }
 
-            // ---- The right-click size menu ----
+            
             Item {
                 id: sizeMenu
-                // One accessor for the selection so the x/y/height bindings
-                // below can guard on it. Calling selected() inline in each of
-                // them evaluated against null while the menu was hidden, which
-                // threw three TypeErrors on every relayout.
+                
+                
+                
+                
                 readonly property var sel: ControlCenterLayout.selected()
 
                 visible: sel !== null
                 width: 132
                 height: 30 + (sel ? ControlCenterLayout.catalogue[sel.type].sizes.length * 28 : 0)
-                // Pinned to the selected control's top-right, clamped inside.
+                
                 x: sel ? Math.max(0, Math.min(root.canvasW - width,
                       root.cellX(sel.col) + root.cellX(sel.colSpan) - width)) : 0
                 y: sel ? root.cellY(sel.row) : 0
@@ -405,12 +405,12 @@ ColumnLayout {
                     border.color: Qt.rgba(1, 1, 1, 0.1)
                 }
 
-                // Dismisses the menu. Needed because the canvas is disabled
-                // while the menu is up: without this there would be no way to
-                // close it short of Escape, and the canvas click that used to
-                // do it is exactly the pass-through being fixed. Declared
-                // before the rows, which are MouseAreas too, so a press on a
-                // row goes to the row rather than here.
+                
+                
+                
+                
+                
+                
                 MouseArea {
                     anchors.fill: parent
                     onClicked: {
@@ -479,7 +479,7 @@ ColumnLayout {
         }
     }
 
-    // ---- "Add a control" --------------------------------------------------
+    
 
     SettingsSectionLabel {
         label: "Add a control"
@@ -535,7 +535,7 @@ ColumnLayout {
         }
     }
 
-    // ---- Footer hint ------------------------------------------------------
+    
 
     StyledText {
         Layout.fillWidth: true

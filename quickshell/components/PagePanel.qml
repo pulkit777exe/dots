@@ -7,12 +7,12 @@ Item {
     required property int pageIndex
     required property int currentPage
     readonly property bool isCurrent: pageIndex === currentPage
-    // fillWidth, not a plain `width: parent.width`. The pages are hosted in a
-    // ColumnLayout (SettingsApp's flickCol), and a layout assigns widths to
-    // the items it manages -- so the binding here was being fought over by
-    // the layout, and a page whose content asked for less width than its
-    // siblings got 72px instead of the content column. fillWidth is the
-    // supported way to say "take the whole column".
+    
+    
+    
+    
+    
+    
     Layout.fillWidth: true
     Layout.preferredWidth: 0
     width: parent ? parent.width : 0

@@ -2,10 +2,10 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 
-// BrightnessMonitor — per-screen monitor helper for Brightness service.
-// Extracted from Singleton inline `component Monitor` (v0.3.0: keep delegation
-// explicit, avoid Process-as-property cleverness inside Singleton).
-// Used via Variants { model: Quickshell.screens; BrightnessMonitor {} }
+
+
+
+
 
 QtObject {
     id: monitor
@@ -14,9 +14,9 @@ QtObject {
     required property bool isDdc
     required property string busNum
     required property bool isAppleDisplay
-    required property var getMonitorActive  // () => var
-    required property var requestOsd        // (int) => void
-    required property var syncLevel         // (int) => void
+    required property var getMonitorActive  
+    required property var requestOsd        
+    required property var syncLevel         
 
     property real brightness: 0
     property real queuedBrightness: NaN
@@ -47,24 +47,24 @@ QtObject {
         value = Math.max(0.01, Math.min(1, value));
         const rounded = Math.max(1, Math.round(value * 100));
         if (Math.round(brightness * 100) === rounded) return;
-        // Event-driven: don't update brightness/Osd optimistically, let hardware event drive it
-        // For DDC, coalesce hardware calls but don't update UI until readback
+        
+        
         if (isDdc && coalesceTimer.running) {
             queuedBrightness = value;
             return;
         }
-        // For non-DDC, still event-driven: trigger hardware, UI will update via inotify/readback
-        // But for immediate feedback like volume (PipeWire), we also trigger OSD via brightness change
-        // So we still need to call hardware
+        
+        
+        
         if (isDdc) Quickshell.execDetached(["ddcutil", "-b", busNum, "setvcp", "10", rounded]);
         else Quickshell.execDetached(["brightnessctl", "s", `${rounded}%`]);
         queuedBrightness = NaN;
         coalesceTimer.restart();
-        // Schedule readback for event-driven update (both DDC and brightnessctl)
+        
         readbackTimer.restart();
     }
 
-    // Event-driven OSD: when brightness actually changes via hardware readback, show OSD
+    
     onBrightnessChanged: {
         const rounded = Math.round(brightness * 100);
         if (monitor.getMonitorActive() === monitor) monitor.syncLevel(rounded);
@@ -78,7 +78,7 @@ QtObject {
                 readProc.command = ["bash", "-c", "command -v ddcutil >/dev/null && ddcutil -b " + busNum + " getvcp 10 --brief || true"];
                 readProc.running = true;
             } else if (!isAppleDisplay) {
-                // For brightnessctl, read back via sysfs for event-driven update
+                
                 readProc.command = ["sh", "-c", "echo a b c $(brightnessctl g) $(brightnessctl m)"];
                 readProc.running = true;
             }

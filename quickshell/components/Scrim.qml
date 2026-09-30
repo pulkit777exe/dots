@@ -1,9 +1,9 @@
 import QtQuick
 
-// Scrim
-// Full-area dim backdrop, placed behind a modal (auth dialog, etc.).
-// Fill the parent (usually the panel window's root) and stack the
-// modal surface on top of it.
+
+
+
+
 Rectangle {
     id: root
 
@@ -20,8 +20,8 @@ Rectangle {
         onClicked: root.dismissed()
     }
 
-    // block clicks from reaching whatever is behind the scrim even
-    // when dismissOnClick is false
+    
+    
     MouseArea {
         anchors.fill: parent
         enabled: !root.dismissOnClick

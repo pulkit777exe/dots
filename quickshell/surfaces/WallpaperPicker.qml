@@ -14,30 +14,30 @@ Surface {
 
     signal wallpaperSelected(int index)
 
-    // Geometry measured off 2026-09-20_22-30-49, the wallpaper reference.
-    // That capture's panel spans x 198..1207 (1009 wide) with the first card
-    // starting 37 in and the last ending 38 from the other edge -- symmetric.
-    // Five cards of ~170 with ~16px gaps need 5*170 + 4*16 = 914, which fits
-    // the 985 of usable width with ~35 either side.
-    //
-    // 734 was showing three and a half cards in a much smaller panel, which is
-    // where the crowding came from.
+    
+    
+    
+    
+    
+    
+    
+    
     width: 1008
     implicitHeight: 222
     cornerRadius: 20
 
-    // Thumbnail metrics, named so the delegate and the ListView agree.
-    //
-    // No currentScale/otherScale: the reference does not scale the selected
-    // card, and the scale is what made this row's spacing uneven (see the
-    // delegate's `scale` below).
+    
+    
+    
+    
+    
     readonly property real itemW: 170
     readonly property real itemH: 113
     readonly property real cardSpacing: 16
 
-    // ------------------------------------------------------------
-    // Selection
-    // ------------------------------------------------------------
+    
+    
+    
 
     function resetSelection() {
         if (
@@ -94,9 +94,9 @@ Surface {
         }
     }
 
-    // ------------------------------------------------------------
-    // Lifecycle
-    // ------------------------------------------------------------
+    
+    
+    
 
     onWallpapersChanged:
         resetSelection()
@@ -125,9 +125,9 @@ Surface {
 
     focus: true
 
-    // ------------------------------------------------------------
-    // Keyboard
-    // ------------------------------------------------------------
+    
+    
+    
 
     Keys.onLeftPressed:
         function(event) {
@@ -159,9 +159,9 @@ Surface {
             event.accepted = true
         }
 
-    // ------------------------------------------------------------
-    // Layout
-    // ------------------------------------------------------------
+    
+    
+    
 
     ColumnLayout {
         anchors.fill: parent
@@ -169,9 +169,9 @@ Surface {
 
         spacing: 12
 
-        // --------------------------------------------------------
-        // Header
-        // --------------------------------------------------------
+        
+        
+        
 
         RowLayout {
             Layout.fillWidth: true
@@ -210,9 +210,9 @@ Surface {
             }
         }
 
-        // --------------------------------------------------------
-        // Wallpaper list
-        // --------------------------------------------------------
+        
+        
+        
 
         ListView {
             id: list
@@ -225,12 +225,12 @@ Surface {
 
             spacing: root.cardSpacing
 
-            // Clip. It was false, so the thumbnails were free to render past
-            // the panel's edge and over its rounded corner: the current item is
-            // scaled to 1.16, i.e. 227px against a 196px slot, and the
-            // neighbours spill either side of it. With the list 706px of
-            // usable width the three visible items need 170 + 12 + 227 + 12 +
-            // 170 = 591, so clipping costs nothing and nothing can escape.
+            
+            
+            
+            
+            
+            
             clip: true
 
             model:
@@ -242,8 +242,8 @@ Surface {
             highlightRangeMode:
                 ListView.StrictlyEnforceRange
 
-            // Centred on the real item width. Nothing is scaled now, so this
-            // is simply centring the current thumbnail in the row.
+            
+            
             preferredHighlightBegin:
                 (width - root.itemW) / 2
 
@@ -259,10 +259,10 @@ Surface {
                 ListView.SnapToItem
 
             delegate: Item {
-                // Named so the thumbnail's Image can read `source` from
-                // here. It used to be `parent.parent.source`, which worked
-                // only at exactly this nesting depth and broke silently the
-                // moment anything was wrapped.
+                
+                
+                
+                
                 id: card
 
                 required property string source
@@ -273,14 +273,14 @@ Surface {
                 width: root.itemW
                 height: root.itemH
 
-                // Uniform, no scale -- the reference's selected card is the
-                // same size as the rest, marked only by its 2px accent border
-                // (which the thumbnail Rectangle below already draws).
-                //
-                // The 1.16/0.87 scale is what made this row's spacing look
-                // broken: the current card painted 227px into a 196px slot and
-                // ate 15px of each neighbour's gap, while unhighlighted pairs
-                // were left with far more, so the gaps alternated.
+                
+                
+                
+                
+                
+                
+                
+                
                 scale: 1
 
                 opacity:
@@ -298,9 +298,9 @@ Surface {
                     }
                 }
 
-                // ------------------------------------------------
-                // Thumbnail
-                // ------------------------------------------------
+                
+                
+                
 
                 Rectangle {
                     anchors.fill: parent
@@ -378,9 +378,9 @@ Surface {
                     }
                 }
 
-                // ------------------------------------------------
-                // Hover
-                // ------------------------------------------------
+                
+                
+                
 
                 HoverHandler {
                     id: hover
@@ -403,9 +403,9 @@ Surface {
                             : "transparent"
                 }
 
-                // ------------------------------------------------
-                // Click
-                // ------------------------------------------------
+                
+                
+                
 
                 TapHandler {
                     onTapped: {
@@ -427,9 +427,9 @@ Surface {
             }
         }
 
-        // --------------------------------------------------------
-        // Footer
-        // --------------------------------------------------------
+        
+        
+        
 
         RowLayout {
             Layout.fillWidth: true

@@ -1,26 +1,18 @@
 pragma Singleton
-// qmllint disable import
-// qmllint disable signal-handler-parameters
+
+
 
 import QtQuick
 import Quickshell
 import Quickshell.Io
 
-/*
-  PowerProfile service.
 
-  power-profiles-daemon ships `powerprofilesctl monitor`, which streams a
-  line every time the active profile changes (from any source — this
-  applet, GNOME Settings, a hotkey, auto-switch on AC unplug) — so, same
-  shape as the Wifi/Bluetooth services, we keep one long-lived process
-  attached to that stream instead of polling.
-*/
 
 Singleton {
     id: root
 
     property bool available: false
-    property string active: "balanced"          // "performance" | "balanced" | "power-saver"
+    property string active: "balanced"          
     property var profiles: ["power-saver", "balanced", "performance"]
 
     signal profileChanged(string profile)
@@ -28,7 +20,7 @@ Singleton {
     function setProfile(profile) {
         if (!available || profile === active) return;
         if (usePlatformFallback) {
-            // ACPI platform_profile requires root; use pkexec tee so polkit prompts, fallback to direct tee
+            
             const p = toPlatformProfile(profile);
             platformSetter.command = ["bash", "-c", "echo '" + p + "' | pkexec tee /sys/firmware/acpi/platform_profile >/dev/null 2>&1 || echo '" + p + "' | tee /sys/firmware/acpi/platform_profile >/dev/null; echo " + p + "| cat /sys/firmware/acpi/platform_profile | grep -q " + p + " && echo ok || echo fail"];
             platformSetter.running = true;
@@ -54,14 +46,14 @@ Singleton {
         stderr: StdioCollector { id: platformSetterErr }
         onExited: (code) => {
             if (code !== 0) console.warn("PowerProfile: platform_profile set failed", platformSetterOut.text, platformSetterErr.text);
-            // Re-probe to confirm new value
+            
             platformProbe.running = true;
         }
     }
 
-    // Fallback for desktops where power-profiles-daemon is masked but ACPI platform_profile exists
-    // (seen on this machine: /sys/firmware/acpi/platform_profile → performance / quiet balanced performance)
-    // Maps quiet→power-saver so UI stays consistent with powerprofilesctl naming.
+    
+    
+    
     function fromPlatformProfile(v) {
         const s = v.trim();
         if (s === "quiet") return "power-saver";
@@ -92,7 +84,7 @@ Singleton {
         stderr: StdioCollector { id: probeErr }
         onExited: (code) => {
             if (!root.available) {
-                // powerprofilesctl failed (masked on this desktop) → try ACPI platform_profile directly
+                
                 platformProbe.running = true;
             }
         }
@@ -140,8 +132,8 @@ Singleton {
         stdout: SplitParser {
             splitMarker: "\n"
             onRead: (line) => {
-                // powerprofilesctl monitor prints just the new profile name
-                // per line (e.g. "performance") whenever it changes.
+                
+                
                 const val = line.trim();
                 if (root.profiles.includes(val)) {
                     root.active = val;
@@ -151,7 +143,7 @@ Singleton {
         }
         onExited: (code, status) => {
             if (root.usePlatformFallback) {
-                // Don't restart powerprofilesctl monitor when using fallback
+                
                 return;
             }
             restartTimer.start()

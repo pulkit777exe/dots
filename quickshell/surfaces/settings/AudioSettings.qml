@@ -3,10 +3,10 @@ import QtQuick.Layouts
 import "../../components"
 import "../../services"
 
-// AudioSettings
-// Output/input device pickers plus their volume sliders. Bind
-// outputDevices/inputDevices to a real PipeWire/PulseAudio service;
-// the arrays below are placeholder demo data.
+
+
+
+
 Surface {
     id: root
 
@@ -137,7 +137,7 @@ Surface {
                     : (root.outputVolume < 50 ? "volume_down" : "volume_up")
                 accentColor: root.accent
                 value: root.outputVolume
-                // externally controlled, see WifiSettings' Toggle for why
+                
                 onMoved: (v) => root.outputVolumeMoved(v)
             }
         }

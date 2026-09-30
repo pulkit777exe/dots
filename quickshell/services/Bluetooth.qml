@@ -4,23 +4,15 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 
-/*
-  Bluetooth service — high-reliability bluetoothctl poller + DBus/bluetoothctl monitor.
-  Maintains:
-    - enabled: bool
-    - scanning: bool
-    - devices: [{mac, name, paired, connected, trusted, icon, battery}]
-    - connectedDevice: var or null
-    - connectedName: string
-*/
+
 
 Singleton {
     id: root
 
-    // ── Public Flat Properties ──────────────────────────────────────
+    
     property bool enabled: false
     property bool scanning: false
-    property var devices: [] // [{mac, name, paired, connected, trusted, icon, battery}]
+    property var devices: [] 
 
     readonly property var connectedDevices: devices.filter(d => d.connected)
     readonly property var connectedDevice: connectedDevices.length > 0 ? connectedDevices[0] : null
@@ -36,7 +28,7 @@ Singleton {
     signal deviceConnected(string mac, string name)
     signal deviceDisconnected(string mac)
 
-    // ── Public Actions ──────────────────────────────────────────────
+    
     function toggle() {
         const next = !root.enabled;
         btToggleProc.powerState = next ? "on" : "off";
@@ -73,7 +65,7 @@ Singleton {
         btForgetProc.running = true;
     }
 
-    // ── Polling Process with StdioCollector ─────────────────────────
+    
     Process {
         id: btPollProc
         command: ["sh", "-c", "bluetoothctl show && echo '---' && bluetoothctl devices && echo '---' && bluetoothctl devices Connected"]
@@ -121,7 +113,7 @@ Singleton {
                     }
                 }
 
-                // Sort: Connected first, then Paired, then alphabetical by name
+                
                 allDevs.sort((a, b) => (Number(b.connected) - Number(a.connected) || Number(b.paired) - Number(a.paired) || a.name.localeCompare(b.name)));
                 root.devices = allDevs;
                 root.stateChanged();
@@ -129,7 +121,7 @@ Singleton {
         }
     }
 
-    // ── Command Processes ───────────────────────────────────────────
+    
     Process {
         id: btToggleProc
         property string powerState: "on"
@@ -171,7 +163,7 @@ Singleton {
         onExited: btPollTimer.restart()
     }
 
-    // Scan auto-turn-off timer
+    
     Timer {
         id: scanTimeout
         interval: 15000
@@ -181,7 +173,7 @@ Singleton {
         }
     }
 
-    // Periodic poller (fast 3s for desktop responsiveness)
+    
     Timer {
         id: btPollTimer
         interval: 3000
@@ -195,7 +187,7 @@ Singleton {
         btPollProc.running = true;
     }
 
-    // ── IPC compatibility ──────────────────────────────────────────
+    
     IpcHandler {
         target: "bluetooth"
         function toggle(): void { root.toggle(); }

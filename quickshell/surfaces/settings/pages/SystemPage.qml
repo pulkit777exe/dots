@@ -3,9 +3,9 @@ import QtQuick.Layouts
 import "../../../components"
 import "../../../services"
 
-// SystemPage
-// No reference capture for this page, so it follows the same header-card and
-// content-card structure as the five that have one.
+
+
+
 ColumnLayout {
     id: root
     spacing: 12
