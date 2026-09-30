@@ -16,7 +16,6 @@ Singleton {
     property int cpuCount: 0
 
     // Expose for MotionConfig to reduce motion on low-spec
-    property bool shouldReduceMotion: lowSpec
 
     Process {
         id: memProbe

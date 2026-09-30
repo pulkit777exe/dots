@@ -29,7 +29,6 @@ Singleton {
     
     // Ethernet support from Caelestia
     property var ethernetInterfaces: []
-    readonly property bool hasAvailableEthernet: ethernetInterfaces.some(d => d.state !== "unavailable" && d.state !== "disconnected")
     property string activeInterface: ""
     property string activeConnection: ""
 

@@ -93,7 +93,6 @@ Singleton {
         onTriggered: root.osdVisible = false
     }
 
-    property rect islandRect: Qt.rect(0, 0, 0, 0)
 
     // ── Mode operations ─────────────────────────────────────────────
     function close() {

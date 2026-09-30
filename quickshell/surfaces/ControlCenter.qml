@@ -44,7 +44,6 @@ Surface {
     readonly property color bgSliderTrackCard: "#141211"
     // Text tones, sampled rather than guessed.
     readonly property color textDim: "#7a7a7a"
-    readonly property color textFaint: "#8a8a8a"
 
     width: 460
     // Surface is an Item, so implicitHeight alone does not size it. Without

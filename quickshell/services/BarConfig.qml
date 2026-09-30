@@ -72,11 +72,9 @@ Singleton {
     property real panelSlideIn: 22
 
     function setNotchMode(v) { data.notchMode = v; save(); }
-    function setNotchFlare(v) { data.notchFlare = v; save(); }
     function setBarHeight(v) { data.barHeight = v; save(); }
     function setCollapsedWidth(v) { data.collapsedWidth = v; save(); }
     function setExpandedHeight(v) { data.expandedHeight = v; save(); }
-    function setMinimumExpandedWidth(v) { data.minimumExpandedWidth = v; save(); }
     function setGapFromScreenEdge(v) { data.gapFromScreenEdge = v; save(); }
     function setExpandedCornerRadius(v) { data.expandedCornerRadius = v; save(); }
     function setStatusCircleEnabled(v) { data.statusCircleEnabled = v; save(); }

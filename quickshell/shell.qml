@@ -24,6 +24,13 @@ import qs.modules
 // properties — there is no polling anywhere in this file either.
 ShellRoot {
     id: shellRoot
+
+    // Do not delete this as unused. Keybinds is a `pragma Singleton`, and
+    // this reference is the only thing in the tree that instantiates it. It
+    // looks like a plain alias because nothing reads it, but constructing the
+    // singleton is what registers its IpcHandlers -- and those are the shell's
+    // entire control surface, `shell` and `uis`. Removing this line loads the
+    // config cleanly, logs nothing, and leaves every surface unreachable.
     property var keybinds: Keybinds
 
     // ---- Wallpaper: Background layer with macOS-like crossfade ----

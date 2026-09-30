@@ -39,7 +39,6 @@ Singleton {
 
     property bool available: false
     property bool enabled: false
-    property int dayTemperature: 6000
     property int nightTemperature: 4000
 
     signal toggled(bool enabled)

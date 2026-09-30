@@ -131,11 +131,9 @@ Singleton {
     function setMediaShowMiniPill(v: bool){ data.mediaShowMiniPill=v; save(); }
     function setMediaShowToast(v: bool){ data.mediaShowToast=v; save(); }
     function setMediaAutoPauseOnLock(v: bool){ data.mediaAutoPauseOnLock=v; save(); }
-    function setLauncherMaxResults(v: int){ data.launcherMaxResults=v; save(); }
     function setLauncherWidth(v: real){ data.launcherWidth=v; save(); }
     function setLauncherRowHeight(v: real){ data.launcherRowHeight=v; save(); }
     function setLauncherRowsBeforeScrolling(v: int){ data.launcherRowsBeforeScrolling=v; save(); }
-    function setNotifSoundEnabled(v: bool){ data.notifSoundEnabled=v; save(); }
     function setNotifPopupTimeoutMs(v: int){ data.notifPopupTimeoutMs=v; save(); }
     function setNotifUrgentTimeoutMs(v: int){ data.notifUrgentTimeoutMs=v; save(); }
     function setNotifWidth(v: real){ data.notifWidth=v; save(); }

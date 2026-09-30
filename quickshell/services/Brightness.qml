@@ -107,7 +107,6 @@ Singleton {
     readonly property var monitors:
         variants.instances
 
-    property bool appleDisplayPresent: false
 
     property int brightnessIncrement: 5
 

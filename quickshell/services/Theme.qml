@@ -29,7 +29,6 @@ Singleton {
 
     readonly property string home: Quickshell.env("HOME")
     readonly property string colorsRoot: home + "/.config/colors"
-    readonly property string themesRoot: colorsRoot
     readonly property string scriptPath: Quickshell.shellDir + "/scripts/list-themes.py"
     readonly property string statePath: Quickshell.statePath("theme-state.json")
 
@@ -66,7 +65,6 @@ Singleton {
     //                                 centre's cards and the power menu's
     //                                 tiles (2026-09-20_22-28-15)
     readonly property color panelFill: "#000000"
-    readonly property color surfaceCard: Qt.alpha(colors.foreground, 0.063)
     readonly property color surfaceRaised: Qt.alpha(colors.foreground, 0.105)
 
     // Tide compatibility — KISS aliases used by Tide-style SettingsApp

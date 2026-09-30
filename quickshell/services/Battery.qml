@@ -31,7 +31,6 @@ Singleton {
     }
     readonly property bool charging: device ? (device.state === UPowerDeviceState.Charging || device.state === UPowerDeviceState.PendingCharge || device.state === UPowerDeviceState.FullyCharged) : false
     readonly property bool plugged: device ? (device.state !== UPowerDeviceState.Discharging) : true
-    readonly property bool isLaptopBattery: available
 
     // seconds -> null when unknown/charging fully etc.
     readonly property real timeToEmpty: device ? device.timeToEmpty : 0
