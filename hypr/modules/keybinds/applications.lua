@@ -14,9 +14,14 @@ hl.bind(
 -- `rofi -show drun`; repointed so the "everything goes through
 -- Quickshell" goal actually holds for the single most-used launcher
 -- keybind, not just the newer modules.keybinds.quickshell additions.)
+--
+-- qs-call, not `quickshell ipc call`: the latter launches a second Qt
+-- process per press, which is 39ms here against qs-call's 16ms for the
+-- same call. qs-call falls back to the real client by itself if the
+-- socket is not there, so this cannot become a way to lose a keypress.
 hl.bind(
     mod .. " + slash",
-    hl.dsp.exec_cmd("quickshell ipc call shell toggleLauncher")
+    hl.dsp.exec_cmd("~/.config/hypr/scripts/qs-call shell toggleLauncher")
 )
 
 -- Lock
