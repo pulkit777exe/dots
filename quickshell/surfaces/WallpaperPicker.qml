@@ -259,6 +259,12 @@ Surface {
                 ListView.SnapToItem
 
             delegate: Item {
+                // Named so the thumbnail's Image can read `source` from
+                // here. It used to be `parent.parent.source`, which worked
+                // only at exactly this nesting depth and broke silently the
+                // moment anything was wrapped.
+                id: card
+
                 required property string source
                 required property bool selected
                 required property string fileName
@@ -322,7 +328,7 @@ Surface {
                         anchors.fill: parent
 
                         source:
-                            parent.parent.source
+                            card.source
 
                         fillMode:
                             Image.PreserveAspectCrop
