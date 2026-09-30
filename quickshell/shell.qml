@@ -231,8 +231,20 @@ ShellRoot {
             
             
             
-            implicitHeight: UiState.settingsOpen ? 1045
-                : (UiState.anyOpen ? 700 : (island.barHeight + (island.notchMode ? 0 : island.gapFromEdge) + 16))
+            // The window's height comes from the island's own implicitHeight,
+            // which is the max of the three dot panels' real heights.
+            //
+            // It used to be two hand-kept numbers here -- 1045 when settings
+            // was open, 700 for everything else. That is a second place to
+            // remember the panel heights, and it had already drifted: the
+            // control centre's sound view is 719px tall, so 700 clipped its
+            // last 19px with nothing logged. A panel height changed in
+            // ControlCenter.qml and the window did not follow.
+            //
+            // Taking island.implicitHeight means a panel can be any height
+            // it likes and the window is always tall enough, because it is
+            // reading the layout rather than restating it.
+            implicitHeight: Math.max(island.implicitHeight, island.barHeight + (island.notchMode ? 0 : island.gapFromEdge) + 16)
 
             readonly property bool isFullscreen: Boolean(Hyprland.activeWindow && Hyprland.activeWindow.fullscreen) && !UiState.anyOpen
 
