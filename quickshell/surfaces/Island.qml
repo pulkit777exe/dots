@@ -448,6 +448,21 @@ Item {
                 anchors.fill: parent
                 visible: centerNotchWrap.isOsd
                 shadow: false
+
+                // Sibling order decides the paint, and this is the first
+                // child of centerSurface, so every panel below draws over
+                // it. That meant a volume keypress with the control centre
+                // or settings open produced no feedback at all: the notch
+                // resized to 275x43, the OSD was painted underneath, and the
+                // panel stayed on top. The state was never lost -- mode is
+                // untouched by an OSD -- only the feedback was invisible.
+                //
+                // So the OSD moves to the front whenever one is showing, and
+                // the panel underneath is untouched and comes back when the
+                // OSD's own timer expires. `z` rather than a move in the
+                // tree, because reordering siblings would change the paint
+                // of every other overlay pair for no reason.
+                z: centerNotchWrap.isOsd ? 100 : 0
             }
 
             
