@@ -215,13 +215,27 @@ check_session() {
     # The shell is only useful if its entrypoint and the Keybinds singleton
     # are both present — those are the two files Hyprland and the global
     # shortcuts depend on.
+    # hypr/scripts/qs-call is here because a keybind names it by absolute
+    # path. If it goes missing, SUPER+slash does nothing and the only
+    # symptom is a launcher that will not open.
     for f in "$CONFIG_DIR/quickshell/shell.qml" "$CONFIG_DIR/quickshell/modules/Keybinds.qml" \
              "$CONFIG_DIR/quickshell/modules/qmldir" "$CONFIG_DIR/hypr/hyprland.lua" \
+             "$CONFIG_DIR/hypr/scripts/qs-call" \
              "$CONFIG_DIR/colors/index.json" "$CONFIG_DIR/kitty/kitty.conf"; do
         if [ -e "$f" ]; then
             log "present: ${f#"$CONFIG_DIR"/}"
         else
             err "missing: ${f#"$CONFIG_DIR"/}"
+            fail=1
+        fi
+    done
+
+    # A keybind that execs a script needs it executable. Present-but-not-+x
+    # is worse than missing, because the check above passes and the only
+    # symptom is a key that silently does nothing.
+    for f in "$CONFIG_DIR/hypr/scripts/qs-call"; do
+        if [ -e "$f" ] && [ ! -x "$f" ]; then
+            err "not executable: ${f#"$CONFIG_DIR"/}  (chmod +x, or the keybind that runs it is dead)"
             fail=1
         fi
     done
