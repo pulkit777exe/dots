@@ -129,11 +129,21 @@ REPLY_VOID = 1
 def unpack(data):
     """Decode a reply into (status, value).
 
-    The reply header is two bytes, not the four the request uses:
+        u8    type, 5 for a reply
+        u8    status, 0 = has a value, 1 = void
+        u32   BYTE length of the string, BIG endian
+        ...   that many bytes of UTF-16BE
 
-        05 00  then { u8 bytelen, utf-16be }   a value
-        05 01  then { u8 bytelen, utf-16be }   a void call, carrying an
-                                               empty string
+    The length is a big-endian u32, which is what lets a reply exceed the
+    255 bytes a u8 could describe. It was a u8 here first, and every reply
+    longer than 127 ASCII characters came back as mojibake: the JSON from
+    `battery.getStatus` and `wifi.status` is over that, and both were
+    unreadable while short values like "false" looked fine. Nothing errored
+    -- the reply simply decoded to the wrong string, which is the worst
+    possible failure for something whose job is to be trusted by a keybind.
+
+    Note the mixed endianness: the request's version word is little-endian,
+    its reply's length is big-endian, and the payload is UTF-16BE.
 
     Every return type arrives as a string, including the ones declared
     `: int` -- `battery.getPercentage` replies "66", not 66 -- so nothing
@@ -141,19 +151,15 @@ def unpack(data):
 
     Returns (status, value) where value is None for a void reply.
     """
-    if len(data) < 2:
+    if len(data) < 6:
         raise ValueError("short reply")
     kind, status = data[0], data[1]
     if kind != REPLY_TYPE:
         raise ValueError(f"unexpected reply type {kind}")
-    fields, off = [], 2
-    while off < len(data):
-        n = data[off]
-        off += 1
-        fields.append(data[off:off + n].decode("utf-16-be", "replace"))
-        off += n
-    value = next((f for f in fields if f), None)
-    return status, value
+    n = int.from_bytes(data[2:6], "big")
+    if 6 + n > len(data):
+        raise ValueError(f"truncated reply: want {n} bytes, have {len(data) - 6}")
+    return status, data[6:6 + n].decode("utf-16-be", "replace")
 
 
 def call(sock, target, function, args=()):
@@ -179,9 +185,9 @@ def call(sock, target, function, args=()):
             status, value = unpack(chunks)
         except ValueError:
             continue
-        # A void reply carries an empty string and is complete at once. A
-        # value reply is complete once it has one.
-        if status == REPLY_VOID or value is not None:
+        # A void reply is complete at once; a value reply is complete once
+        # it carries one.
+        if status == REPLY_VOID or value:
             return status, value
     if chunks:
         return unpack(chunks)
