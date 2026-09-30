@@ -261,6 +261,7 @@ ShellRoot {
 
             Island {
                 id: island
+                screenName: barWindow.screen ? barWindow.screen.name : ""
                 opacity: barWindow.isFullscreen ? 0 : 1
                 Behavior on opacity { NumberAnimation { duration: MotionConfig.fade(); easing.type: Easing.OutCubic } }
                 anchors.top: parent.top

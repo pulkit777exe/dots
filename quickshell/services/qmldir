@@ -14,6 +14,7 @@ singleton Auth 1.0 Auth.qml
 singleton NightLight 1.0 NightLight.qml
 singleton Media 1.0 Media.qml
 singleton BarConfig 1.0 BarConfig.qml
+singleton BarConfigMonitors 1.0 BarConfigMonitors.qml
 singleton MotionConfig 1.0 MotionConfig.qml
 singleton Clipboard 1.0 Clipboard.qml
 singleton Cava 1.0 Cava.qml

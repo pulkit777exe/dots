@@ -7,15 +7,39 @@ import Quickshell.Hyprland
 Item {
     id: root
 
-    
-    property bool notchMode: BarConfig.notchMode
-    property real notchFlare: BarConfig.notchFlare
-    property real barHeight: BarConfig.barHeight
-    property real collapsedWidth: BarConfig.collapsedWidth
-    property real expandedHeight: BarConfig.expandedHeight
-    property real gapFromEdge: BarConfig.gapFromScreenEdge
+    // The screen this bar is on, e.g. "eDP-1". One Island is built per
+    // screen, so each instance resolves its own monitors/<name>.json.
+    //
+    // Passed in from shell.qml rather than read from `modelData` here:
+    // Island is nested inside the bar's PanelWindow, not a direct child of
+    // the Variants model, so the model never reaches it. Declaring
+    // `required property var modelData` to get at it produces "Required
+    // property modelData was not initialized" on every screen and the bar
+    // silently loses its per-monitor resolution.
+    property string screenName: ""
 
-    
+    Component.onCompleted: BarConfigMonitors.loadFor(screenName)
+
+    // Per-monitor geometry, falling back to the global BarConfig value for
+    // any key this monitor's file does not name. The global values are
+    // unchanged by an override -- these are reads, not writes -- so
+    // removing the file restores exactly the previous bar.
+    property bool notchMode: BarConfig.notchMode
+    property real notchFlare: BarConfigMonitors.value("notchFlare", BarConfig.notchFlare)
+    property real barHeight: BarConfigMonitors.value("barHeight", BarConfig.barHeight)
+    property real collapsedWidth: BarConfigMonitors.value("collapsedWidth", BarConfig.collapsedWidth)
+    property real expandedHeight: BarConfigMonitors.value("expandedHeight", BarConfig.expandedHeight)
+    property real gapFromEdge: BarConfigMonitors.value("gapFromScreenEdge", BarConfig.gapFromScreenEdge)
+    property real expandedCornerRadius: BarConfigMonitors.value("expandedCornerRadius", BarConfig.expandedCornerRadius)
+    property real collapsedCornerRadius: BarConfigMonitors.value("collapsedCornerRadius", BarConfig.collapsedCornerRadius)
+    property real minimumExpandedWidth: BarConfigMonitors.value("minimumExpandedWidth", BarConfig.minimumExpandedWidth)
+
+    // BarConfig computes this from the global values, so it is recomputed
+    // here from the resolved ones. A monitor that lowers barHeight must get
+    // a proportionally smaller collapsed radius, or the pill is taller than
+    // the dot it sits in and clips.
+    readonly property real effectiveCollapsedRadius: Math.min(collapsedCornerRadius, barHeight / 2)
+
     property alias leftSurfaceItem: leftDotWrap
     property alias centerSurfaceItem: centerNotchWrap
     property alias rightSurfaceItem: rightDotWrap
@@ -140,7 +164,7 @@ Item {
         Surface {
             id: leftSurface
             anchors.fill: parent
-            cornerRadius: leftDotWrap.isExpanded ? BarConfig.expandedCornerRadius : BarConfig.effectiveCollapsedRadius
+            cornerRadius: leftDotWrap.isExpanded ? root.expandedCornerRadius : root.effectiveCollapsedRadius
             topLeftRadius: (root.notchMode && !leftDotWrap.isExpanded) ? 0 : cornerRadius
             topRightRadius: (root.notchMode && !leftDotWrap.isExpanded) ? 0 : cornerRadius
             bottomLeftRadius: cornerRadius
@@ -348,7 +372,7 @@ Item {
             
             cornerRadius: centerNotchWrap.isOsd
                 ? centerNotchWrap.height / 2
-                : (centerNotchWrap.isCenterExpanded ? BarConfig.expandedCornerRadius : BarConfig.effectiveCollapsedRadius)
+                : (centerNotchWrap.isCenterExpanded ? root.expandedCornerRadius : root.effectiveCollapsedRadius)
             topLeftRadius: (root.notchMode && !centerNotchWrap.isCenterExpanded) ? 0 : cornerRadius
             topRightRadius: (root.notchMode && !centerNotchWrap.isCenterExpanded) ? 0 : cornerRadius
             bottomLeftRadius: cornerRadius
@@ -690,7 +714,7 @@ Item {
         Surface {
             id: rightSurface
             anchors.fill: parent
-            cornerRadius: rightDotWrap.isExpanded ? BarConfig.expandedCornerRadius : BarConfig.effectiveCollapsedRadius
+            cornerRadius: rightDotWrap.isExpanded ? root.expandedCornerRadius : root.effectiveCollapsedRadius
             topLeftRadius: (root.notchMode && !rightDotWrap.isExpanded) ? 0 : cornerRadius
             topRightRadius: (root.notchMode && !rightDotWrap.isExpanded) ? 0 : cornerRadius
             bottomLeftRadius: cornerRadius
