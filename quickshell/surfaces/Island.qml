@@ -2,7 +2,6 @@ import QtQuick
 import "../components"
 import "../services"
 import Quickshell
-import Quickshell.Hyprland
 
 Item {
     id: root

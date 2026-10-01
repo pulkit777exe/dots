@@ -219,7 +219,6 @@ ShellRoot {
             
             
             
-            exclusiveZone: island.barHeight + (island.notchMode ? 0 : island.gapFromEdge)
             color: "transparent"
 
             WlrLayershell.layer: WlrLayer.Overlay
@@ -246,13 +245,31 @@ ShellRoot {
             // reading the layout rather than restating it.
             implicitHeight: Math.max(island.implicitHeight, island.barHeight + (island.notchMode ? 0 : island.gapFromEdge) + 16)
 
-            readonly property bool isFullscreen: Boolean(Hyprland.activeWindow && Hyprland.activeWindow.fullscreen) && !UiState.anyOpen
+            readonly property bool isFullscreen: Compositor.activeWindowFullscreen && !UiState.anyOpen
 
+            // Same condition as hiddenForFullscreen: when the island is kept
+            // up for an OSD its regions have to stay interactive, or the pill
+            // is drawn but cannot be clicked and the mask silently eats the
+            // input.
             mask: Region {
-                Region { item: isFullscreen ? null : island.leftSurfaceItem }
-                Region { item: isFullscreen ? null : island.centerSurfaceItem }
-                Region { item: isFullscreen ? null : island.rightSurfaceItem }
+                Region { item: island.hiddenForFullscreen ? null : island.leftSurfaceItem }
+                Region { item: island.hiddenForFullscreen ? null : island.centerSurfaceItem }
+                Region { item: island.hiddenForFullscreen ? null : island.rightSurfaceItem }
             }
+
+            // Hiding the bar also has to give the space back. An exclusive
+            // zone is a claim on the compositor's layout, so leaving it set
+            // while the bar is invisible reserves barHeight + gap that
+            // nothing draws in: a fullscreen window stops short of the top
+            // of the screen by exactly that much, with a black band above
+            // it that looks like a rendering fault.
+            //
+            // `anyOpen` keeps the zone reserved when an overlay is up, so a
+            // panel that is open on top of a fullscreen window still gets
+            // the room it needs and is not clipped by its own window.
+            exclusiveZone: (barWindow.isFullscreen && !UiState.anyOpen && island.hiddenForFullscreen)
+                ? 0
+                : (island.barHeight + (island.notchMode ? 0 : island.gapFromEdge))
 
             HyprlandFocusGrab {
                 active: UiState.anyOpen && Auth.pending === null
@@ -262,7 +279,28 @@ ShellRoot {
             Island {
                 id: island
                 screenName: barWindow.screen ? barWindow.screen.name : ""
-                opacity: barWindow.isFullscreen ? 0 : 1
+
+                // The resting bar is what fullscreen hides. An OSD or a
+                // notification is not: both are the shell telling you
+                // something changed, and a volume keypress that produces no
+                // feedback at all while a video is playing is indistinguishable
+                // from a broken key.
+                //
+                // `isFullscreen` above already excludes the case where a panel
+                // is open, so this only ever fires over a plain fullscreen
+                // window. Adding osdVisible and the notification count is what
+                // keeps the island up for exactly as long as the transient
+                // lasts -- it then fades out on its own when the OSD timer
+                // expires, because `osdVisible` goes false.
+                //
+                // The OSD has to be shown this way because it lives inside the
+                // island's notch, not in the overlay window the way
+                // notifications do. That is also why notifications already
+                // worked over fullscreen and the OSD did not.
+                readonly property bool hiddenForFullscreen:
+                    barWindow.isFullscreen && !UiState.osdVisible && Notifications.active.length === 0
+
+                opacity: hiddenForFullscreen ? 0 : 1
                 Behavior on opacity { NumberAnimation { duration: MotionConfig.fade(); easing.type: Easing.OutCubic } }
                 anchors.top: parent.top
                 anchors.left: parent.left
