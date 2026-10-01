@@ -392,7 +392,7 @@ Singleton {
     IpcHandler {
         target: "clipboard"
 
-        function list() {
+        function list(): string {
             return JSON.stringify(
                 root.entries
             )
@@ -414,7 +414,7 @@ Singleton {
             root.wipe()
         }
 
-        function isAvailable() {
+        function isAvailable(): bool {
             return root.available
         }
     }

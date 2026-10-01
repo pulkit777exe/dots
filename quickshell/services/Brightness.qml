@@ -453,7 +453,7 @@ Singleton {
     IpcHandler {
         target: "brightness"
 
-        function get() {
+        function get(): real {
             return getFor("active")
         }
 
