@@ -266,4 +266,21 @@ the shell and read the log:
 quickshell -c ~/.config/quickshell
 ```
 
-See `quickshell/ARCHITECTURE.md` for the longer version.
+## Documentation
+
+| | |
+|---|---|
+| `README.md` | this file -- installing, verifying, and the traps worth knowing before you change something |
+| `quickshell/ARCHITECTURE.md` | how the shell is put together, plus the complete IPC reference (checked against the running shell by `tests/run.sh`, so it cannot drift) |
+| `quickshell/CHANGELOG.md` | what was fixed and why, in order -- read this before "fixing" something that looks wrong, because it usually is not |
+| `SECURITY.md` | what is and is not sandboxed |
+
+Two checks worth running after any change:
+
+```bash
+./scripts/lint.sh      # grep rules, the IpcHandler scope audit, qmllint
+./tests/run.sh         # contract tests: theme round trip, IPC, surfaces
+```
+
+`tests/run.sh` skips the checks that need a running shell when there isn't
+one, so it is safe to run on a fresh clone.

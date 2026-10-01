@@ -234,6 +234,28 @@ else
         no "advertised IPC functions are callable" "unreachable:$missing"
     fi
 
+    # The IPC table in ARCHITECTURE.md claims to be generated from
+    # `ipc show`. It was not -- it had drifted in both directions, promising
+    # 10 functions that do not exist (wifi forget, wifi getEthernet,
+    # audio getSinks/getSources/listStreams/cycleOutput, mpris getActive/list,
+    # bluetooth list/isEnabled, shell nextTheme/nextWallpaper) and omitting
+    # 20 that do. So check it.
+    doc="$QS_DIR/ARCHITECTURE.md"
+    if [ ! -f "$doc" ]; then
+        sk "the IPC table in ARCHITECTURE.md matches the shell" "no ARCHITECTURE.md"
+    else
+        # Writes a one-line summary to stdout on success, the differing
+        # targets to stderr on failure. Its exit status is the only thing
+        # consulted, so the ok/fail branch must read *that* status and not
+        # the status of a `||` chain -- an earlier version did, and printed
+        # both a FAIL and an ok line for the same check.
+        if detail=$(python3 "$QS_DIR/scripts/check-ipc-table.py" 2>&1); then
+            ok "the IPC table in ARCHITECTURE.md matches the shell ($detail)"
+        else
+            no "the IPC table in ARCHITECTURE.md matches the shell" "$(printf '%s' "$detail" | head -4 | tr '\n' ';')"
+        fi
+    fi
+
     # Every advertised name must appear in `ipc show` under its target. This
     # catches a target that was renamed without updating its callers.
     unlisted=""

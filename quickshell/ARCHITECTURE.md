@@ -108,26 +108,34 @@ documented binds for those deliberately use plain `bind`, not `binde`.
 
 ## Complete IPC reference
 
-Every `qs ipc call <target> <function> [args]` this shell exposes,
-extracted directly from source:
+Every `qs ipc call <target> <function> [args]` this shell exposes.
+Generated from `quickshell ipc show` — 93 functions across 15 targets.
+
+`scripts/` and `tests/run.sh` check this table against the running shell, so
+it cannot drift from what is actually callable.
 
 | Target | Function | Notes |
 |---|---|---|
-| `shell` | `toggleLauncher` `toggleControlCenter` `togglePowerMenu` `toggleSettings` `toggleClipboard` `closeAll` `nextTheme` `nextWallpaper` `toggleThemePicker` | |
-| `uis` | `isLauncherOpen` `isControlCenterOpen` `isPowerMenuOpen` `isSettingsOpen` `isClipboardOpen` | read-only state queries |
-| `theme` | `get` `set <name>` `cycle` `list` `getWallpaper` `cycleWallpaper` `publish <name>` | `publish` re-runs `scripts/publish-colors.py` — use it after hand-editing a theme's `colors.json`, the inotify watcher doesn't re-publish |
-| `audio` | `getVolume` `setVolume <0-100>` `toggleMute` `cycleOutput` `getSinks` `getSources` `listStreams` | |
-| `brightness` | `get` `getFor <query>` `set <0-100>` `setFor <query> <0-100>` | |
-| `battery` | `getStatus` `getPercentage` `isCharging` | read-only |
-| `bluetooth` | `toggle` `scan` `refresh` `connect <mac>` `disconnect <mac>` `list` `isEnabled` | |
-| `wifi` | `status` `toggle` `scan` `connect <ssid> <password>` `disconnect` `getEthernet` `forget <ssid>` | `connect` genuinely forwards a real password || `network` | `status` `toggle` | shorter alias, same underlying Wifi service |
-| `nightlight` | `isEnabled` `toggle` `enable` `disable` `setTemp <kelvin>` | |
-| `mpris` | `getActive <prop>` `list` `play` `pause` `playPause` `previous` `next` `stop` `toggle` | |
-| `powerprofile` | `get` `set <profile>` `cycle` `list` `isAvailable` | |
-| `power` | `get` `cycle` | shorter alias, same underlying PowerProfile service |
-| `notifs` | `clear` `isDndEnabled` `toggleDnd` `enableDnd` `disableDnd` `list` | |
-| `notifications` | `clear` `toggleDnd` | shorter alias — a *subset*, not identical to `notifs` |
-| `clipboard` | `list` `refresh` `copy <id>` `del <id>` `wipe` `isAvailable` | `del`, not `delete` — reserved word in JS |
+| `audio` | `getVolume` `setVolume` `toggleMute` | volume only; sink/source enumeration is not exposed over IPC |
+| `battery` | `getPercentage` `getStatus` `isCharging` | read-only |
+| `bluetooth` | `connect` `disconnect` `refresh` `scan` `toggle` | connect/disconnect take a MAC |
+| `brightness` | `get` `getFor` `set` `setFor` |  |
+| `clipboard` | `copy` `del` `isAvailable` `list` `refresh` `wipe` | `del`, not `delete` — reserved word in JS |
+| `mpris` | `next` `pause` `play` `playPause` `previous` `stop` `toggle` | the active player; `getActive <prop>` is not exposed |
+| `nightlight` | `disable` `enable` `isEnabled` `setTemp` `toggle` |  |
+| `notifications` | `clear` `toggleDnd` | a *subset* of `notifs`, not identical |
+| `notifs` | `clear` `disableDnd` `enableDnd` `isDndEnabled` `list` `toggleDnd` | superset of `notifications` |
+| `power` | `cycle` `get` | shorter alias over the same PowerProfile service |
+| `powerprofile` | `cycle` `get` `isAvailable` `list` `set` | the service itself; `power` is its alias |
+| `shell` | `bluetoothToggle` `brightnessDown` `brightnessUp` `ccBluetooth` `ccDisplay` `ccHome` `ccSound` `ccWifi` `clearNotifs` `closeAll` `mediaNext` `mediaPrev` `mediaStop` `mediaToggle` `nightLightToggle` `toggleCalendar` `toggleClipboard` `toggleControlCenter` `toggleLauncher` `toggleMedia` `togglePowerMenu` `toggleSettings` `toggleThemePicker` `toggleWallpaperPicker` | the `cc*` and `media*` names are what the control centre's drill sheets and the island's media card dispatch; the rest are keybind-facing |
+| `theme` | `cycle` `cycleWallpaper` `get` `getWallpaper` `list` `publish` `set` | `publish` re-runs `scripts/publish-colors.py` — use it after hand-editing a theme's `colors.json`, the inotify watcher does not re-publish |
+| `uis` | `isCalendarOpen` `isClipboardOpen` `isControlCenterOpen` `isLauncherOpen` `isMediaOpen` `isPowerMenuOpen` `isSettingsOpen` `isThemePickerOpen` `isWallpaperPickerOpen` | read-only state queries — safe to poll |
+| `wifi` | `connect` `disconnect` `scan` `status` `toggle` | `connect` genuinely forwards a real password |
+
+`hypr/scripts/qs-call <target> <function>` reaches the same functions over
+the shell's IPC socket without launching a Qt process: 16ms against the real
+client's 39ms, which is ~2.4x on every call and ~23ms saved per keypress. It
+falls back to `quickshell ipc` when the socket is unavailable.
 
 A recurring bug class worth knowing about if you're extending this:
 several functions above exist **only** inside an `IpcHandler` block —
