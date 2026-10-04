@@ -3,7 +3,7 @@
 > **Not a website in a window. A system tool that lives where you need it.**
 > Derived from macOS native app principles, adapted to a Wayland layer-shell — KISS, event-driven, low-spec portable.
 
-Applies to: `shell.qml` (Bar/Island + wallpaper + overlay), `surfaces/*`, `components/*`, `services/*`. Targets **Quickshell v0.3.0** + Qt 6.
+Applies to: `shell.qml` (Bar/Island + wallpaper + overlay), `surfaces/*`, `components/*`, `services/*`. Targets **Quickshell v0.3.1** + Qt 6 — the version the tree is built and tested against, and the version every API claim below is checked against (a 0.3.0 number here was stale).
 
 ---
 
@@ -117,7 +117,7 @@ All components `Theme.colors.*` reactive, no polling, `Behavior` disabled when `
 - **Wayland:** `WlrLayershell` `Top/Overlay/Background`, `Region` mask, `IdleInhibitor` etc; **X11 fallback** via `PanelWindow` `screen: modelData` (no `layer` needed).
 - **Compositor:** Hyprland `GlobalShortcut` + generic `IpcHandler` (works on Sway/Mutter).
 - **Files:** `Quickshell.statePath` (`~/.local/state/...`) not `shellDir + "/state"`; `FileView printErrors:false` for first-run missing `bar/motion-config.json` (no WARN), `watchChanges` + `inotifywait -m -q -r` with `sleep 10` poll fallback, debounced 400ms.
-- **Dependencies:** `command -v` checks for `ddcutil/asdbctl`, `brightnessctl` fallback poll `0.5s`, `nmcli monitor` `200ms` debounce, `bluetoothctl` persistent `SplitParser`.
+- **Dependencies:** `command -v` checks for `ddcutil/asdbctl`, `brightnessctl` fallback poll `0.5s`, `nmcli monitor` `200ms` debounce. **Bluetooth is not a CLI dependency** — `services/Bluetooth.qml` is a view over stock `Quickshell.Bluetooth`, so the requirement is a running `bluetoothd` speaking D-Bus, not a `bluetoothctl` on `PATH`. Adapter power and discovery are property writes (`adapter.enabled` / `adapter.discovering`), never method calls; a lone 15s `Timer` closes the scan window. No `SplitParser`, no poll, no subprocess. See `ARCHITECTURE.md`'s event-driven section for the verified-at-runtime details and the `org.bluez.Agent1` pairing gap.
 
 ---
 

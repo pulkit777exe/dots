@@ -30,7 +30,7 @@ Item {
             text: root.label
             font.pixelSize: 13
             
-            color: Qt.rgba(1, 0.97, 0.925, 0.95)
+            color: Theme.withAlpha(Theme.colors.text, 0.9)
             elide: Text.ElideRight
         }
 

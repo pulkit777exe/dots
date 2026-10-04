@@ -14,8 +14,8 @@ Item {
         id: bg
         anchors.fill: parent
         radius: 24
-        color: "#141414"
-        border.color: "#282828"
+        color: Theme.colors.background
+        border.color: Theme.colors.border
         border.width: 1
         clip: true
 
@@ -43,6 +43,9 @@ Item {
 
         Rectangle {
             anchors.fill: parent
+            // A dim over the album art, which is arbitrary unknown pixels.
+            // Neutral black on purpose: any palette key here would tint the
+            // photograph rather than darken it.
             color: Qt.rgba(0, 0, 0, 0.28)
             visible: Media.artUrl.length > 0
         }
@@ -84,8 +87,8 @@ Item {
                 Rectangle {
                     anchors.fill: parent
                     radius: 16
-                    color: "#202020"
-                    border.color: "#2c2c2c"
+                    color: Theme.colors.surface
+                    border.color: Theme.colors.border
                     border.width: 1
                     visible: Media.artUrl.length === 0
 
@@ -93,7 +96,7 @@ Item {
                         anchors.centerIn: parent
                         icon: "music_note"
                         size: 40
-                        iconColor: "#666666"
+                        iconColor: Theme.withAlpha(Theme.colors.text, 0.4)
                     }
                 }
 
@@ -102,7 +105,7 @@ Item {
                     anchors.fill: parent
                     radius: 16
                     color: "transparent"
-                    border.color: Qt.rgba(1, 1, 1, 0.10)
+                    border.color: Theme.colors.border
                     border.width: 1
                 }
             }
@@ -120,7 +123,7 @@ Item {
                     text: Media.title || "No media playing"
                     font.pixelSize: 17
                     font.weight: Font.Bold
-                    color: "#FFFFFF"
+                    color: Theme.colors.text
                     elide: Text.ElideRight
                 }
 
@@ -137,7 +140,7 @@ Item {
                     text: Media.artist || "Unknown artist"
                     font.pixelSize: 13
                     font.weight: Font.Medium
-                    color: Qt.rgba(1, 0.93, 0.88, 0.62)
+                    color: Theme.withAlpha(Theme.colors.text, 0.62)
                     elide: Text.ElideRight
                 }
 
@@ -151,7 +154,7 @@ Item {
                         Layout.preferredHeight: 18
                         Layout.preferredWidth: idLabel.implicitWidth + 12
                         radius: 5
-                        color: "#222222"
+                        color: Theme.colors.surface
                         visible: Media.identity.length > 0
                         StyledText {
                             id: idLabel
@@ -159,7 +162,7 @@ Item {
                             text: Media.identity
                             font.pixelSize: 10
                             font.weight: Font.DemiBold
-                            color: "#888888"
+                            color: Theme.withAlpha(Theme.colors.text, 0.55)
                         }
                     }
 
@@ -167,7 +170,7 @@ Item {
                         Layout.fillWidth: true
                         text: Media.album
                         font.pixelSize: 11
-                        color: "#666666"
+                        color: Theme.withAlpha(Theme.colors.text, 0.4)
                         elide: Text.ElideRight
                         visible: text.length > 0
                     }
@@ -186,7 +189,7 @@ Item {
                         anchors { left: parent.left; right: parent.right; verticalCenter: parent.verticalCenter }
                         height: progressHover.hovered || scrubMouse.pressed ? 6 : 4
                         radius: height / 2
-                        color: "#2c2c2c"
+                        color: Theme.colors.surfaceAlt
                         clip: true
                         Behavior on height { NumberAnimation { duration: MotionConfig.hover() } }
 
@@ -221,7 +224,7 @@ Item {
                         text: Media.formatTime(Media.position)
                         font.pixelSize: 11
                         font.weight: Font.Medium
-                        color: "#888888"
+                        color: Theme.withAlpha(Theme.colors.text, 0.55)
                     }
 
                     Item { Layout.fillWidth: true }
@@ -230,7 +233,7 @@ Item {
                         text: Media.formatTime(Media.length)
                         font.pixelSize: 11
                         font.weight: Font.Medium
-                        color: "#888888"
+                        color: Theme.withAlpha(Theme.colors.text, 0.55)
                     }
                 }
 
@@ -244,7 +247,7 @@ Item {
                         icon: "skip_previous"
                         size: 32
                         iconSize: 18
-                        iconColor: "#CCCCCC"
+                        iconColor: Theme.withAlpha(Theme.colors.text, 0.8)
                         enabled: Media.hasPlayer
                         onClicked: Media.previous()
                     }
@@ -260,7 +263,7 @@ Item {
                         Layout.preferredWidth: 38
                         Layout.preferredHeight: 38
                         radius: 19
-                        color: Qt.rgba(1, 1, 1, 0.09)
+                        color: Theme.withAlpha(Theme.colors.text, 0.09)
 
                         scale: playTap.pressed ? 0.93 : 1.0
                         Behavior on scale { SpringAnimation { spring: 6; damping: 0.7; mass: 0.4 } }
@@ -269,7 +272,7 @@ Item {
                             anchors.centerIn: parent
                             icon: Media.playing ? "pause" : "play_arrow"
                             size: 20
-                            iconColor: "#F5F1D7"
+                            iconColor: Theme.colors.text
                         }
 
                         HoverHandler { id: playHover; cursorShape: Qt.PointingHandCursor }
@@ -280,7 +283,7 @@ Item {
                         icon: "skip_next"
                         size: 32
                         iconSize: 18
-                        iconColor: "#CCCCCC"
+                        iconColor: Theme.withAlpha(Theme.colors.text, 0.8)
                         enabled: Media.hasPlayer
                         onClicked: Media.next()
                     }

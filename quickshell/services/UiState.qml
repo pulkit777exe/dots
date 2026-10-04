@@ -26,6 +26,24 @@ Singleton {
     property int mode: UiState.Mode.Closed
 
     
+    // Ten of the thirteen `property bool` declarations below are READONLY
+    // projections of `mode`, which is one int already carrying an enum. The
+    // state space is therefore the eleven enum members, not 2^10, and no two
+    // of these can be true at once -- which is exactly what the ten WRITABLE
+    // booleans they replaced could not say.
+    //
+    // The three writable ones are orthogonal and shadow nothing.
+    // `calendarMonth` is reset by close() and toggle() and can only be set
+    // while mode is Calendar. `osdVisible` is transient, written by showOsd()
+    // and its own hide Timer. `osdMuted` is a snapshot of Volume.muted taken
+    // when the OSD fired -- NOT `osdLevel === 0`: PipeWire lets a sink be
+    // muted at 50%, and OSD.qml passes false for the brightness OSD, so
+    // deriving it from the level would be wrong.
+    //
+    // Measured and left alone on purpose: these projections are also the
+    // public names behind the uis:isXOpen IPC functions and behind the
+    // nine-surfaces test, so renaming them to reach the number would be
+    // cosmetic and would break both.
     readonly property bool anyOpen: mode !== UiState.Mode.Closed
     readonly property bool launcherOpen: mode === UiState.Mode.Launcher
     readonly property bool controlCenterOpen: mode === UiState.Mode.ControlCenter

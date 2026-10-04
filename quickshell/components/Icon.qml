@@ -6,7 +6,7 @@ Text {
 
     property string icon: ""
     property int size: 16
-    property color iconColor: Qt.rgba(1, 1, 1, 0.92)
+    property color iconColor: Theme.withAlpha(Theme.colors.text, 0.92)
 
     text: icon
     color: iconColor

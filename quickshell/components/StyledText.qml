@@ -20,29 +20,43 @@ Text {
         }
     }
 
+    // Every rung used to be `Qt.rgba(1, 1, 1, a)` -- a fixed fraction of pure
+    // white, which is a colour the palette never gets to choose. Each is now
+    // the same fraction of `Theme.colors.text`, so the RAMP SHAPE is untouched
+    // and only its top rung moves (see CcTokens.qml, which made the same move
+    // for the control centre and is the reason these alphas are already the
+    // numbers they are).
     readonly property color defaultColor: {
         switch (variant) {
             case "clock":
+                // Deliberately NOT sharing a case with `mediaTitle`, which it
+                // used to. The two agreed at 0.95 by coincidence -- one is the
+                // bar clock, the other is an MPRIS title -- and a shared case
+                // label means editing one recolours the other with no diff
+                // anywhere near the site that changed. Same value today, two
+                // independent rungs from here on.
+                return Theme.withAlpha(Theme.colors.text, 0.95)
+
             case "mediaTitle":
-                return Qt.rgba(1, 1, 1, 0.95)
+                return Theme.withAlpha(Theme.colors.text, 0.95)
 
             case "mediaSubtitle":
-                return Qt.rgba(1, 1, 1, 0.65)
+                return Theme.withAlpha(Theme.colors.text, 0.65)
 
             case "mediaArtist":
-                return Qt.rgba(1, 1, 1, 0.45)
+                return Theme.withAlpha(Theme.colors.text, 0.45)
 
             case "dayLetter":
-                return Qt.rgba(1, 1, 1, 0.4)
+                return Theme.withAlpha(Theme.colors.text, 0.4)
 
             case "dayNumber":
-                return Qt.rgba(1, 1, 1, 0.85)
+                return Theme.withAlpha(Theme.colors.text, 0.85)
 
             case "dayNumberActive":
                 return Theme.colors.accentText
 
             default:
-                return Qt.rgba(1, 1, 1, 0.9)
+                return Theme.withAlpha(Theme.colors.text, 0.9)
         }
     }
 

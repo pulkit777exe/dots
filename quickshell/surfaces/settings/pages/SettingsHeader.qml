@@ -27,7 +27,7 @@ Surface {
     
     
     
-    backgroundColor: Qt.rgba(1, 0.875, 0.75, 0.063)
+    backgroundColor: Theme.colors.surface
     borderWidth: 0
     shadow: false
 
@@ -62,7 +62,7 @@ Surface {
             text: root.title
             font.pixelSize: 20
             font.weight: Font.DemiBold
-            color: "#FFFFFF"
+            color: Theme.colors.text
             elide: Text.ElideRight
         }
 
@@ -75,7 +75,7 @@ Surface {
             elide: Text.ElideRight
             text: root.subtitle
             font.pixelSize: 13
-            color: Qt.rgba(1, 1, 1, 0.45)
+            color: Theme.withAlpha(Theme.colors.text, 0.45)
         }
     }
 }

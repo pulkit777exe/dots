@@ -419,3 +419,336 @@ gotcha as of this writing), install instructions, known gaps. Root
 `kitty/`, `quickshell/`, `vlc/`, `Thunar/` into `~/.config/` and checks
 for the binaries README.md's Requirements table lists, backing up
 anything already in place rather than overwriting it.
+
+## Round 10 — Bluetooth onto the stock module, and three things the doc had wrong
+
+Driven by `docs/SIMPLIFICATION-REVIEW.md`, which compared this tree against
+ChillPill-Shell and argued that `services/Bluetooth.qml` should be a view
+over the stock API rather than a `bluetoothctl` scraper. The argument held
+up. The review's own details did not, in three places, and those are
+corrected in the file itself.
+
+**`services/Bluetooth.qml` rewritten on `Quickshell.Bluetooth`: 8
+subprocesses → 0, and no text parsed at all.** The old service polled
+`bluetoothctl` (3 spawns per cycle) plus one per toggle / scan / connect /
+disconnect / pair / forget, and scraped `show`, `info` and `devices` output.
+It is now a pure view: `Bluetooth.defaultAdapter`, `adapter.devices.values`,
+and BlueZ's D-Bus object-manager change signals. 198 → 166 lines.
+
+Two things that were only settled by running the real module against this
+machine's live BlueZ, not by reading the docs:
+
+- **A `BluetoothAdapter` exposes no callable QML methods.** Adapter power
+  and discovery are *property writes* — `adapter.enabled = ...`,
+  `adapter.discovering = ...`. `setEnabled()` / `startDiscovery()` do not
+  exist on the type in 0.3.1. The device-level methods (`connect()`,
+  `disconnect()`, `pair()`, `forget()`) do exist, and those are what the
+  service calls.
+- **`discovered` is gone, and its removal is the point.** It existed only
+  because `bluetoothctl devices` reads BlueZ's *on-disk cache* — paired
+  hardware only — so an unpaired device had nowhere to appear and Nearby
+  was permanently empty. `nearbyDevices` is now derived as the unpaired
+  subset of `devices`. Verified on this machine: with scanning on, an
+  unpaired device reached `nearbyDevices` through the module.
+
+The one remaining `Timer` is a 15s scan window that resets `discovering`
+to false — not a poll. Discovery otherwise leaves the radio scanning and
+nothing else in the shell would stop it.
+
+**Known gap, recorded rather than glossed: BlueZ pairing agents.**
+Quickshell 0.3.1 registers no `org.bluez.Agent1` — `strings /usr/bin/
+quickshell | grep -ci agent1` returns 0, and there are no `RequestPinCode`
+or `RequestPasskey` symbols either — so a device that wants a PIN or a
+passkey cannot be answered from QML. **This is not a regression.** The
+`bluetoothctl pair` path it replaced ran as a detached `Process` with
+piped stdio and no terminal, so it could not answer one either. A device
+that only needs a confirmation on its own side, the common case, pairs
+unchanged. The earlier review assumed stock Quickshell registered its own
+agent at `/quickshell/agent`; it does not, and the review also suggested
+checking this against `Auth.qml`'s polkit flow. Those are unrelated
+mechanisms — polkit authenticates an *action* against a privileged
+service, a pairing agent is a plain session-bus client answering BlueZ's
+method calls.
+
+**`scripts/recovery.sh`: the reap list is two services, not three.** The
+`bluetoothctl monitor` entry is removed, along with the comment naming it.
+That entry had been naming a process that never existed, which is how the
+documented design and the code drifted apart for so long. What remains is
+Clipboard's `wl-paste --watch cliphist store` and Wifi's `nmcli monitor`.
+Bluetooth needs no reap entry because it now spawns nothing. The
+reparent-to-init-only guard is unchanged.
+
+**`services/Notifications.qml`: the duplicated guard idiom, collapsed —
+and explicitly *not* a split.** Six `Connections` blocks each carried a
+hand-rolled `property bool initialised` + `property <T> wasX` + a
+`wasX !== X` re-check before notifying. They now share one shape: a single
+`property bool seenStartupChange` that swallows the first change and then
+trusts the handler's own value. A 3-second `systemNotifsReady` `Timer` that
+only gated the Bluetooth block went with it. The file is **still 952 lines
+and still does all four jobs** — daemon state, the `notify()` formatter, ten
+`Connections`, two `IpcHandler`s. `git diff --numstat` reads 102 insertions
+against 206 deletions, every hunk a pure deletion; the net −104 lines look
+like an extraction and are not one. Splitting the file is a separate, larger
+change and was left alone.
+
+**`surfaces/ControlCenter.qml`, two changes plus a real bug.** The cells
+each declared eleven children and hid ten of them with
+`visible: controlType === "..."`, so ninety controls were built to draw
+nine; they are now one `Loader` over a `sourceComponent` switch. The 64-row
+`rowTops()` table was rebuilt by `rowTop()` for every cell and depends on
+`Notifications.active`, so every toast rebuilt it 64 times — it is now a
+`readonly property var`. And the actual bug: **a drill page was drawn over
+the home grid without blocking input underneath it.** The Bluetooth
+page's on/off switch lands exactly on the Night Light disc in row 1, so one
+tap turned Bluetooth off *and* the night light on; the same leak made a
+drill page's back arrow re-open the page it sits on. Cells a drill card
+covers now stop taking input while it covers them, and row 0 — which ends
+above the drill line — keeps working, which is what makes it the page
+switcher.
+
+### Also fixed: `lint.sh` was linting with the wrong major version of `qmllint`
+
+Found while trying to state the qmllint status honestly, and it is the same
+false-clean this round is otherwise about. On a machine with both the Qt5
+and Qt6 Qt packages installed, `/usr/bin/qmllint` is the **Qt5** binary:
+`qmllint --version` reports `qmllint 1.0`, and on this tree it exits 0 with
+a **zero-byte log** — it analyses nothing at all. The "qmllint: clean" line
+this script has been printing therefore said almost nothing, and it would
+have said the same about a file importing a module that does not resolve,
+because that case also exits 0 silently. Three changes:
+
+- Resolve a real Qt6 linter (`qmllint-qt6`, then the `qt6/bin` paths, then
+  the unversioned name only if its version string is 6.x), and print which
+  one ran. Under it the tree is **0 errors, ~3000 warnings** — reported as
+  a count with the full log path, not as a pass.
+- **An empty log is now a failure, not a pass.** It is indistinguishable
+  from never having analysed anything, which is the failure mode above.
+- Fixed the severity match while there. It was `grep -E "Error|error:"`
+  over the whole log, which also matches a *warning* whose echoed source
+  happens to contain an error-shaped name — `FileViewError.FileNotFound` at
+  `Notifications.qml:402` is one, and it briefly made the whole tree look
+  like it had a lint error. Severity is now anchored to the start of the
+  line. There are 0 errors under the Qt6 linter.
+
+New check: **`quickshell modules`.** Every `Quickshell.*` module URI the
+tree actually imports (11 of them) must appear as an exact line in
+`strings /usr/bin/quickshell`. This is the check qmllint structurally
+cannot be — it has no import path for a module Quickshell registers
+in-process, which is the same blind spot that made its clean exit
+meaningless. All 11 pass today. Both new checks were proven to fire: a
+stub linter that exits 0 silently fails on the empty-log assertion, and a
+synthetic file importing `Quickshell.TotallyMadeUp` fails the module check
+while a commented-out `import Quickshell.Io` is correctly ignored.
+
+One thing the newly-working linter did **not** find: no `[unresolved-type]`
+or `[incompatible-type]` warning is a dead service call, so the Round 7 bug
+class is not hiding in the ~3000. `scripts/ipc-audit.py` remains what covers
+it, and it is clean.
+
+### Verification status for this round
+
+Bluetooth: verified at runtime against this machine's live BlueZ — adapter
+resolves, device list populates, an unpaired device reached
+`nearbyDevices`, adapter power toggles. `./scripts/lint.sh` clean,
+`./tests/run.sh` 15/15, `check-ipc-table.py` 93 functions across 15 targets
+(the debug `probePut`/`probeClear` pair was removed during this round, which
+put the count back where it was). Not verified: PIN/passkey pairing, which is
+the gap above. Notifications and ControlCenter: static verification plus
+`lint.sh` / `tests/run.sh`; the Control Center drill-input fix has not been
+exercised by hand on screen.
+
+---
+
+## Round 11 — the tree stops being allowed to be big, and stops hiding what it costs
+
+This round is mostly structural, but the reason it happened is worth
+stating first: three separate defects this session were only findable
+because the code was in the way of reading them. A 2,277-line control
+centre owned a private colour palette that matched no shipped theme. A
+`pragma Singleton` held per-monitor state, so "the second screen uses the
+first screen's overrides" was true and invisible. An `IpcHandler` reply
+larger than one socket buffer truncated *and* wedged the IPC server for
+minutes, reporting `Not ready to accept queries yet.` at exit status 0 —
+which is the exact string the test suite retries through, so it read as a
+routine reload.
+
+### Bluetooth needs no scraper at all
+
+`services/Bluetooth.qml` went from 262 lines and **8 subprocesses** to
+163 lines and **zero**: a pure view over stock `Quickshell.Bluetooth`,
+every property a binding on a BlueZ signal. The `bluetoothctl` text
+scraper it replaced existed because `bluetoothctl devices` reads BlueZ's
+*on-disk cache* — paired hardware only — so a stranger device had nowhere
+to appear, and a `scan on` whose output was discarded gave it nowhere to
+land. The object manager reports a device the moment it is seen.
+
+Two things cost real time and are now written down in
+`ARCHITECTURE.md`: a `BluetoothAdapter` in 0.3.1 has **no callable QML
+methods** (power and discovery are property *writes*), and Quickshell
+registers **no `org.bluez.Agent1`**, so PIN/passkey prompts cannot be
+answered from QML. That gap is not a regression — the old
+`bluetoothctl pair` ran as a detached process with no terminal and could
+not answer one either — but it is a gap, and the pane now shows
+`Read only` with the reason rather than an editor that cannot work.
+
+### The tree is split along real seams, and the dead weight is gone
+
+Fifteen files exceeded the ~400-line guideline; the largest was 2,277.
+Now **none does** — the largest is 397. Every extraction went into a
+sibling file that names its own concern, and four provably dead files
+(676 lines, zero references, no `qmldir` entry, no `Loader` with a string
+source) were deleted rather than maintained.
+
+`ControlCenter.qml` 2,277 → 274, with its five drill pages in `cc/` and
+its design tokens and controls as `Cc*` components. `Notifications.qml`
+1,046 → a 224-line singleton plus seven collaborators. `Island.qml` 833 →
+109. `Theme.qml`, `Brightness.qml`, `Wifi.qml`, `Clipboard.qml`,
+`Launcher.qml`, `AuthDialog.qml` and six more split the same way.
+
+The net effect is the shape the contract asks for: **+3,670 / −8,734**
+lines across 71 files. The codebase got *smaller* while the file count
+grew to 138.
+
+Three traps recurred enough to be worth recording, because each one
+silently takes the whole configuration down rather than one surface:
+
+- A `Process` declared, documented, and **never started** — an extraction
+  left the `Component.onCompleted { someProc.running = true }` behind in
+  the file it came from (`BacklightDevice.qml`).
+- A child object written inside a `QtObject {}` is a **compile error**;
+  `qmllint` only warns.
+- A new file reading `Theme`/`ConfigStore` **without** `import
+  "../services"` loads fine and renders **black text on a dark fill**.
+  Five files shipped that way before anything caught it.
+  `scripts/lint.sh` now has a `service-missing-import` rule, proven
+  against eleven fixtures.
+
+### What being event-driven was costing
+
+The shell's own CPU was 0.225% of one core, which is the number you
+would measure and the number that lies. It *caused* ~3.8% of a core in
+short-lived children, and **79% of that was one bug**:
+
+`services/PowerProfile.qml` ran `powerprofilesctl monitor`, which is
+**not a valid subcommand** — it exits 2 on a usage error. `onExited`
+started a 3-second timer, which restarted it, forever: **27,360 forks
+per day**, ~95ms of CPU each at 98% utilisation. It survived 13 hours
+and 26 reloads silently because the process had no `stderr:` collector
+and the shell's fd 2 is `/dev/null`, so the usage error was discarded.
+It is now an event-driven subscription on Quickshell's `PowerProfiles`
+singleton: **19 spawns/min → 0**.
+
+| fix | before | after |
+|---|---|---|
+| `PowerProfile` monitor loop | 27,360 forks/day, 3.0% of a core | 0 |
+| `Wifi` 5s `nmcli` poll (duplicated a monitor already running) | 33,840 forks/day, 0.55% | 2,880, 0.047% |
+| `Theme` recursive python inotify watcher duplicating a `FileView` | 14.5 MB RSS | 0 |
+| `Cava` restart loop (latent, not firing) | up to 86,400 forks/day | structurally impossible |
+
+`Wifi`'s fix kept a 60s unconditional backstop, because the failure mode
+of removing it is a dead monitor stranding the UI rather than a slow one.
+`Cava`'s `running` is now a *binding*, so the loop cannot self-arm.
+
+### Colour lives in the theme layer, and nowhere else
+
+165 hex literals and 116 `Qt.rgba(1, 1, 1, x)` scrims outside
+`themes/`: **all 281 are gone.** The work started where it was worst —
+the control centre read the theme exactly twice, for `accent` and
+`accentText`, and painted every background from a private 11-token
+gruvbox palette of which **10 existed in no palette at all**. It is not
+even self-consistent: `bgSurface` and `bgCard` were the same value under
+two names.
+
+Every alpha now maps to a token via `Theme.withAlpha`, which already
+existed and was already the production idiom. `StyledText`'s `clock` and
+`mediaTitle` cases were sharing one `return` by coincidence and were
+split so routing one through the theme cannot silently recolour the
+other. The two genuine dims — a scrim over arbitrary content, a drop
+shadow — stayed `Qt.rgba` on `panelFill` with a comment saying why.
+
+**Two findings that the sweep exposed rather than caused.** All six
+palettes are dark, so the contract's "so light mode works" motivation is
+exercised by nothing that ships; the real justification is theme
+switching. And substitution **changes rendered RGB everywhere** — `text`
+deviates from `#ffffff` by 31/255 on monochrome and 119/255 on horizon,
+where every secondary text goes salmon. Contrast tables for every rung
+on every theme are in the working notes; this is a visual change on five
+of six themes and should be reviewed as one.
+
+`ariadne` was the worst case and is fixed: its surface ramp *ascended
+into the light* (`surfaceElevated` at luminance 0.68 against 0.65 text),
+so **no text colour could ever be legible** on it — text needed
+luminance ≥3.24 against a physical maximum of 1.0. Its text now reads
+5.12–9.85:1 across every backdrop, and `muted` 4.05–4.51:1 on cards.
+
+### Bugs found and fixed
+
+- **Sound and display drill pages never opened.** `drillRequested` is
+  declared `(string view, point origin)`; those two call sites passed
+  one argument, so QML raised `Insufficient arguments` and the handler
+  never ran. Wi-Fi and Bluetooth passed both and worked. They had been
+  written without an origin because `SliderCard` had no `originInRoot()`
+  helper, unlike `CcPill` — added.
+- **Every keybind's fallback was broken.** `qs-call`'s fallback ran
+  `quickshell ipc <argv>`, omitting the `call` subcommand, so it exited
+  106 "A subcommand is required". It was dormant because the fast path
+  normally wins.
+- **Notification history was lost on every restart.** One saved toast
+  without an `urgency` key made the parse throw inside its `try`, and
+  the restore returned `[]`. Watcher toasts are filed *without* urgency
+  because `JSON.stringify` drops undefined, so this was reachable, not
+  theoretical.
+- **`clipboard list` truncated over IPC** — 433,018 bytes declared,
+  ~219KB delivered at a varying size per call. Now a bounded 65,350-byte
+  window of `{total, returned, truncated, entries}`. An oversized reply
+  does not merely truncate: it leaves the IPC server answering every
+  query with the reload string at exit 0 for minutes.
+- **The wallpaper picker showed `0/0` on every fresh load.**
+  `resolveTheme()` assigns `currentName` but every `rebuildPickerModel()`
+  call site fires while it is still `""`, so `wallpaperRows()` looked up
+  `presets[""]`. The model now follows the name.
+- **A "Dark Mode Base" toggle that did nothing** — it wrote
+  `Theme.darkMode`, which is `readonly` and derived from the palette, and
+  no palette is light. Removed rather than given an override for a
+  palette that does not exist.
+- **Per-monitor bar overrides were shared between screens.**
+  `BarConfigMonitors` was a singleton with mutable state and one Island
+  per screen wrote to it. Worse than last-writer-wins: once a second
+  instance asked, *no* override applied at all. Now a per-monitor
+  `QtObject` with `screenName` as a `required property` — there is no
+  writer left to race.
+- **The settings window had ~270px of dead space**, and the control
+  centre ~370px, both from hand-kept heights that had drifted. Both now
+  derive from content and are clamped to the Island's own screen. Same
+  bug class `todos.md` Phase 3 records for the bar window.
+
+### Tooling
+
+- `scripts/lint.sh` resolves a real **Qt6** `qmllint` (the `/usr/bin`
+  one here is the Qt 5 stub, which analyses nothing and emits an empty
+  log), asserts the log is non-empty, checks every `Quickshell.*` import
+  against the installed binary, and gained `service-missing-import`.
+- `tests/run.sh` 15 → 18 checks: theme tokens (every `Theme.colors` key
+  exists in all six palettes; all palettes share one key set), a bounded
+  clipboard reply, and a reload-gap retry that keys on the exact string
+  Quickshell returns mid-reload.
+- `quickshell/scripts/shell-log.sh`, because `journalctl --user` is a
+  **dead channel** for this shell: fd 1 and fd 2 are `/dev/null`. `errors`
+  exits 3 when it matches nothing, so a log check cannot silently pass.
+
+### Verification status for this round
+
+`./scripts/lint.sh` clean. `./tests/run.sh` 18/18, three consecutive
+runs. `check-ipc-table.py` 93 functions across 15 targets. `ipc-audit.py`
+clean. The tree loads clean in a fresh instance, and Bluetooth, the
+colour change, the geometry change, the per-monitor fix and the
+clipboard bound were each confirmed against the running desktop —
+screenshots, not inference.
+
+**Not verified, and not claimed:** multi-monitor (one output on this
+machine), light mode (no palette exists), `AuthDialog` rendered live (no
+polkit request was faked), D-Bus ingest to a second notification server
+(the live shell holds the bus name), and every keyboard, hover and
+pressed path. `ControlCenterLayout.settle` does not always terminate —
+pre-existing, preserved through the split, still open. `log.qslog` grows
+~2.6 MiB/day of NetworkManager property spam.

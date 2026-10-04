@@ -1,8 +1,29 @@
 import QtQuick
 import QtQuick.Layouts
-import Quickshell
 import "../components"
 import "../services"
+
+// Launcher.qml -- the app launcher.
+//
+// What is left here is the launcher's own state and the timing around it:
+//
+//   * which row is selected, and the arrow keys that move it
+//   * the debounce, and the crossfade, that turn a keystroke into a query
+//   * the focus retry that puts the caret in the search field before the user
+//     can type
+//   * the panel's own appear animation
+//
+// Three things that used to be here are not any more, because each is a
+// separate thing to change and each now has a file of its own:
+//
+//   LauncherSearch.qml    the search field and the keys that reach it
+//   LauncherResults.qml   the rows, the sliding highlight, the row count
+//
+// `AppLauncher.setQuery`, the launching of a result and the IPC behind both are
+// in services/AppLauncher.qml, and this file only reads them: there is no
+// Process here and none should arrive, for the reason ClipboardHistory.qml gives
+// -- a panel that indexes .desktop files cannot be reasoned about by reading
+// the panel.
 
 Surface {
     id: root
@@ -10,15 +31,13 @@ Surface {
     cornerRadius: 20
     backgroundColor: Theme.panelFill
 
+    // Written by IslandCenterPanel too, which passes AppLauncher.results in
+    // from outside rather than letting this file reach for it.
     property var results: AppLauncher.results
 
     property int selectedIndex: 0
     property int hoverIndex: -1
 
-    
-    
-    
-    
     implicitHeight: column.implicitHeight + 38
 
     transformOrigin: Item.Center
@@ -28,10 +47,9 @@ Surface {
 
     signal activated(var result)
 
-    
-    
-    
-
+    // 180ms: long enough that a fast typist produces one query rather than
+    // eight, short enough that the list does not feel like it is ignoring the
+    // keyboard. repeat: false so it is a debounce and not a poll.
     Timer {
         id: searchDebounce
 
@@ -43,14 +61,16 @@ Surface {
         }
     }
 
+    // Reduced motion: no crossfade and no delay, because MotionConfig.fade(0.275)
+    // is already 0 there -- the animation would be instant but the results
+    // would still land 180ms after the keystroke, which is the part that reads
+    // as lag.
     function queueSearch() {
-        
-        
         searchDebounce.restart()
     }
 
     function applySearchImmediately() {
-        AppLauncher.setQuery(searchField.text)
+        AppLauncher.setQuery(searchBar.text)
 
         selectedIndex = 0
         hoverIndex = -1
@@ -58,14 +78,12 @@ Surface {
         resultsArea.opacity = 1
     }
 
-    
-    
-    
-
+    // Fade out, swap, fade back in: three steps, in this order, and the swap is
+    // a ScriptAction between the two numbers so the list is never re-populated
+    // while it is half faded.
     SequentialAnimation {
         id: searchTransition
 
-        
         NumberAnimation {
             target: resultsArea
             property: "opacity"
@@ -76,17 +94,15 @@ Surface {
             easing.type: Easing.OutQuad
         }
 
-        
         ScriptAction {
             script: {
-                AppLauncher.setQuery(searchField.text)
+                AppLauncher.setQuery(searchBar.text)
 
                 selectedIndex = 0
                 hoverIndex = -1
             }
         }
 
-        
         NumberAnimation {
             target: resultsArea
             property: "opacity"
@@ -95,13 +111,9 @@ Surface {
             to: 1
 
             duration: MotionConfig.fade(0.45)
-            easing.type: Easing.OutQuad
+            easing.type: Easing.OutCubic
         }
     }
-
-    
-    
-    
 
     function moveSelection(delta) {
         if (results.length === 0)
@@ -125,21 +137,25 @@ Surface {
         root.activated(results[selectedIndex])
     }
 
-    
-    
-    
-
+    // Focus the field and empty it. Called on completion and every time the
+    // panel opens, so a search left over from last time does not silently
+    // filter a list the user cannot see is being filtered.
     function searchFieldFocus() {
-        searchField.text = ""
+        searchBar.text = ""
 
         selectedIndex = 0
         hoverIndex = -1
 
-        searchField.focusInput()
+        searchBar.focusInput()
     }
 
+    // Unused here and by everything else in the tree, and duplicated verbatim
+    // in ClipboardHistory.qml -- which is a file that is not this one to
+    // change. Kept for the same reason it is kept there, and reported rather
+    // than removed: a focus query that nothing asks is one more thing to
+    // keep true.
     function searchFieldHasFocus(): bool {
-        return searchField.hasFocus
+        return searchBar.hasFocus
     }
 
     onVisibleChanged: {
@@ -147,6 +163,11 @@ Surface {
             focusRetry.restart()
     }
 
+    // The panel opens without a key event ever reaching it, so the caret has
+    // to be asked for: the window that hosts this is focused by the
+    // compositor, and on the first frame the search field is not ready to take
+    // focus. 60ms, repeating, until either the panel is hidden again or the
+    // field actually has it.
     Timer {
         id: focusRetry
 
@@ -154,7 +175,7 @@ Surface {
         repeat: true
 
         onTriggered: {
-            if (!root.visible || searchField.hasFocus) {
+            if (!root.visible || searchBar.hasFocus) {
                 stop()
                 return
             }
@@ -162,10 +183,6 @@ Surface {
             root.searchFieldFocus()
         }
     }
-
-    
-    
-    
 
     ParallelAnimation {
         id: appearAnimation
@@ -192,116 +209,64 @@ Surface {
         }
     }
 
-    
-    
-    
-
     ColumnLayout {
         id: column
 
         anchors.fill: parent
         anchors.leftMargin: 12
         anchors.rightMargin: 12
-        
-        
         anchors.topMargin: 21
         anchors.bottomMargin: 17
 
         spacing: 0
 
-        
-        
-        
+        LauncherSearch {
+            id: searchBar
 
-        RowLayout {
             Layout.fillWidth: true
-            
-            Layout.preferredHeight: 32
 
             Layout.leftMargin: 8
             Layout.rightMargin: 8
 
-            SearchField {
-                id: searchField
+            onMoved: (delta) => root.moveSelection(delta)
 
-                Layout.fillWidth: true
+            onAccepted: root.activateSelection()
 
-                placeholderText: "Search..."
-
-                onNavigateDown: {
-                    root.moveSelection(1)
-                }
-
-                onNavigateUp: {
-                    root.moveSelection(-1)
-                }
-
-                Keys.onDownPressed: {
-                    root.moveSelection(1)
-                }
-
-                Keys.onUpPressed: {
-                    root.moveSelection(-1)
-                }
-
-                Keys.onEscapePressed: {
-                    UiState.closeAll()
-                }
-
-                onAccepted: {
-                    root.activateSelection()
-                }
-
-                onTextChanged: {
-                    if (MotionConfig.reduceMotion) {
-                        searchDebounce.stop()
-                        root.applySearchImmediately()
-                    } else {
-                        root.queueSearch()
-                    }
+            // Every keystroke re-filters the list, so the old index points at
+            // a different app, or past the end of the list entirely. The
+            // panel owns that decision because the panel owns the debounce.
+            onQueryEdited: {
+                if (MotionConfig.reduceMotion) {
+                    searchDebounce.stop()
+                    root.applySearchImmediately()
+                } else {
+                    root.queueSearch()
                 }
             }
         }
-
-        
-        
-        
 
         Rectangle {
             Layout.fillWidth: true
             Layout.preferredHeight: 1
 
-            
-            
-            
             Layout.topMargin: 8
             Layout.bottomMargin: 11
 
-            color: Qt.rgba(1, 1, 1, 0.08)
+            color: Theme.colors.divider
 
-            visible:
-                root.results.length > 0
+            visible: root.results.length > 0
         }
 
-        
-        
-        
-
-        Item {
+        // Height from the row count, animated so a search that goes from 9
+        // results to 1 does not snap the panel shut under the user's eyes.
+        // LauncherResults owns the count -- it is what draws the rows -- and
+        // this is the only place the two are put together.
+        LauncherResults {
             id: resultsArea
 
             Layout.fillWidth: true
 
-            
-            Layout.preferredHeight:
-                Math.min(
-                    Math.max(1, root.results.length),
-                    Math.max(1, ConfigStore.launcherRowsBeforeScrolling)
-                ) * ConfigStore.launcherRowHeight
-
-            clip: true
-
-            opacity: 1
+            Layout.preferredHeight: resultsArea.implicitHeight
 
             Behavior on Layout.preferredHeight {
                 enabled: !MotionConfig.reduceMotion
@@ -312,131 +277,20 @@ Surface {
                 }
             }
 
-            Flickable {
-                id: resultsFlick
-                anchors.fill: parent
-                clip: true
-                boundsBehavior: Flickable.StopAtBounds
-                contentWidth: width
-                contentHeight: Math.max(1, root.results.length) * ConfigStore.launcherRowHeight
+            results: root.results
+            selectedIndex: root.selectedIndex
+            hoverIndex: root.hoverIndex
 
-            
-            
-            
+            onRowHovered: (index) => root.hoverIndex = index
 
-            Rectangle {
-                id: selectionSurface
+            onRowActivated: (index) => {
+                root.selectedIndex = index
+                root.hoverIndex = -1
 
-                z: 0
-
-                x: 0
-                width: resultsArea.width
-                height: ConfigStore.launcherRowHeight
-
-                radius: 12
-
-                property int targetIndex:
-                    root.hoverIndex >= 0
-                        ? root.hoverIndex
-                        : root.selectedIndex
-
-                y: targetIndex * ConfigStore.launcherRowHeight
-
-                
-                
-                
-                
-                
-                color: "#2b2725"
-
-                visible:
-                    root.results.length > 0
-
-                Behavior on y {
-                    enabled: !MotionConfig.reduceMotion
-
-                    NumberAnimation {
-                        duration: MotionConfig.movement(0.425)
-                        easing.type: Easing.OutCubic
-                    }
-                }
-
-                
-                
-                Rectangle {
-                    width: 3
-                    height: 22
-
-                    radius: 2
-
-                    anchors.left: parent.left
-                    anchors.leftMargin: 2
-                    anchors.verticalCenter: parent.verticalCenter
-
-                    color: Theme.colors.accent
-                }
+                root.activateSelection()
             }
-
-            
-            
-            
-
-            Repeater {
-                model: root.results
-
-                delegate: ListRow {
-                    id: row
-
-                    required property int index
-                    required property var modelData
-
-                    z: 1
-
-                    x: 0
-                    y: index * ConfigStore.launcherRowHeight
-
-                    width: resultsArea.width
-                    height: ConfigStore.launcherRowHeight
-
-                    icon: modelData.icon
-                    iconSource: modelData.iconSource || ""
-
-                    title: modelData.title
-                    subtitle: modelData.subtitle
-
-                    selected:
-                        index === root.selectedIndex
-
-                    
-                    animateAppearance: false
-
-                    onHovered: {
-                        root.hoverIndex = index
-                    }
-
-                    onClicked: {
-                        root.selectedIndex = index
-                        root.hoverIndex = -1
-
-                        root.activateSelection()
-                    }
-                }
-            }
-
-            
-            HoverHandler {
-                onHoveredChanged: {
-                    if (!hovered)
-                        root.hoverIndex = -1
-                }
-            }
-            } 
         }
     }
-
-    
-    
-    
 
     Component.onCompleted: {
         if (MotionConfig.reduceMotion) {

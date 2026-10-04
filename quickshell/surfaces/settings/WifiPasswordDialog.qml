@@ -38,7 +38,7 @@ Surface {
             Layout.fillWidth: true
             spacing: 8
 
-            Icon { icon: "wifi_lock"; size: 18; iconColor: Qt.rgba(1, 1, 1, 0.85) }
+            Icon { icon: "wifi_lock"; size: 18; iconColor: Theme.withAlpha(Theme.colors.text, 0.85) }
 
             StyledText {
                 Layout.fillWidth: true
@@ -64,7 +64,7 @@ Surface {
             Layout.topMargin: 6
             Layout.preferredHeight: 40
             radius: 10
-            color: Qt.rgba(1, 1, 1, 0.05)
+            color: Theme.colors.surface
             border.width: passwordField.activeFocus ? 1 : 0
             border.color: root.accent
 
@@ -75,7 +75,7 @@ Surface {
                 anchors.rightMargin: 40
                 verticalAlignment: TextInput.AlignVCenter
                 echoMode: revealButton.revealed ? TextInput.Normal : TextInput.Password
-                color: Qt.rgba(1, 1, 1, 0.9)
+                color: Theme.withAlpha(Theme.colors.text, 0.9)
                 font.pixelSize: 13
                 clip: true
                 selectByMouse: true
@@ -87,7 +87,7 @@ Surface {
                     variant: "mediaSubtitle"
                     text: "Password"
                     visible: passwordField.text.length === 0 && !passwordField.activeFocus
-                    color: Qt.rgba(1, 1, 1, 0.35)
+                    color: Theme.withAlpha(Theme.colors.text, 0.35)
                 }
 
                 onAccepted: if (text.length > 0 && !root.connecting) root.submitted(text)

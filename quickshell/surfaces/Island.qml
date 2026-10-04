@@ -1,8 +1,27 @@
 import QtQuick
-import "../components"
 import "../services"
-import Quickshell
 
+// The bar window's contents: three panels laid out across the top.
+//
+// This file is the layout and nothing else. It resolves nothing, draws
+// nothing, and decides no sizes of its own beyond where each region sits and
+// how tall the window has to be for them. The three regions are:
+//
+//   IslandLeftDot       album art at rest, media player when expanded
+//   IslandCenterPanel   the notch at rest, every surface that opens in it
+//   IslandRightDot      battery and wifi at rest, control centre when expanded
+//
+// and the geometry they share is resolved once, per monitor, in
+// IslandMetrics.qml.
+//
+// The one piece of knowledge this file owns that the regions cannot: the
+// dots hang off the CENTRE panel's edges, so it measures the centre panel and
+// hands its x and width to the two dots. That is why the centre is declared
+// before them -- it has to exist before anything can read its geometry.
+//
+// Sibling order here is not meaningful to painting. Each region draws one
+// opaque Surface and they never overlap at rest; when one expands it grows
+// toward the centre panel rather than over it.
 Item {
     id: root
 
@@ -17,808 +36,73 @@ Item {
     // silently loses its per-monitor resolution.
     property string screenName: ""
 
-    Component.onCompleted: BarConfigMonitors.loadFor(screenName)
-
-    // Per-monitor geometry, falling back to the global BarConfig value for
-    // any key this monitor's file does not name. The global values are
-    // unchanged by an override -- these are reads, not writes -- so
-    // removing the file restores exactly the previous bar.
-    property bool notchMode: BarConfig.notchMode
-    property real notchFlare: BarConfigMonitors.value("notchFlare", BarConfig.notchFlare)
-    property real barHeight: BarConfigMonitors.value("barHeight", BarConfig.barHeight)
-    property real collapsedWidth: BarConfigMonitors.value("collapsedWidth", BarConfig.collapsedWidth)
-    property real expandedHeight: BarConfigMonitors.value("expandedHeight", BarConfig.expandedHeight)
-    property real gapFromEdge: BarConfigMonitors.value("gapFromScreenEdge", BarConfig.gapFromScreenEdge)
-    property real expandedCornerRadius: BarConfigMonitors.value("expandedCornerRadius", BarConfig.expandedCornerRadius)
-    property real collapsedCornerRadius: BarConfigMonitors.value("collapsedCornerRadius", BarConfig.collapsedCornerRadius)
-    property real minimumExpandedWidth: BarConfigMonitors.value("minimumExpandedWidth", BarConfig.minimumExpandedWidth)
-
-    // BarConfig computes this from the global values, so it is recomputed
-    // here from the resolved ones. A monitor that lowers barHeight must get
-    // a proportionally smaller collapsed radius, or the pill is taller than
-    // the dot it sits in and clips.
-    readonly property real effectiveCollapsedRadius: Math.min(collapsedCornerRadius, barHeight / 2)
-
-    property alias leftSurfaceItem: leftDotWrap
-    property alias centerSurfaceItem: centerNotchWrap
-    property alias rightSurfaceItem: rightDotWrap
-
-    implicitHeight: Math.max(leftDotWrap.height + leftDotWrap.y, Math.max(centerNotchWrap.height + centerNotchWrap.y, rightDotWrap.height + rightDotWrap.y)) + 20
-
-    
-    property string currentTime: Qt.formatTime(new Date(), "hh:mm")
-    Timer {
-        interval: 1000
-        running: true
-        repeat: true
-        onTriggered: root.currentTime = Qt.formatTime(new Date(), "hh:mm")
+    // Resolved once and shared. A QtObject, so it costs no scene graph node;
+    // see IslandMetrics.qml for why the resolution lives in its own file.
+    IslandMetrics {
+        id: islandMetrics
+        screenName: root.screenName
     }
 
-    
-    readonly property real topOffset: notchMode ? 0 : gapFromEdge
-    readonly property real dotSpacing: 10
+    // shell.qml reads these three off the Island to size the window's
+    // exclusive zone and to decide what fullscreen hides. They are declared
+    // here rather than used through islandMetrics so that shell.qml does not
+    // have to know the resolution lives one level down; they are pure
+    // pass-throughs, and the single place the pass-throughs stop is if
+    // shell.qml grows a fourth read.
+    readonly property bool notchMode: islandMetrics.notchMode
+    readonly property real barHeight: islandMetrics.barHeight
+    readonly property real gapFromEdge: islandMetrics.gapFromEdge
 
-    
-    
-    
-    Item {
-        id: leftDotWrap
-        y: root.topOffset
-        
-        
-        
-        
-        
-        
-        visible: BarConfig.albumArtCircleEnabled
+    // shell.qml's input mask is built from these three Regions, so each has
+    // to be the region root itself -- the Region follows that item's
+    // position and size, and a Region pointed at anything inside it would
+    // mask the wrong rectangle. They are aliases rather than extra Items so
+    // the thing masked is provably the thing drawn.
+    property alias leftSurfaceItem: leftDot
+    property alias centerSurfaceItem: centerPanel
+    property alias rightSurfaceItem: rightDot
 
-        
-        
-        
-        
-        
-        readonly property bool isExpanded: UiState.mediaOpen
-        property real targetW: isExpanded ? 406 : root.barHeight
-        property real targetH: isExpanded ? 214 : root.barHeight
+    // How tall the bar window has to be for whichever region is tallest,
+    // measured from its y, plus slack. Derived from the regions rather than
+    // kept as a number: the control centre's sound view is far taller than
+    // the resting bar, and a kept height clipped its last rows with nothing
+    // logged. A region that grows taller now takes the window with it.
+    implicitHeight: Math.max(
+        leftDot.height + leftDot.y,
+        Math.max(centerPanel.height + centerPanel.y,
+                 rightDot.height + rightDot.y)) + 20
 
-        width: targetW
-        height: targetH
-
-        
-        
-        
-        readonly property real collapsedX: centerNotchWrap.x - root.barHeight - root.dotSpacing
-        readonly property real collapsedCentre: collapsedX + root.barHeight / 2
-
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        x: isExpanded
-            ? Math.max(root.gapFromEdge,
-                Math.min(collapsedX + root.barHeight - targetW,
-                         root.width - targetW - root.gapFromEdge))
-            : collapsedX
-
-        Behavior on width {
-            enabled: !MotionConfig.reduceMotion
-            SpringAnimation { spring: 4.8; damping: MotionConfig.springDamping; mass: 0.8 }
-        }
-        Behavior on height {
-            enabled: !MotionConfig.reduceMotion
-            SpringAnimation { spring: 4.8; damping: MotionConfig.springDamping; mass: 0.8 }
-        }
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        Behavior on x {
-            enabled: !MotionConfig.reduceMotion && !centerNotchWrap.isOsd
-            SpringAnimation { spring: 9; damping: MotionConfig.springDamping; mass: 0.6 }
-        }
-
-        
-        Surface {
-            id: leftSurface
-            anchors.fill: parent
-            cornerRadius: leftDotWrap.isExpanded ? root.expandedCornerRadius : root.effectiveCollapsedRadius
-            topLeftRadius: (root.notchMode && !leftDotWrap.isExpanded) ? 0 : cornerRadius
-            topRightRadius: (root.notchMode && !leftDotWrap.isExpanded) ? 0 : cornerRadius
-            bottomLeftRadius: cornerRadius
-            bottomRightRadius: cornerRadius
-            
-            
-            
-            
-            backgroundColor: "#000000"
-            shadow: leftDotWrap.isExpanded
-
-            Behavior on cornerRadius {
-                enabled: !MotionConfig.reduceMotion
-                SpringAnimation { spring: 4.8; damping: MotionConfig.springDamping; mass: 0.8 }
-            }
-
-            
-            Item {
-                anchors.fill: parent
-                visible: !leftDotWrap.isExpanded
-                opacity: leftDotWrap.isExpanded ? 0 : 1
-                Behavior on opacity { NumberAnimation { duration: MotionConfig.fade(); easing.type: Easing.OutCubic } }
-
-                Item {
-                    id: dotArtContainer
-                    anchors.centerIn: parent
-                    width: root.barHeight - 2 * BarConfig.innerPadding
-                    height: width
-                    
-                    
-                    
-                    
-                    
-                    x: (parent.width - width) / 2
-                    y: (parent.height - height) / 2 - (leftDotHover.containsMouse ? BarConfig.stageLiftOnHover : 0)
-                    scale: leftDotHover.containsMouse ? 1.05 : 1.0
-
-                    Behavior on scale {
-                        enabled: !MotionConfig.reduceMotion
-                        SpringAnimation { spring: 5.2; damping: MotionConfig.springDamping; mass: 0.6 }
-                    }
-                    Behavior on y {
-                        enabled: !MotionConfig.reduceMotion
-                        SpringAnimation { spring: 5.2; damping: MotionConfig.springDamping; mass: 0.6 }
-                    }
-
-                    
-                    
-                    
-                    
-                    
-                    Rectangle {
-                        id: dotArtClip
-                        anchors.fill: parent
-                        radius: width / 2
-                        color: "transparent"
-                        clip: true
-                        visible: Media.artUrl.length > 0
-
-                        Image {
-                            id: dotRawArt
-                            anchors.fill: parent
-                            source: Media.artUrl
-                            fillMode: Image.PreserveAspectCrop
-                            smooth: true
-                            asynchronous: true
-                        }
-                    }
-
-                    Icon {
-                        anchors.centerIn: parent
-                        icon: "music_note"
-                        size: 16
-                        iconColor: Qt.rgba(1, 1, 1, 0.8)
-                        visible: Media.artUrl.length === 0
-                    }
-                }
-
-                MouseArea {
-                    id: leftDotHover
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: UiState.toggleMedia()
-                }
-            }
-
-            
-            
-            
-            
-            
-            
-            
-            Item {
-                id: mediaSlide
-                anchors.fill: parent
-                visible: leftDotWrap.isExpanded
-                // On a wrapper, not on the content: the content is
-                // anchors.fill, and an explicit y on an anchored item
-                // silently overrides the anchor.
-                y: leftDotWrap.isExpanded ? 0 : -BarConfig.panelSlideIn
-                Behavior on y {
-                    enabled: !MotionConfig.reduceMotion
-                    NumberAnimation { duration: MotionConfig.slideInMs; easing.type: Easing.OutCubic }
-                }
-
-                MediaPlayerSurface {
-                    anchors.fill: parent
-                    opacity: leftDotWrap.isExpanded ? 1 : 0
-                    Behavior on opacity { NumberAnimation { duration: MotionConfig.fade(); easing.type: Easing.OutCubic } }
-                }
-            }
-        }
+    IslandCenterPanel {
+        id: centerPanel
+        metrics: islandMetrics
+        // Read by the settings page's height clamp, which is per screen
+        // because one panel is built per output.
+        screenName: root.screenName
     }
 
-    
-    
-    
-    Item {
-        id: centerNotchWrap
-        
-        
-        
-        y: isSettings ? 76 : root.topOffset
-        anchors.horizontalCenter: parent.horizontalCenter
-
-        readonly property bool isCalendar: UiState.calendarOpen
-        readonly property bool isSettings: UiState.settingsOpen
-        readonly property bool isLauncher: UiState.launcherOpen
-        readonly property bool isClipboard: UiState.clipboardOpen
-        readonly property bool isPowerMenu: UiState.powerMenuOpen
-        readonly property bool isThemePicker: UiState.themePickerOpen
-        readonly property bool isWallpaperPicker: UiState.wallpaperPickerOpen
-        
-        
-        
-        readonly property bool isOsd: UiState.osdVisible
-
-        
-        
-        
-        
-        readonly property bool isCenterExpanded: isCalendar || isSettings || isLauncher || isClipboard || isPowerMenu || isThemePicker || isWallpaperPicker
-
-        property real targetW: {
-            if (isOsd) return 275
-            if (isCalendar) return UiState.calendarMonth ? 341 : 259
-            if (isSettings) return 1320
-            if (isLauncher) return 550
-            if (isClipboard) return 480
-            if (isPowerMenu) return powerInner.implicitWidth + 24
-            if (isThemePicker) return themePickerContent.width + 24
-            if (isWallpaperPicker) return wallpaperPickerContent.width + 24
-            return root.collapsedWidth
-        }
-
-        property real targetH: {
-            if (isOsd) return 43
-            if (isCalendar) return UiState.calendarMonth ? 281 : 117
-            if (isSettings) return 969
-            if (isLauncher) return launcherContent.implicitHeight + 24
-            if (isClipboard) return clipboardInner.implicitHeight + 24
-            if (isPowerMenu) return powerInner.implicitHeight + 24
-            if (isThemePicker) return themePickerContent.implicitHeight + 24
-            if (isWallpaperPicker) return wallpaperPickerContent.implicitHeight + 24
-            return root.barHeight
-        }
-
-        width: targetW
-        height: targetH
-
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        Behavior on width {
-            enabled: !MotionConfig.reduceMotion
-            SpringAnimation {
-                spring: centerNotchWrap.isOsd ? 11 : 4.8
-                damping: MotionConfig.springDamping
-                mass: centerNotchWrap.isOsd ? 0.6 : 0.8
-            }
-        }
-        Behavior on height {
-            enabled: !MotionConfig.reduceMotion
-            SpringAnimation {
-                spring: centerNotchWrap.isOsd ? 11 : 4.8
-                damping: MotionConfig.springDamping
-                mass: centerNotchWrap.isOsd ? 0.6 : 0.8
-            }
-        }
-
-        Surface {
-            id: centerSurface
-            anchors.fill: parent
-            
-            
-            
-            
-            cornerRadius: centerNotchWrap.isOsd
-                ? centerNotchWrap.height / 2
-                : (centerNotchWrap.isCenterExpanded ? root.expandedCornerRadius : root.effectiveCollapsedRadius)
-            topLeftRadius: (root.notchMode && !centerNotchWrap.isCenterExpanded) ? 0 : cornerRadius
-            topRightRadius: (root.notchMode && !centerNotchWrap.isCenterExpanded) ? 0 : cornerRadius
-            bottomLeftRadius: cornerRadius
-            bottomRightRadius: cornerRadius
-            backgroundColor: "#000000"
-            shadow: centerNotchWrap.isCenterExpanded || centerNotchWrap.isOsd
-
-            Behavior on cornerRadius {
-                enabled: !MotionConfig.reduceMotion
-                SpringAnimation { spring: 4.8; damping: MotionConfig.springDamping; mass: 0.8 }
-            }
-
-            
-            Item {
-                anchors.fill: parent
-                
-                
-                
-                
-                
-                
-                visible: !centerNotchWrap.isCenterExpanded
-                opacity: centerNotchWrap.isCenterExpanded ? 0 : 1
-                Behavior on opacity { NumberAnimation { duration: MotionConfig.fade(); easing.type: Easing.OutCubic } }
-
-                MouseArea {
-                    id: notchHover
-                    anchors.fill: parent
-                    
-                    
-                    
-                    
-                    
-                    hoverEnabled: true
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: UiState.toggleCalendar()
-                }
-
-                
-                
-                
-                
-                
-                
-                
-                
-                
-                
-                
-                
-                
-                
-                
-                
-                Item {
-                    width: parent.width
-                    height: parent.height
-                    
-                    
-                    
-                    
-                    
-                    
-                    
-                    
-                    y: -(notchHover.containsMouse ? BarConfig.stageLiftOnHover / 2 : 0)
-                    scale: notchHover.containsMouse ? 1.05 : 1.0
-
-                    Behavior on scale {
-                        enabled: !MotionConfig.reduceMotion
-                        SpringAnimation { spring: 5.2; damping: MotionConfig.springDamping; mass: 0.6 }
-                    }
-                    Behavior on y {
-                        enabled: !MotionConfig.reduceMotion
-                        SpringAnimation { spring: 5.2; damping: MotionConfig.springDamping; mass: 0.6 }
-                    }
-
-                    StyledText {
-                        anchors.centerIn: parent
-                        text: root.currentTime
-                        font.pixelSize: 14
-                        font.weight: Font.DemiBold
-                        color: "#F7EFE1"
-                        visible: !centerNotchWrap.isOsd
-                        opacity: visible ? 1 : 0
-                        Behavior on opacity { NumberAnimation { duration: MotionConfig.fade(); easing.type: Easing.OutCubic } }
-                    }
-                }
-            }
-
-            
-            
-            
-            
-            OSD {
-                id: osdContent
-                anchors.fill: parent
-                visible: centerNotchWrap.isOsd
-                shadow: false
-
-                // Sibling order decides the paint, and this is the first
-                // child of centerSurface, so every panel below draws over
-                // it. That meant a volume keypress with the control centre
-                // or settings open produced no feedback at all: the notch
-                // resized to 275x43, the OSD was painted underneath, and the
-                // panel stayed on top. The state was never lost -- mode is
-                // untouched by an OSD -- only the feedback was invisible.
-                //
-                // So the OSD moves to the front whenever one is showing, and
-                // the panel underneath is untouched and comes back when the
-                // OSD's own timer expires. `z` rather than a move in the
-                // tree, because reordering siblings would change the paint
-                // of every other overlay pair for no reason.
-                z: centerNotchWrap.isOsd ? 100 : 0
-            }
-
-            
-            Calendar {
-                anchors.fill: parent
-                visible: centerNotchWrap.isCalendar && !UiState.calendarMonth
-                opacity: visible ? 1 : 0
-                Behavior on opacity { NumberAnimation { duration: MotionConfig.fade(); easing.type: Easing.OutCubic } }
-            }
-
-            
-            MonthCalendar {
-                anchors.fill: parent
-                visible: centerNotchWrap.isCalendar && UiState.calendarMonth
-                opacity: visible ? 1 : 0
-                Behavior on opacity { NumberAnimation { duration: MotionConfig.fade(); easing.type: Easing.OutCubic } }
-            }
-
-            
-            SettingsApp {
-                id: settingsInner
-                anchors.fill: parent
-                visible: centerNotchWrap.isSettings
-                opacity: centerNotchWrap.isSettings ? 1 : 0
-                Behavior on opacity { NumberAnimation { duration: MotionConfig.fade(); easing.type: Easing.OutCubic } }
-                shadow: false
-                borderWidth: 0
-            }
-
-            
-            Launcher {
-                id: launcherContent
-                anchors.fill: parent
-                anchors.margins: 12
-                visible: centerNotchWrap.isLauncher
-                opacity: centerNotchWrap.isLauncher ? 1 : 0
-                Behavior on opacity { NumberAnimation { duration: MotionConfig.fade(); easing.type: Easing.OutCubic } }
-                shadow: false
-                backgroundColor: "transparent"
-                borderWidth: 0
-                results: AppLauncher.results
-                onActivated: (res) => { AppLauncher.launch(res); UiState.close(); }
-            }
-
-            
-            Item {
-                id: clipboardContent
-                anchors.fill: parent
-                anchors.margins: 12
-                visible: centerNotchWrap.isClipboard
-                opacity: centerNotchWrap.isClipboard ? 1 : 0
-                Behavior on opacity { NumberAnimation { duration: MotionConfig.fade(); easing.type: Easing.OutCubic } }
-                ClipboardHistory {
-                    id: clipboardInner
-                    width: parent.width
-                    shadow: false
-                    backgroundColor: "transparent"
-                    borderWidth: 0
-                    onCloseRequested: UiState.close()
-                }
-            }
-
-            
-            Item {
-                id: powerMenuContent
-                anchors.fill: parent
-                anchors.margins: 12
-                visible: centerNotchWrap.isPowerMenu
-                opacity: centerNotchWrap.isPowerMenu ? 1 : 0
-                Behavior on opacity { NumberAnimation { duration: MotionConfig.fade(); easing.type: Easing.OutCubic } }
-                PowerMenu {
-                    id: powerInner
-                    width: parent.width
-                    shadow: false
-                    backgroundColor: "transparent"
-                    borderWidth: 0
-                    onActionTaken: UiState.close()
-                }
-            }
-
-            
-            ThemePicker {
-                id: themePickerContent
-                anchors.top: parent.top
-                anchors.horizontalCenter: parent.horizontalCenter
-                anchors.topMargin: 12
-                themes: Theme.pickerModel
-                shadow: false
-                backgroundColor: "transparent"
-                borderWidth: 0
-                visible: centerNotchWrap.isThemePicker
-                opacity: centerNotchWrap.isThemePicker ? 1 : 0
-                Behavior on opacity { NumberAnimation { duration: MotionConfig.fade(); easing.type: Easing.OutCubic } }
-                onThemeSelected: (index) => { Theme.selectByPickerIndex(index); UiState.close(); }
-            }
-
-            
-            WallpaperPicker {
-                id: wallpaperPickerContent
-                anchors.top: parent.top
-                anchors.horizontalCenter: parent.horizontalCenter
-                anchors.topMargin: 12
-                themeName: Theme.displayName
-                themeKey: Theme.currentName
-                wallpapers: Theme.wallpaperPickerModel
-                shadow: false
-                backgroundColor: "transparent"
-                borderWidth: 0
-                visible: centerNotchWrap.isWallpaperPicker
-                opacity: centerNotchWrap.isWallpaperPicker ? 1 : 0
-                Behavior on opacity { NumberAnimation { duration: MotionConfig.fade(); easing.type: Easing.OutCubic } }
-                onWallpaperSelected: (idx) => { Theme.setWallpaper(idx); UiState.close(); }
-            }
-        }
+    IslandLeftDot {
+        id: leftDot
+        metrics: islandMetrics
+        // The bar window's width, not this region's: the expanded panel
+        // clamps itself against the window, and this region resizes to the
+        // panel, so reading its own width would make the clamp circular.
+        availableWidth: root.width
+        centerX: centerPanel.x
+        centerIsOsd: centerPanel.isOsd
     }
 
-    
-    
-    
-    Item {
-        id: rightDotWrap
-        y: root.topOffset
-        
-        
-        
-        
-        visible: BarConfig.statusCircleEnabled
-
-        readonly property bool isExpanded: UiState.controlCenterOpen
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        property real targetW: isExpanded ? 514 : root.barHeight
-        property real targetH: isExpanded ? controlCenterContent.implicitHeight : root.barHeight
-
-        width: targetW
-        height: targetH
-
-        
-        readonly property real collapsedX: centerNotchWrap.x + centerNotchWrap.width + root.dotSpacing
-        readonly property real collapsedCentre: collapsedX + root.barHeight / 2
-
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        x: isExpanded
-            ? Math.max(root.gapFromEdge,
-                Math.min(collapsedX, root.width - targetW - root.gapFromEdge))
-            : collapsedX
-
-        Behavior on width {
-            enabled: !MotionConfig.reduceMotion
-            SpringAnimation { spring: 4.8; damping: MotionConfig.springDamping; mass: 0.8 }
-        }
-        Behavior on height {
-            enabled: !MotionConfig.reduceMotion
-            SpringAnimation { spring: 4.8; damping: MotionConfig.springDamping; mass: 0.8 }
-        }
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        Behavior on x {
-            enabled: !MotionConfig.reduceMotion && !centerNotchWrap.isOsd
-            SpringAnimation { spring: 9; damping: MotionConfig.springDamping; mass: 0.6 }
-        }
-
-        Surface {
-            id: rightSurface
-            anchors.fill: parent
-            cornerRadius: rightDotWrap.isExpanded ? root.expandedCornerRadius : root.effectiveCollapsedRadius
-            topLeftRadius: (root.notchMode && !rightDotWrap.isExpanded) ? 0 : cornerRadius
-            topRightRadius: (root.notchMode && !rightDotWrap.isExpanded) ? 0 : cornerRadius
-            bottomLeftRadius: cornerRadius
-            bottomRightRadius: cornerRadius
-            
-            
-            
-            
-            
-            backgroundColor: "#000000"
-
-            shadow: rightDotWrap.isExpanded
-
-            Behavior on cornerRadius {
-                enabled: !MotionConfig.reduceMotion
-                SpringAnimation { spring: 4.8; damping: MotionConfig.springDamping; mass: 0.8 }
-            }
-
-            
-            Item {
-                anchors.fill: parent
-                visible: !rightDotWrap.isExpanded
-                opacity: rightDotWrap.isExpanded ? 0 : 1
-                Behavior on opacity { NumberAnimation { duration: MotionConfig.fade(); easing.type: Easing.OutCubic } }
-
-                Item {
-                    id: rightDotArtContainer
-                    anchors.centerIn: parent
-                    width: root.barHeight - 2 * BarConfig.innerPadding
-                    height: width
-                    
-                    
-                    
-                    
-                    
-                    x: (parent.width - width) / 2
-                    y: (parent.height - height) / 2 - (rightDotHover.containsMouse ? BarConfig.stageLiftOnHover : 0)
-                    scale: rightDotHover.containsMouse ? 1.05 : 1.0
-
-                    Behavior on scale {
-                        enabled: !MotionConfig.reduceMotion
-                        SpringAnimation { spring: 5.2; damping: MotionConfig.springDamping; mass: 0.6 }
-                    }
-                    Behavior on y {
-                        enabled: !MotionConfig.reduceMotion
-                        SpringAnimation { spring: 5.2; damping: MotionConfig.springDamping; mass: 0.6 }
-                    }
-
-                    
-                    BatteryRing {
-                        anchors.fill: parent
-                        percentage: Battery.percentage
-                        charging: Battery.charging
-                        strokeWidth: 2.2
-                    }
-
-                    
-                    Icon {
-                        anchors.centerIn: parent
-                        icon: !Wifi.enabled ? "wifi_off" : (Wifi.connected ? "wifi" : "wifi_find")
-                        size: 15
-                        iconColor: Qt.rgba(1, 1, 1, 0.92)
-                    }
-                }
-
-                MouseArea {
-                    id: rightDotHover
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: UiState.toggleControlCenter()
-                }
-            }
-
-            
-            
-            
-            
-            
-            
-            Item {
-                id: controlCenterSlide
-                anchors.fill: parent
-                visible: rightDotWrap.isExpanded
-
-                y: rightDotWrap.isExpanded ? 0 : -BarConfig.panelSlideIn
-                Behavior on y {
-                    enabled: !MotionConfig.reduceMotion
-                    NumberAnimation { duration: MotionConfig.slideInMs; easing.type: Easing.OutCubic }
-                }
-
-                ControlCenter {
-                    id: controlCenterContent
-                    anchors.fill: parent
-                    opacity: rightDotWrap.isExpanded ? 1 : 0
-                    Behavior on opacity { NumberAnimation { duration: MotionConfig.fade(); easing.type: Easing.OutCubic } }
-                    shadow: false
-                    borderWidth: 0
-                    backgroundColor: "transparent"
-                }
-            }
-        }
+    IslandRightDot {
+        id: rightDot
+        metrics: islandMetrics
+        availableWidth: root.width
+        // Both, because the centre panel is not a fixed width: an OSD widens
+        // it to 275 in the middle of a keypress, and this dot has to move
+        // with the panel's right edge.
+        centerX: centerPanel.x
+        centerWidth: centerPanel.width
+        centerIsOsd: centerPanel.isOsd
     }
 
-    
     Keys.onEscapePressed: UiState.closeAll()
     focus: UiState.anyOpen
     Keys.enabled: UiState.anyOpen

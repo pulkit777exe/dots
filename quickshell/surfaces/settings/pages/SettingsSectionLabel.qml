@@ -33,5 +33,5 @@ StyledText {
     font.letterSpacing: upperCase ? 1.0 : 0.0
     font.capitalization: upperCase ? Font.AllUppercase : Font.MixedCase
     text: root.label
-    textColor: Qt.rgba(1, 1, 1, 0.4)
+    textColor: Theme.withAlpha(Theme.colors.text, 0.4)
 }

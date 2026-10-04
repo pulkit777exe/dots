@@ -1,12 +1,20 @@
 pragma Singleton
 
-
-
 import QtQuick
 import Quickshell
 import Quickshell.Io
 
-
+// The theme layer: discover the palettes in colors/, hold the one in use,
+// blend between two of them, publish the result, apply the wallpaper.
+//
+// Three collaborators, split because none is "being the theme": ColorMath
+// (hex arithmetic), ThemeRows (the pickers' row lists) and ColorWatch (the
+// colors/ watchers and the 400ms debounce). Each is handed what it needs
+// rather than reaching back for it: a helper that read Theme.fallbackColors
+// would have to import the module Theme is declared in, and QML answers that
+// with a load-time failure, not a warning. What stays is Theme's own -- the
+// degraded-mode palette, the state that picks one, and the three processes
+// that discover, publish and apply.
 
 Singleton {
     id: root
@@ -16,133 +24,75 @@ Singleton {
     readonly property string scriptPath: Quickshell.shellDir + "/scripts/list-themes.py"
     readonly property string statePath: Quickshell.statePath("theme-state.json")
 
+    ColorMath { id: colorMath }
+    ThemeRows { id: rows }
+    WallpaperSetter { id: wallpaperApply }
+    // The debounce is ColorWatch's; what a reload MEANS -- re-run
+    // list-themes.py -- is this file's.
+    ColorWatch {
+        id: colorWatch
+        colorsRoot: root.colorsRoot
+        onReloadRequested: discovery.running = true
+    }
+
     property var presets: ({})
     property string currentName: ""
     property var wallpaperIndex: ({})
 
     readonly property var current: presets[currentName] ? presets[currentName] : null
-    
-    
+
     readonly property var targetColors: (current && current.colors) ? current.colors : fallbackColors
     property var fromColors: fallbackColors
     property var displayedColors: targetColors
     property real colorProgress: 1
     readonly property var colors: displayedColors
 
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
+    // The two colours no palette has a say in. panelFill is the base every
+    // translucent surface is read against -- Surface.qml's background, and
+    // what the scrims and drop shadows take an alpha of -- so it stays a
+    // literal: a palette that could set it decides how opaque the shell's
+    // own panels are.
     readonly property color panelFill: "#000000"
     readonly property color surfaceRaised: Qt.alpha(colors.foreground, 0.105)
 
-    
     readonly property bool darkMode: isDarkPreset()
-    
+
     readonly property string displayName: current ? current.name : currentName
 
-    
     readonly property var themeWallpapers: (current && current.wallpapers) ? current.wallpapers : []
     readonly property int currentWallpaperIndex: Math.min((wallpaperIndex[currentName] !== undefined ? wallpaperIndex[currentName] : 0), Math.max(0, themeWallpapers.length - 1))
+
+    // Two callers: the wallpaper binding below and one row per wallpaper in
+    // the picker. Theme is the only thing that knows where colors/ lives.
     function fileUrl(path) {
-        if (!path) return "";
-        const s = path.toString();
-        if (s.startsWith("file://")) return s;
-        if (s.startsWith("/")) return "file://" + s;
-        return "file://" + root.colorsRoot + "/" + s;
+        return rows.fileUrl(path, root.colorsRoot);
     }
 
     readonly property string currentWallpaper: themeWallpapers.length > 0
         ? fileUrl(themeWallpapers[currentWallpaperIndex])
         : ""
-    
+
     property string wallpaperFrom: ""
     property string wallpaperTo: currentWallpaper
-    property real wallpaperProgress: 1  
+    property real wallpaperProgress: 1
     property bool wallpaperTransitioning: wallpaperProgress < 1
 
-    readonly property var pickerModel: {
-        let out = [];
-        for (let key in presets) {
-            const t = presets[key];
-            const accent = (t.colors && t.colors.accent) ? t.colors.accent : fallbackColors.accent;
-            const bg = (t.colors && t.colors.background) ? t.colors.background : fallbackColors.background;
-            out.push({
-                key: key,
-                name: t.name ? t.name : key,
-                accent: accent,
-                cardColor: bg,
-                selected: key === currentName,
-                
-                
-                
-                
-                
-                
-                
-                swatchColors: [
-                    (t.colors && t.colors.accent) ? t.colors.accent : accent,
-                    (t.colors && t.colors.success) ? t.colors.success : accent,
-                    (t.colors && t.colors.warning) ? t.colors.warning : accent,
-                    (t.colors && t.colors.danger) ? t.colors.danger : ((t.colors && t.colors.error) ? t.colors.error : accent),
-                    (t.colors && t.colors.textMuted) ? t.colors.textMuted : ((t.colors && t.colors.muted) ? t.colors.muted : accent),
-                    (t.colors && t.colors.surfaceAlt) ? t.colors.surfaceAlt : bg
-                ],
-            });
-        }
-        return out;
-    }
+    readonly property var pickerModel:
+        rows.themeRows(root.presets, root.currentName, root.fallbackColors)
 
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
     property var wallpaperPickerModel: []
 
+    // Assigned rather than bound: every caller changes one of this
+    // function's inputs and wants the new rows to exist before it goes on.
     function rebuildPickerModel() {
-        const theme = root.presets[root.currentName];
-        const wallpapers = (theme && theme.wallpapers) ? theme.wallpapers : [];
-        const savedIndex = Number(root.wallpaperIndex[root.currentName] !== undefined ? root.wallpaperIndex[root.currentName] : 0);
-        const selectedIndex = wallpapers.length > 0
-            ? Math.min(savedIndex, wallpapers.length - 1)
-            : -1;
-
-        const out = [];
-        for (let index = 0; index < wallpapers.length; index++) {
-            const path = wallpapers[index];
-            out.push({
-                themeKey: root.currentName,
-                source: root.fileUrl(path),
-                fileName: String(path).split("/").pop(),
-                selected: index === selectedIndex
-            });
-        }
-        root.wallpaperPickerModel = out;
+        wallpaperPickerModel =
+            rows.wallpaperRows(root.presets, root.currentName, root.wallpaperIndex, root.colorsRoot);
     }
 
+    // The degraded-mode palette: what the shell draws with before
+    // list-themes.py has answered, and what themeRows() falls back to for a
+    // theme missing a key. The literals belong here -- this is the theme
+    // layer, and the only QML in the tree carrying a palette of its own.
     readonly property var fallbackColors: ({
         background: "#202020", surface: "#282828", surfaceAlt: "#303030",
         surfaceElevated: "#383838", surfaceMuted: "#b0282828",
@@ -158,76 +108,14 @@ Singleton {
 
     onWallpaperChanged: (source) => {
         if (!source) return;
-        const path = source.replace("file://", "");
-        root.applyWallpaper(path);
+        wallpaperApply.apply(source.replace("file://", ""));
     }
 
-    function applyWallpaper(path) {
-        wallpaperApply.command = ["bash", "-c",
-            'p="' + path.replace(/"/g, '\\"') + '"; ' +
-            'if command -v hyprctl >/dev/null 2>&1; then ' +
-            '  hyprctl hyprpaper preload "$p" >/dev/null 2>&1; ' +
-            '  hyprctl hyprpaper wallpaper ",$p" >/dev/null 2>&1 && exit 0; ' +
-            '  hyprctl hyprpaper reload ",$p" >/dev/null 2>&1 && exit 0; ' +
-            'fi; ' +
-            'if command -v swww >/dev/null 2>&1; then swww img "$p" --transition-type fade --transition-duration 0.38; exit 0; fi; ' +
-            'pkill -x swaybg >/dev/null 2>&1; swaybg -o "*" -i "$p" -m fill &'
-        ];
-        wallpaperApply.running = true;
-    }
-    Process { id: wallpaperApply }
-
-    function lerpHex(a, b, t) {
-        let hasAlpha = a.length === 9 || b.length === 9;
-        let ah = a, bh = b;
-        let aAlpha = 1, bAlpha = 1;
-        if (ah.length === 9) { aAlpha = parseInt(ah.slice(1,3),16)/255; ah = "#" + ah.slice(3); }
-        if (bh.length === 9) { bAlpha = parseInt(bh.slice(1,3),16)/255; bh = "#" + bh.slice(3); }
-        const ca = hexToRgb(ah), cb = hexToRgb(bh);
-        const r = Math.round(ca.r + (cb.r - ca.r) * t);
-        const g = Math.round(ca.g + (cb.g - ca.g) * t);
-        const b_ = Math.round(ca.b + (cb.b - ca.b) * t);
-        const hex = toHex(r,g,b_);
-        if (hasAlpha) {
-            const alpha = Math.round((aAlpha + (bAlpha - aAlpha)*t)*255);
-            return "#" + alpha.toString(16).padStart(2,"0") + hex.slice(1);
-        }
-        return hex;
-    }
-    function interpolateColors(from, to, t) {
-        if (!from || !to) return to ? to : (from ? from : fallbackColors);
-        let out = {};
-        const keys = new Set([...Object.keys(from), ...Object.keys(to)]);
-        for (const k of keys) {
-            const fv = from[k], tv = to[k];
-            if (typeof fv === "string" && typeof tv === "string" && fv.startsWith("#") && tv.startsWith("#")) {
-                out[k] = lerpHex(fv, tv, t);
-            } else out[k] = t < 0.5 ? fv : tv;
-        }
-        return out;
-    }
-    function startColorTransition() {
-        if (wallpaperApplied) {
-            fromColors = displayedColors;
-            colorProgress = 0;
-            colorAnim.restart();
-        } else {
-            displayedColors = targetColors;
-            colorProgress = 1;
-        }
-    }
-    function startWallpaperTransition(newWall) {
-        if (!wallpaperApplied || !newWall || wallpaperProgress < 1) {
-            wallpaperFrom = "";
-        } else {
-            wallpaperFrom = wallpaperTo;
-        }
-        wallpaperTo = newWall;
-        wallpaperProgress = 0;
-        wallpaperAnim.restart();
-    }
-
-    
+    // ---- colour transition ----------------------------------------------
+    //
+    // A theme change is a cross-fade of the whole palette, not a cut, and an
+    // explicit restart() rather than a Behavior so two changes in quick
+    // succession continue from where the first had got to.
     NumberAnimation {
         id: colorAnim
         target: root
@@ -243,10 +131,35 @@ Singleton {
     }
     onTargetColorsChanged: startColorTransition()
 
-    
-    
-    
-    
+    // The first palette to arrive must NOT animate: a fade here is a fade
+    // from the fallback palette on a shell that has not finished starting.
+    function startColorTransition() {
+        if (wallpaperApplied) {
+            fromColors = displayedColors;
+            colorProgress = 0;
+            colorAnim.restart();
+        } else {
+            displayedColors = targetColors;
+            colorProgress = 1;
+        }
+    }
+
+    function startWallpaperTransition(newWall) {
+        if (!wallpaperApplied || !newWall || wallpaperProgress < 1) {
+            // No previous wallpaper to fade from: empty the `from` side.
+            wallpaperFrom = "";
+        } else {
+            wallpaperFrom = wallpaperTo;
+        }
+        wallpaperTo = newWall;
+        wallpaperProgress = 0;
+        wallpaperAnim.restart();
+    }
+
+    // ---- wallpaper transition -------------------------------------------
+    //
+    // The animation only moves wallpaperProgress; a surface cross-fades
+    // between wallpaperFrom and wallpaperTo, so nothing waits for the image.
     NumberAnimation {
         id: wallpaperAnim
         target: root
@@ -264,43 +177,30 @@ Singleton {
         }
     }
 
+    // ---- the three colour helpers, delegated ---------------------------
+    //
+    // Implemented in ColorMath.qml; these stay the public names, because
+    // withAlpha() is called 134 times as `Theme.withAlpha(...)`.
     function isDarkPreset() {
-        
-        let bg = "#202020";
-        if (targetColors && targetColors.background) bg = targetColors.background;
-        return hexLightness(bg) < 0.5;
-    }
-    function hexToRgb(hex) {
-        let h = hex.replace("#", "");
-        if (h.length === 3) h = h.split("").map(ch => ch + ch).join("");
-        const num = parseInt(h, 16);
-        return { r: (num >> 16) & 255, g: (num >> 8) & 255, b: num & 255 };
-    }
-    function hexLightness(hex) {
-        const c = hexToRgb(hex);
-        const r = c.r / 255, g = c.g / 255, b = c.b / 255;
-        return (Math.max(r, g, b) + Math.min(r, g, b)) / 2;
-    }
-    function toHex(r, g, b) {
-        const clamp = (v) => Math.max(0, Math.min(255, Math.round(v)));
-        const pad = (v) => clamp(v).toString(16).padStart(2, "0");
-        return "#" + pad(r) + pad(g) + pad(b);
-    }
-    
-    
-    
-    function withAlpha(c, alpha01) {
-        let h = String(c).replace("#", "");
-        if (h.length === 8) h = h.slice(2);
-        const a = Math.max(0, Math.min(255, Math.round(alpha01 * 255)));
-        return "#" + a.toString(16).padStart(2, "0") + h;
+        return colorMath.isDark(targetColors, fallbackColors.background);
     }
 
-    
-    
-    
-    
-    
+    function interpolateColors(from, to, t) {
+        return colorMath.interpolate(from, to, t, fallbackColors);
+    }
+
+    function withAlpha(c, alpha01) {
+        return colorMath.withAlpha(c, alpha01);
+    }
+
+    // ---- publishing ------------------------------------------------------
+    //
+    // publish-colors.py writes the generated colors/kitty.conf,
+    // colors/colors.css and the rest, which is how the DE and the terminals
+    // pick up a theme change. A Process rather than an inline write because
+    // the script is the one place that knows the file list. Those generated
+    // files are gitignored; the palettes they come from are not, and nothing
+    // here writes those.
     readonly property string publishScript: Quickshell.shellDir + "/scripts/publish-colors.py"
 
     function publish(themeName) {
@@ -309,6 +209,7 @@ Singleton {
         publisher.command = ["python3", publishScript, name];
         publisher.running = true;
     }
+
     Process {
         id: publisher
         stdout: StdioCollector {}
@@ -322,19 +223,11 @@ Singleton {
         if (!presets[name] || name === currentName) return;
 
         currentName = name;
-        
-        
-        
-        
-        
+
         savedTheme = name;
         rebuildPickerModel();
         saveState();
 
-        
-        
-        
-        
         publish(name);
 
         themeChanged(name);
@@ -353,6 +246,8 @@ Singleton {
     function setWallpaper(index) {
         if (index < 0 || index >= themeWallpapers.length) return;
 
+        // A fresh object: wallpaperIndex is a `var`, and its change handler
+        // only fires for a reassignment.
         let updated = Object.assign({}, wallpaperIndex);
         updated[currentName] = index;
         wallpaperIndex = updated;
@@ -366,7 +261,13 @@ Singleton {
         setWallpaper((currentWallpaperIndex + 1) % themeWallpapers.length);
     }
 
-    
+    // ---- discovery -------------------------------------------------------
+    //
+    // Read by a script, not a FileView + JsonAdapter, because the discovery
+    // is not a parse: it walks wallpaper directories, falls back through
+    // candidate paths per theme, and merges a palette with defaults. That
+    // logic lives in list-themes.py; a second copy here would be a second
+    // answer to the same question.
     Process {
         id: discovery
         command: ["python3", root.scriptPath]
@@ -385,46 +286,24 @@ Singleton {
         }
     }
 
-    Process {
-        id: watcher
-        command: [Quickshell.shellDir + "/scripts/inotify-watch.py", "-r", root.colorsRoot]
-        running: true
-        stdout: SplitParser {
-            splitMarker: "\n"
-            onRead: (line) => debouncedReload.restart()
-        }
-        onExited: (code) => restartWatcher.start()
-    }
-    Timer { id: restartWatcher; interval: 3000; onTriggered: watcher.running = true }
-    Timer { id: debouncedReload; interval: 400; onTriggered: discovery.running = true }
-
     Component.onCompleted: {
         rebuildPickerModel();
         discovery.running = true;
     }
 
-    FileView {
-        id: indexWatcher
-        path: root.colorsRoot + "/index.json"
-        watchChanges: true
-        printErrors: false
-        onFileChanged: discovery.running = true
-    }
-
-    
-    
-    
-    
-    
-    
-    
+    // ---- saved state ------------------------------------------------------
+    //
+    // Two gates, not a load order: presets and state arrive independently --
+    // the state file may not exist on a first run -- and resolveTheme() is the
+    // only thing that may pick the active theme until both are in.
     property bool presetsResolved: false
     property bool stateResolved: false
     property bool wallpaperApplied: false
-    
+
     property string savedTheme: ""
-    
-    
+
+    // What index.json declares: the lowest of three priorities, below a saved
+    // theme and above the first discovered theme.
     property string declaredTheme: ""
 
     FileView {
@@ -438,17 +317,18 @@ Singleton {
     FileView {
         id: stateWriter
         path: root.statePath
-        
         printErrors: false
     }
 
-    
-    
-    
-    
-    
-    
-    
+    // The picker's rows are a function of the theme NAME, so the model follows
+    // the name rather than each caller remembering to rebuild. Without this the
+    // picker was empty on every fresh load: `resolveTheme()` assigns
+    // `currentName`, but every explicit `rebuildPickerModel()` call site fires
+    // while `currentName` is still "", so `wallpaperRows()` looked up
+    // `presets[""]` and returned []. It only filled in if a later `setTheme` or
+    // `setWallpaper` happened to run.
+    onCurrentNameChanged: rebuildPickerModel()
+
     function resolveTheme() {
         if (!presetsResolved || !stateResolved) return;
         const keys = Object.keys(presets);
@@ -465,11 +345,7 @@ Singleton {
         wallpaperApplied = true;
         if (currentWallpaper) wallpaperChanged(currentWallpaper);
         else if (themeWallpapers.length === 0) console.warn("Theme: no wallpapers discovered for", currentName);
-        
-        
-        
-        
-        
+
         publish(currentName);
     }
 
@@ -477,6 +353,8 @@ Singleton {
         try {
             root.presets = (data && data.themes) ? data.themes : {};
             root.declaredTheme = (data && data.current) || (data && data.default) || "";
+            // Re-pointed here: this caller has just read colors/.
+            colorWatch.sync(root.presets);
         } catch (e) {
             console.warn("Theme: applyPresets failed", e);
         }
@@ -490,8 +368,7 @@ Singleton {
     function applyState(jsonText) {
         try {
             const data = JSON.parse(jsonText);
-            
-            
+
             if (data.theme) savedTheme = data.theme;
             if (data.wallpaperIndex) wallpaperIndex = data.wallpaperIndex;
             rebuildPickerModel();
@@ -508,12 +385,7 @@ Singleton {
 
     IpcHandler {
         target: "theme"
-        
-        
-        
-        
-        
-        
+
         function get(): string { return root.currentName; }
         function set(name: string): void { setTheme(name); }
         function cycle(): void { cycleTheme(); }

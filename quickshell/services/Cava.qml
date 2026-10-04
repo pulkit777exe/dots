@@ -7,6 +7,7 @@ import Quickshell.Io
 
 
 
+
 Singleton {
     id: root
     property var levels: [0, 0, 0] 
@@ -60,9 +61,11 @@ cat ${configPath}`]
     }
 
     function stop() {
-        cavaProc.running = false
         running = false
         levels = [0,0,0]
+        // The smoothed copy has to go too, or the next start resumes from the
+        // last bar heights instead of from silence.
+        smoothedLevels = [0,0,0]
     }
 
     Process {
@@ -82,7 +85,6 @@ cat ${configPath}`]
             onRead: (line) => {
                 if (line.trim() === "yes") {
                     root.available = true
-                    cavaProc.running = true
                     root.running = true
                 } else {
                     root.available = false
@@ -95,7 +97,19 @@ cat ${configPath}`]
 
     Process {
         id: cavaProc
-        
+
+        // A binding, not an assignment. It used to be set imperatively, and
+        // onExited re-armed it from a 1000ms timer whenever `running` was true:
+        // 86400 forks/day if cava ever exited, three times the powerprofilesctl
+        // loop this repo shipped, and invisible because there is no cava binary
+        // and no media player on this machine to trigger it.
+        //
+        // Nothing writes cavaProc.running now. `running` is the only thing that
+        // starts cava, it is cleared the moment cava exits, and it is set again
+        // only by start() -- which is reached from Media, not from cava's own
+        // exit. A failure cannot re-arm itself, so there is no interval, no
+        // backoff, and no non-zero-exit retry to get wrong.
+        running: root.running
         command: ["cava", "-p", root.configPath]
         stdout: SplitParser {
             splitMarker: "\n"
@@ -128,13 +142,19 @@ cat ${configPath}`]
             }
         }
         onExited: (code) => {
-            if (root.running) {
-                
-                restartTimer.start()
+            // Cleared first, so the `running` binding above drops and the
+            // process cannot be restarted from inside this handler. Restarting
+            // is not attempted on either exit code: cava exiting is either
+            // deliberate or a failure to fix, and a timer that re-runs it is the
+            // fork loop this file used to contain.
+            root.running = false
+            root.smoothedLevels = [0,0,0]
+            root.levels = [0,0,0]
+            if (code !== 0) {
+                console.warn("Cava: exited with", code, "- not restarting; cava resumes when media starts")
             }
         }
     }
-    Timer { id: restartTimer; interval: 1000; onTriggered: { if (root.running) cavaProc.running = true } }
 
     
     Connections {
@@ -144,8 +164,11 @@ cat ${configPath}`]
     }
     Connections {
         target: DeviceProfile
+        // Unconditional, so a cava that exited is recovered by a lowSpec flip
+        // too. start() still decides: it returns early unless media is playing,
+        // and stop() has just cleared `running`.
         function onLowSpecChanged() {
-            if (running) { stop(); start(); } 
+            stop(); start()
         }
     }
 

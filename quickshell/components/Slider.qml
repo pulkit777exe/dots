@@ -21,7 +21,7 @@ Item {
     property color accentColor: Theme.colors.accent
     property color trackColor: Theme.colors.surfaceAlt
     property color iconOnFillColor: Theme.colors.accentText
-    property color labelColor: Qt.rgba(1, 1, 1, 0.55)
+    property color labelColor: Theme.withAlpha(Theme.colors.text, 0.55)
 
     signal moved(real value)
 
@@ -62,7 +62,7 @@ Item {
     Rectangle {
         anchors.fill: track
         radius: track.radius
-        color: Qt.rgba(1, 1, 1, 0.05)
+        color: Theme.withAlpha(Theme.colors.text, 0.05)
         opacity: dragArea.containsMouse && !dragArea.pressed ? 1 : 0
         Behavior on opacity { NumberAnimation { duration: MotionConfig.hover(); easing.type: Easing.OutCubic } }
     }

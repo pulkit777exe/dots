@@ -1,9 +1,7 @@
 import QtQuick
 import QtQuick.Layouts
 
-
-
-
+import "../../../services"
 
 
 
@@ -17,6 +15,6 @@ Item {
 
     Rectangle {
         anchors.fill: parent
-        color: Qt.rgba(1, 1, 1, 0.09)
+        color: Theme.colors.divider
     }
 }

@@ -226,7 +226,11 @@ control socket, so `allow_remote_control yes` in `kitty/kitty.conf` must survive
 
 **A config change had no effect.** Some of these files are only read at session
 start. `hyprctl reload` re-reads the Hyprland config; Quickshell changes need
-the shell restarted (log out/in, or restart the `quickshell -p` process).
+the shell restarted (log out/in, or restart the `quickshell -p` process). To
+confirm a reload actually loaded, look for the `Reloading configuration...` /
+`Configuration Loaded` pair in `quickshell/scripts/shell-log.sh tail` — not in
+the journal, which never sees this shell at all (see **The shell's log is not
+in the journal** below).
 
 ## Layout of the shell
 
@@ -254,13 +258,22 @@ fills, selected states, and semantic colours.
 Check the result with:
 
 ```bash
-qmllint -I . -I services -I components -I surfaces $(find . -name '*.qml')
+qmllint-qt6 -I . -I services -I components -I surfaces $(find . -name '*.qml')
 ```
 
-Note that `qmllint` passing does not mean the config loads. It does not resolve
-Quickshell's `Singleton` base type, so a service can lint clean and still fail
-at runtime with "Type X unavailable". When you add a service, actually start
-the shell and read the log:
+Use `qmllint-qt6`, not `qmllint`. On a machine with both the Qt5 and Qt6
+devel packages installed, `/usr/bin/qmllint` is the **Qt5** binary: it
+reports `qmllint 1.0`, analyses nothing, and exits 0 with an empty log on
+this whole tree. `scripts/lint.sh` resolves a Qt6 linter explicitly and
+fails on an empty log for exactly that reason.
+
+Note that `qmllint` passing does not mean the config loads. It does not
+resolve Quickshell's `Singleton` base type, so a service can lint clean and
+still fail at runtime with "Type X unavailable". It also cannot be trusted
+with an import it cannot resolve — that case exits 0 silently, which is why
+`lint.sh` separately asserts every `Quickshell.*` module this tree imports
+is present in the installed `quickshell` binary. When you add a service,
+actually start the shell and read the log:
 
 ```bash
 quickshell -c ~/.config/quickshell
@@ -275,12 +288,51 @@ quickshell -c ~/.config/quickshell
 | `quickshell/CHANGELOG.md` | what was fixed and why, in order -- read this before "fixing" something that looks wrong, because it usually is not |
 | `SECURITY.md` | what is and is not sandboxed |
 
-Two checks worth running after any change:
+Three checks worth running after any change:
 
 ```bash
-./scripts/lint.sh      # grep rules, the IpcHandler scope audit, qmllint
-./tests/run.sh         # contract tests: theme round trip, IPC, surfaces
+./scripts/lint.sh                    # grep rules, the IpcHandler scope audit,
+                                     # the Quickshell module-presence check,
+                                     # and qmllint (Qt6)
+./tests/run.sh                       # contract tests: theme round trip, IPC,
+                                     # surfaces
+quickshell/scripts/shell-log.sh tail # what the *running* shell actually logged
 ```
 
 `tests/run.sh` skips the checks that need a running shell when there isn't
 one, so it is safe to run on a fresh clone.
+
+### The shell's log is not in the journal
+
+The third command is not redundant with the other two — it is the only way to
+see what the running shell did. Hyprland starts Quickshell with stdout and
+stderr on `/dev/null`, so:
+
+```bash
+journalctl --user -b _PID=$(pgrep -x quickshell)   # No entries
+journalctl --user -b | grep -i quickshell         # only systemd's own
+                                                  # start/stop lines, and
+                                                  # coredump records
+```
+
+Both are satisfied by a shell that is failing. Don't treat either as a check.
+The shell writes its own log at
+`/run/user/$UID/quickshell/by-pid/<pid>/log.log` — a symlink into
+`by-id/<instance>/` — and announces that directory as its third log line
+(`Saving logs to ".../by-id/<instance>/log.qslog"`), so the directory is not a
+guess. `log.qslog` is Quickshell's structured log; `log.log` next to it is the
+same content as plain text. `shell-log.sh` reads the text one:
+
+```bash
+quickshell/scripts/shell-log.sh path                     # the resolved path
+quickshell/scripts/shell-log.sh tail 40                  # last 40 lines
+quickshell/scripts/shell-log.sh errors                   # ERROR lines only
+quickshell/scripts/shell-log.sh errors "2026-10-02 17:11:44"
+```
+
+`errors` takes an optional `YYYY-MM-DD HH:MM:SS` and exits **3** when it
+matched nothing, so the last one is a check that can actually fail. Every mode
+exits 1 with a single line on stderr when no shell is running. If a scratch
+`quickshell -c /tmp/...` is up alongside the session shell, it reads the
+**oldest** instance (lowest PID, i.e. the one Hyprland started); `--pid <pid>`
+overrides that.

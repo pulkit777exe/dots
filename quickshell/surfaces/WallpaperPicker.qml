@@ -4,6 +4,24 @@ import QtQuick.Layouts
 import "../components"
 import "../services"
 
+// WallpaperPicker.qml -- the wallpaper panel: a title, a horizontal strip of
+// thumbnails, and a caption saying which one you are on.
+//
+// What is left in this file is the picker's own state: which wallpaper is
+// current, how that tracks the theme's saved wallpaper, the arrow keys, and
+// the geometry of the strip -- 170x113 cards, 16 between them, centred on
+// the current one. What a single thumbnail looks like is
+// WallpaperCard.qml.
+//
+// The strip is a ListView rather than a Row, because it has to keep the
+// current item centred without ever scrolling past the ends: that is
+// StrictlyEnforceRange plus SnapToItem, and both are properties of the view
+// rather than of the cards, so they stayed here.
+//
+// The model, the theme name and the `wallpaperSelected` signal all come from
+// IslandCenterPanel, which is what actually applies a wallpaper. Nothing here
+// touches the filesystem.
+
 Surface {
     id: root
 
@@ -14,31 +32,18 @@ Surface {
 
     signal wallpaperSelected(int index)
 
-    
-    
-    
-    
-    
-    
-    
-    
     width: 1008
     implicitHeight: 222
     cornerRadius: 20
 
-    
-    
-    
-    
-    
     readonly property real itemW: 170
     readonly property real itemH: 113
     readonly property real cardSpacing: 16
 
-    
-    
-    
 
+    // Land the selection on the wallpaper the theme is actually using rather
+    // than wherever it happened to be, because the panel is opened to change
+    // the wallpaper from the one already set.
     function resetSelection() {
         if (
             !wallpapers ||
@@ -62,6 +67,8 @@ Surface {
         currentIndex = 0
     }
 
+    // Wraps, unlike the clipboard list: a strip of six has no end to stop at,
+    // and wrapping is what makes left-then-right feel like one control.
     function moveSelection(delta) {
         if (list.count === 0)
             return
@@ -94,9 +101,6 @@ Surface {
         }
     }
 
-    
-    
-    
 
     onWallpapersChanged:
         resetSelection()
@@ -109,6 +113,9 @@ Surface {
             resetSelection()
             forceActiveFocus()
 
+            // After the model has been laid out, not before: the strip is
+            // sized by its cards, and centring index 0 in a list that has not
+            // measured itself yet centres it in the wrong place.
             Qt.callLater(function() {
                 if (list.count > 0) {
                     list.positionViewAtIndex(
@@ -125,9 +132,6 @@ Surface {
 
     focus: true
 
-    
-    
-    
 
     Keys.onLeftPressed:
         function(event) {
@@ -159,9 +163,6 @@ Surface {
             event.accepted = true
         }
 
-    
-    
-    
 
     ColumnLayout {
         anchors.fill: parent
@@ -169,9 +170,6 @@ Surface {
 
         spacing: 12
 
-        
-        
-        
 
         RowLayout {
             Layout.fillWidth: true
@@ -195,12 +193,7 @@ Surface {
                 font.pixelSize: 11
 
                 color:
-                    Qt.rgba(
-                        1,
-                        1,
-                        1,
-                        0.45
-                    )
+                    Theme.withAlpha(Theme.colors.text, 0.45)
 
                 text:
                     root.themeName
@@ -210,9 +203,6 @@ Surface {
             }
         }
 
-        
-        
-        
 
         ListView {
             id: list
@@ -225,12 +215,6 @@ Surface {
 
             spacing: root.cardSpacing
 
-            
-            
-            
-            
-            
-            
             clip: true
 
             model:
@@ -239,11 +223,13 @@ Surface {
             currentIndex:
                 root.currentIndex
 
+            // The current card stays in the middle whatever the list width,
+            // and the strip refuses to scroll past either end -- which is why
+            // there is empty panel to the left of the first card rather than
+            // the first card being flush against it.
             highlightRangeMode:
                 ListView.StrictlyEnforceRange
 
-            
-            
             preferredHighlightBegin:
                 (width - root.itemW) / 2
 
@@ -258,178 +244,34 @@ Surface {
             snapMode:
                 ListView.SnapToItem
 
-            delegate: Item {
-                
-                
-                
-                
-                id: card
-
-                required property string source
-                required property bool selected
-                required property string fileName
+            delegate: WallpaperCard {
+                required property var modelData
                 required property int index
 
-                width: root.itemW
-                height: root.itemH
+                // itemW and itemH are declared here and passed down, so the
+                // numbers the highlight range is computed from and the numbers
+                // the cards are laid out with cannot disagree.
+                cardWidth: root.itemW
+                cardHeight: root.itemH
 
-                
-                
-                
-                
-                
-                
-                
-                
-                scale: 1
+                onPicked: {
+                    root.currentIndex =
+                        index
 
-                opacity:
-                    ListView.isCurrentItem
-                        ? 1
-                        : 0.86
+                    list.currentIndex =
+                        index
 
-                Behavior on opacity {
-                    enabled:
-                        !MotionConfig.reduceMotion
+                    list.positionViewAtIndex(
+                        index,
+                        ListView.Center
+                    )
 
-                    NumberAnimation {
-                        duration:
-                            MotionConfig.hover()
-                    }
-                }
-
-                
-                
-                
-
-                Rectangle {
-                    anchors.fill: parent
-
-                    radius: 12
-                    clip: true
-
-                    color:
-                        Theme.colors.surfaceAlt
-
-                    border.width:
-                        selected ? 2 : 1
-
-                    border.color:
-                        selected
-                            ? Theme.colors.accent
-                            : Qt.rgba(
-                                1,
-                                1,
-                                1,
-                                0.06
-                              )
-
-                    Image {
-                        anchors.fill: parent
-
-                        source:
-                            card.source
-
-                        fillMode:
-                            Image.PreserveAspectCrop
-
-                        asynchronous: true
-                        cache: true
-                        smooth: true
-
-                        sourceSize:
-                            Qt.size(
-                                392,
-                                236
-                            )
-                    }
-
-                    Rectangle {
-                        anchors.fill: parent
-
-                        color:
-                            Qt.rgba(
-                                0,
-                                0,
-                                0,
-                                0.08
-                            )
-                    }
-
-                    Rectangle {
-                        visible:
-                            selected
-
-                        width: 7
-                        height: 7
-
-                        radius: 3.5
-
-                        anchors.top:
-                            parent.top
-
-                        anchors.right:
-                            parent.right
-
-                        anchors.margins: 8
-
-                        color:
-                            Theme.colors.accent
-                    }
-                }
-
-                
-                
-                
-
-                HoverHandler {
-                    id: hover
-                }
-
-                Rectangle {
-                    anchors.fill: parent
-
-                    radius: 12
-
-                    color:
-                        hover.hovered &&
-                        !ListView.isCurrentItem
-                            ? Qt.rgba(
-                                1,
-                                1,
-                                1,
-                                0.06
-                              )
-                            : "transparent"
-                }
-
-                
-                
-                
-
-                TapHandler {
-                    onTapped: {
-                        root.currentIndex =
-                            index
-
-                        list.currentIndex =
-                            index
-
-                        list.positionViewAtIndex(
-                            index,
-                            ListView.Center
-                        )
-
-                        root.applySelection()
-                        root.forceActiveFocus()
-                    }
+                    root.applySelection()
+                    root.forceActiveFocus()
                 }
             }
         }
 
-        
-        
-        
 
         RowLayout {
             Layout.fillWidth: true
@@ -443,12 +285,7 @@ Surface {
                 font.pixelSize: 11
 
                 color:
-                    Qt.rgba(
-                        1,
-                        1,
-                        1,
-                        0.50
-                    )
+                    Theme.withAlpha(Theme.colors.text, 0.50)
 
                 elide:
                     Text.ElideMiddle
@@ -475,12 +312,7 @@ Surface {
                 font.pixelSize: 11
 
                 color:
-                    Qt.rgba(
-                        1,
-                        1,
-                        1,
-                        0.35
-                    )
+                    Theme.withAlpha(Theme.colors.text, 0.35)
 
                 text:
                     root.wallpapers.length > 0

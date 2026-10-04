@@ -5,6 +5,21 @@ import Quickshell.Io
 
 Singleton {
     id: root
+
+    // Nine of the ten `property bool` declarations below are READONLY
+    // projections of a key on the single `JsonAdapter data`. A readonly
+    // binding is re-evaluated whenever its key changes and cannot be
+    // assigned, so none of them can be set inconsistently with the JSON they
+    // read -- which is the invariant the "at most six booleans per subsystem"
+    // rule exists to protect. `resolved`, the tenth, is the only writable one
+    // and shadows nothing: both of its writes set it to true.
+    //
+    // So the count is a count of NAMES, not of flags that can disagree. It
+    // is not reducible by renaming keys in settings-config.json without
+    // breaking every `ConfigStore.<name>` reader in surfaces/, and not by
+    // splitting the adapter either -- `writeAdapter()` is what makes all 23
+    // setters atomic against each other, so two adapters would be two files
+    // and no cross-key atomicity. Measured and left alone on purpose.
     readonly property int currentPage: data.currentPage
 
 

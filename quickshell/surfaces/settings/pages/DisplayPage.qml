@@ -12,7 +12,7 @@ ColumnLayout {
         spacing: 14
         Rectangle {
             Layout.preferredWidth: 56; Layout.preferredHeight: 56; radius: 28
-            color: Qt.rgba(1,1,1,0.06)
+            color: Theme.colors.surface
             Icon { anchors.centerIn: parent; icon: "brightness_high"; size: 22; iconColor: Theme.colors.accent }
         }
         ColumnLayout {
@@ -50,7 +50,7 @@ ColumnLayout {
     StyledText {
         Layout.fillWidth: true
         variant: "mediaSubtitle"
-        color: Qt.rgba(1,1,1,0.5)
+        color: Theme.withAlpha(Theme.colors.text, 0.5)
         wrapMode: Text.WordWrap
         text: NightLight.available ? "Uses hyprsunset (Wayland). No daemon → toggle does nothing, as noted in NightLight.qml." : "hyprsunset not found — install for Night Light to work."
     }

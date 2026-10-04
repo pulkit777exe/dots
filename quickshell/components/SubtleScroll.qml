@@ -63,7 +63,7 @@ Item {
         height: ind.barSize
         radius: 1.5
         y: ind.inset + (ind.track - height) * ind.pos
-        color: ind.containsMouse ? Theme.colors.accent : Qt.rgba(1, 1, 1, 0.5)
+        color: ind.containsMouse ? Theme.colors.accent : Theme.withAlpha(Theme.colors.text, 0.5)
         opacity: 0.18
 
         Behavior on opacity {

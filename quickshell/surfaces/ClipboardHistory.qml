@@ -4,9 +4,24 @@ import QtQuick.Layouts
 import "../components"
 import "../services"
 
-
-
-
+// ClipboardHistory.qml -- the clipboard panel: a search field, a list of
+// entries, and the keys that walk a selection through it.
+//
+// What is left in this file is the panel's own state: which entry is
+// selected, how the query and the selection follow each other, and the
+// focus retry that puts the caret in the search field before the user can
+// type. Three things that used to be here are not any more, because each is
+// a separate thing to change and each now has a file of its own:
+//
+//   ClipboardSearchBar.qml  the header: search field and Clear all
+//   ClipboardStatus.qml     the line shown when there is no list
+//   ClipboardRow.qml        one entry, as a row
+//
+// Everything to do with cliphist -- the processes, the parsing, the
+// thumbnail decode, the entries themselves -- is in
+// services/Clipboard.qml, and this file only reads it. There is no Process
+// here and none should arrive: a panel that runs `cliphist` cannot be
+// reasoned about by reading the panel.
 
 Surface {
     id: root
@@ -29,11 +44,13 @@ Surface {
     opacity: 0
     scale: 0.96
 
+    // Connected by IslandCenterPanel, and never emitted from here: every path
+    // out of this panel calls UiState.closeAll() directly, so the signal is
+    // dead. It is left in place because IslandCenterPanel.qml has a handler
+    // on it and that file is not this one to change -- a finding to report,
+    // not something to quietly drop.
     signal closeRequested()
 
-    
-    
-    
 
     function moveSelection(delta) {
         if (results.length === 0)
@@ -71,19 +88,21 @@ Surface {
         }
     }
 
-    function searchFieldFocus() {
-        search.text = ""
-        search.focusInput()
+    // Focus the header and empty it. Called on completion and every time the
+    // panel opens, so a search left over from last time does not silently
+    // filter a history the user cannot see is being filtered.
+    function focusSearch() {
+        searchBar.focusAndClear()
         selectedIndex = 0
     }
 
+    // Unused here and by everything else in the tree; Launcher.qml has the
+    // same function with the same problem. Kept for the same reason, and
+    // reported rather than removed.
     function searchFieldHasFocus(): bool {
-        return search.hasFocus
+        return searchBar.hasFocus
     }
 
-    
-    
-    
 
     onVisibleChanged: {
         if (visible) {
@@ -92,6 +111,11 @@ Surface {
         }
     }
 
+    // The panel opens without a key event ever reaching it, so the caret has
+    // to be asked for: the window that hosts this is focused by the
+    // compositor, and on the first frame the search field is not ready to
+    // take focus. 60ms, repeating, until either this panel is hidden again or
+    // the field actually has it.
     Timer {
         id: focusRetry
 
@@ -101,19 +125,16 @@ Surface {
         onTriggered: {
             if (
                 !root.visible ||
-                search.hasFocus
+                searchBar.hasFocus
             ) {
                 stop()
                 return
             }
 
-            searchFieldFocus()
+            root.focusSearch()
         }
     }
 
-    
-    
-    
 
     ParallelAnimation {
         id: appearAnimation
@@ -137,9 +158,6 @@ Surface {
         }
     }
 
-    
-    
-    
 
     ColumnLayout {
         id: column
@@ -149,103 +167,26 @@ Surface {
 
         spacing: 0
 
-        
-        
-        
 
-        RowLayout {
+        ClipboardSearchBar {
+            id: searchBar
+
             Layout.fillWidth: true
-            Layout.preferredHeight: 44
 
-            Layout.leftMargin: 8
-            Layout.rightMargin: 8
+            onMoveSelection:
+                (delta) => root.moveSelection(
+                    delta
+                )
 
-            spacing: 8
+            onAccepted:
+                root.activateSelection()
 
-            SearchField {
-                id: search
-
-                Layout.fillWidth: true
-
-                placeholderText:
-                    "Search clipboard..."
-
-                onNavigateDown:
-                    root.moveSelection(1)
-
-                onNavigateUp:
-                    root.moveSelection(-1)
-
-                Keys.onDownPressed:
-                    root.moveSelection(1)
-
-                Keys.onUpPressed:
-                    root.moveSelection(-1)
-
-                Keys.onEscapePressed:
-                    UiState.closeAll()
-
-                onAccepted:
-                    root.activateSelection()
-
-                onTextChanged: {
-                    Clipboard.query = text
-                    root.selectedIndex = 0
-                }
-            }
-
-            Rectangle {
-                Layout.preferredHeight: 32
-
-                Layout.preferredWidth:
-                    clearText.implicitWidth + 16
-
-                radius: 16
-
-                color:
-                    clearHover.hovered
-                        ? Qt.rgba(
-                            1,
-                            0.3,
-                            0.3,
-                            0.15
-                          )
-                        : "transparent"
-
-                visible:
-                    Clipboard.entries.length > 0
-
-                StyledText {
-                    id: clearText
-
-                    anchors.centerIn: parent
-
-                    font.pixelSize: 12
-                    font.weight: Font.Medium
-
-                    textColor:
-                        Theme.colors.danger
-
-                    text: "Clear all"
-                }
-
-                HoverHandler {
-                    id: clearHover
-
-                    cursorShape:
-                        Qt.PointingHandCursor
-                }
-
-                TapHandler {
-                    onTapped:
-                        Clipboard.wipe()
-                }
-            }
+            // Every keystroke re-filters the list, so the old index points at
+            // a different entry, or past the end of the list entirely.
+            onQueryEdited:
+                root.selectedIndex = 0
         }
 
-        
-        
-        
 
         Rectangle {
             Layout.fillWidth: true
@@ -255,77 +196,25 @@ Surface {
             Layout.bottomMargin: 8
 
             color:
-                Qt.rgba(
-                    1,
-                    1,
-                    1,
-                    0.08
-                )
+                Theme.colors.divider
 
             visible:
                 Clipboard.entries.length > 0
         }
 
-        
-        
-        
 
-        StyledText {
+        ClipboardStatus {
             Layout.fillWidth: true
             Layout.margins: 24
 
             Layout.alignment:
                 Qt.AlignHCenter
-
-            horizontalAlignment:
-                Text.AlignHCenter
-
-            font.pixelSize: 13
-
-            textColor:
-                Qt.rgba(
-                    1,
-                    1,
-                    1,
-                    0.5
-                )
-
-            visible:
-                Clipboard.available &&
-                Clipboard.filteredEntries.length === 0
-
-            text:
-                Clipboard.entries.length === 0
-                    ? "Clipboard is empty"
-                    : "No matching items found"
         }
 
-        StyledText {
-            Layout.fillWidth: true
-            Layout.margins: 24
 
-            Layout.alignment:
-                Qt.AlignHCenter
-
-            horizontalAlignment:
-                Text.AlignHCenter
-
-            font.pixelSize: 13
-
-            textColor:
-                Theme.colors.danger
-
-            visible:
-                !Clipboard.available
-
-            text:
-                "cliphist is not installed or available."
-        }
-
-        
-        
-        
-
+        // The viewport is sized in rows rather than given a fixed height, so
+        // a short history does not leave a tall empty panel. 52 is one row
+        // (50, in ClipboardRow.qml) plus the 2 below.
         ListView {
             id: listView
 
@@ -352,354 +241,34 @@ Surface {
 
             spacing: 2
 
-            delegate: Item {
-                id: rowDelegate
-
+            delegate: ClipboardRow {
                 required property var modelData
                 required property int index
 
                 width: listView.width
-                height: 50
 
-                readonly property bool isSelected:
-                    index === root.selectedIndex
+                entry: modelData
+                selected: index === root.selectedIndex
 
-                readonly property bool isHovered:
-                    rowHover.hovered
+                onActivated: {
+                    root.selectedIndex =
+                        index
 
-                
-                
-                
-
-                Rectangle {
-                    anchors.fill: parent
-
-                    radius: 12
-
-                    color:
-                        rowDelegate.isSelected
-                            ? Theme.colors.surfaceAlt
-                            : (
-                                rowDelegate.isHovered
-                                    ? Qt.rgba(
-                                        1,
-                                        1,
-                                        1,
-                                        0.04
-                                      )
-                                    : "transparent"
-                              )
-
-                    Behavior on color {
-                        ColorAnimation {
-                            duration:
-                                MotionConfig.hover()
-                        }
-                    }
+                    root.activateSelection()
                 }
 
-                
-                
-                
-
-                Rectangle {
-                    width: 3
-                    radius: 2
-
-                    color:
-                        Theme.colors.accent
-
-                    anchors.left:
-                        parent.left
-
-                    anchors.leftMargin: 2
-
-                    anchors.verticalCenter:
-                        parent.verticalCenter
-
-                    height:
-                        parent.height * 0.5
-
-                    opacity:
-                        rowDelegate.isSelected
-                            ? 1
-                            : 0
-
-                    Behavior on opacity {
-                        NumberAnimation {
-                            duration:
-                                MotionConfig.hover()
-                        }
-                    }
-                }
-
-                
-                
-                
-
-                RowLayout {
-                    anchors.fill: parent
-
-                    anchors.leftMargin: 14
-                    anchors.rightMargin: 12
-
-                    spacing: 12
-
-                    
-                    
-                    
-
-                    Item {
-                        Layout.preferredWidth: 34
-                        Layout.preferredHeight: 34
-
-                        
-
-                        Rectangle {
-                            anchors.fill: parent
-
-                            radius: 8
-
-                            color:
-                                Qt.rgba(
-                                    1,
-                                    1,
-                                    1,
-                                    0.06
-                                )
-
-                            visible:
-                                rowDelegate.modelData.isImage
-
-                            clip: true
-
-                            Image {
-                                anchors.fill: parent
-
-                                visible:
-                                    rowDelegate.modelData
-                                        .thumbnailReady === true
-
-                                source:
-                                    rowDelegate.modelData
-                                        .thumbnailReady === true
-                                        ? rowDelegate.modelData.thumbnail
-                                        : ""
-
-                                fillMode:
-                                    Image.PreserveAspectCrop
-
-                                smooth: true
-                                asynchronous: true
-                                cache: true
-                            }
-
-                            
-                            
-
-                            Icon {
-                                anchors.centerIn: parent
-
-                                visible:
-                                    rowDelegate.modelData
-                                        .thumbnailReady !== true
-
-                                icon:
-                                    "image"
-
-                                size: 16
-
-                                iconColor:
-                                    Theme.colors.accent
-                            }
-
-                            Rectangle {
-                                anchors.fill: parent
-
-                                radius: 8
-
-                                color:
-                                    "transparent"
-
-                                border.color:
-                                    Qt.rgba(
-                                        1,
-                                        1,
-                                        1,
-                                        0.1
-                                    )
-
-                                border.width: 0.5
-                            }
-                        }
-
-                        
-                        
-                        
-
-                        Rectangle {
-                            anchors.fill: parent
-
-                            radius: 8
-
-                            color:
-                                Qt.rgba(
-                                    1,
-                                    1,
-                                    1,
-                                    0.06
-                                )
-
-                            visible:
-                                !rowDelegate.modelData.isImage
-
-                            Icon {
-                                anchors.centerIn: parent
-
-                                icon:
-                                    "content_paste"
-
-                                size: 16
-
-                                iconColor:
-                                    Qt.rgba(
-                                        1,
-                                        1,
-                                        1,
-                                        0.8
-                                    )
-                            }
-                        }
-                    }
-
-                    
-                    
-                    
-
-                    ColumnLayout {
-                        Layout.fillWidth: true
-
-                        spacing: 2
-
-                        StyledText {
-                            Layout.fillWidth: true
-
-                            font.pixelSize: 13
-
-                            font.weight:
-                                rowDelegate.modelData.isImage
-                                    ? Font.DemiBold
-                                    : Font.Normal
-
-                            textColor:
-                                Qt.rgba(
-                                    1,
-                                    1,
-                                    1,
-                                    0.9
-                                )
-
-                            elide:
-                                Text.ElideRight
-
-                            maximumLineCount: 1
-
-                            text:
-                                rowDelegate.modelData.isImage
-                                    ? "Image"
-                                    : rowDelegate
-                                        .modelData
-                                        .preview
-                        }
-
-                        StyledText {
-                            Layout.fillWidth: true
-
-                            font.pixelSize: 11
-
-                            textColor:
-                                Qt.rgba(
-                                    1,
-                                    1,
-                                    1,
-                                    0.5
-                                )
-
-                            elide:
-                                Text.ElideRight
-
-                            maximumLineCount: 1
-
-                            text:
-                                rowDelegate.modelData.isImage
-                                    ? rowDelegate
-                                        .modelData
-                                        .preview
-                                    : ""
-
-                            visible:
-                                rowDelegate.modelData.isImage
-                        }
-                    }
-
-                    
-                    
-                    
-
-                    IconButton {
-                        icon: "close"
-
-                        size: 26
-                        iconSize: 13
-
-                        opacity:
-                            rowDelegate.isHovered ||
-                            rowDelegate.isSelected
-                                ? 0.8
-                                : 0
-
-                        Behavior on opacity {
-                            NumberAnimation {
-                                duration:
-                                    MotionConfig.hover()
-                            }
-                        }
-
-                        onClicked:
-                            Clipboard.deleteEntry(
-                                rowDelegate
-                                    .modelData
-                                    .id
-                            )
-                    }
-                }
-
-                HoverHandler {
-                    id: rowHover
-
-                    cursorShape:
-                        Qt.PointingHandCursor
-                }
-
-                TapHandler {
-                    onTapped: {
-                        root.selectedIndex =
-                            index
-
-                        root.activateSelection()
-                    }
-                }
+                onDeleteRequested:
+                    Clipboard.deleteEntry(
+                        entry.id
+                    )
             }
         }
     }
 
-    
-    
-    
 
     Component.onCompleted: {
         Clipboard.refresh()
-        searchFieldFocus()
+        root.focusSearch()
 
         if (MotionConfig.reduceMotion) {
             root.opacity = 1

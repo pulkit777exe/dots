@@ -45,6 +45,38 @@ unreadable reply, no answer -- this hands the call to the real
 `quickshell ipc` client rather than reporting an error. The fast path is
 an optimisation and must never be the reason a keypress does nothing.
 
+Reply size, and why there is no bound here
+-----------------------------------------
+A reply is a u32-BE byte length, so on paper it can be 4 GiB and this
+file used to accumulate a reply of any size into a `bytes` object with
+`chunks += part`. Two things changed that.
+
+`clipboard list` is the one reply in the tree big enough to matter, and
+it was too big for the socket: 433,018 bytes of UTF-16 at a 750-entry
+history, against a 212,992-byte send buffer
+(`net.core.wmem_default`). The shell wrote what fitted and closed, so
+every client saw a JSON document that ended mid-string. Measured here:
+the declared length was constant while the delivered bytes varied
+between 219,264 and 255,808, and a hand-written reader to EOF saw the
+same truncation as this file -- so nothing here was dropping bytes, the
+shell was.
+
+That failure is not merely a truncated reply. Repeated oversized replies
+left the shell's IPC server answering *every* subsequent query with
+"Not ready to accept queries yet." at exit status 0, which is the same
+string tests/run.sh retries through, so it reads as a reload rather than
+as a wedged socket. Bounding the reply in Clipboard.qml fixed it without
+restarting anything.
+
+So the bound belongs in QML, where the payload's content is known, and
+this file only needs to not be the thing that makes it worse: the
+accumulator is a bytearray so growing it is linear rather than
+quadratic, and a reply that declares more than MAX_REPLY is reported as
+an unreadable reply -- which falls back to the real client, as any other
+unreadable reply does -- instead of being assembled here first. That
+ceiling is 64x the largest reply this tree produces and 19x one socket
+send buffer; nothing legitimate reaches it.
+
 Exit status mirrors `quickshell ipc call`: 0 on success, non-zero if the
 call could not be made at all.
 """
@@ -61,6 +93,12 @@ FALLBACK_TIMEOUT = 10.0
 
 REQ_VERSION = 3
 RES_VERSION = 5
+
+# A reply longer than this is not assembled. See the module docstring: the
+# ceiling exists so a reply too large for the socket is reported rather than
+# buffered, and it sits far above anything this shell produces (`clipboard
+# list`, the largest, answers in about 65 KB).
+MAX_REPLY = 4 << 20
 
 
 def socket_path(config=None):
@@ -157,6 +195,8 @@ def unpack(data):
     if kind != REPLY_TYPE:
         raise ValueError(f"unexpected reply type {kind}")
     n = int.from_bytes(data[2:6], "big")
+    if n > MAX_REPLY:
+        raise ValueError(f"reply declares {n} bytes, over the {MAX_REPLY}-byte ceiling")
     if 6 + n > len(data):
         raise ValueError(f"truncated reply: want {n} bytes, have {len(data) - 6}")
     return status, data[6:6 + n].decode("utf-16-be", "replace")
@@ -171,7 +211,13 @@ def call(sock, target, function, args=()):
     payload += CALL_TAIL
     sock.sendall(payload)
 
-    chunks = b""
+    # bytearray, not bytes: `chunks += part` on a bytes object copies
+    # everything received so far on every 64 KiB chunk, which is quadratic
+    # in the reply's size. A 65 KB reply is two chunks and does not care --
+    # but the whole point of bounding the reply in QML is that its size is
+    # not this file's problem, and a buffer that copies itself on every
+    # chunk is how that becomes one.
+    chunks = bytearray()
     sock.settimeout(TIMEOUT)
     while True:
         try:
@@ -181,6 +227,11 @@ def call(sock, target, function, args=()):
         if not part:
             break
         chunks += part
+        # Bounded on what has arrived rather than on what was declared: a
+        # reply the socket will not carry keeps declaring a size it never
+        # delivers, so the declared length is no help as a stopping rule.
+        if len(chunks) > MAX_REPLY:
+            raise ValueError(f"reply exceeds the {MAX_REPLY}-byte ceiling")
         try:
             status, value = unpack(chunks)
         except ValueError:
@@ -215,7 +266,16 @@ def fallback(argv):
     """
     try:
         done = subprocess.run(
-            ["quickshell", "ipc", *argv],
+            # `call` is a subcommand of `ipc`, not an optional extra: without
+            # it `quickshell` exits 106 with "A subcommand is required", so
+            # every keybind's fallback silently failed and reported the wrong
+            # error. Found because `clipboard list` overflowed the fast path's
+            # socket reply and was the one call that landed here in practice.
+            # That reply is bounded now (see the module docstring), so this
+            # path is no longer reachable that way -- the reason it was fixed
+            # is kept because the next reply too large for the socket will
+            # arrive here again, and by then it will be the only clue.
+            ["quickshell", "ipc", "call", *argv],
             capture_output=True, text=True, timeout=FALLBACK_TIMEOUT,
         )
     except (OSError, subprocess.TimeoutExpired) as e:

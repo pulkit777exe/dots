@@ -9,10 +9,10 @@ Item {
     property string iconSource: ""
 
     property color iconBackground:
-        Qt.rgba(1, 1, 1, 0.08)
+        Theme.withAlpha(Theme.colors.text, 0.08)
 
     property color iconColor:
-        Qt.rgba(1, 1, 1, 0.85)
+        Theme.withAlpha(Theme.colors.text, 0.85)
 
     property string title: ""
     property string subtitle: ""

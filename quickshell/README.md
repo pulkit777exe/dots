@@ -134,13 +134,56 @@ than breaking.
 
 ## Known gaps
 
-- **~300 `qmllint` "unqualified access" warnings** across ~30 files —
-  the legacy implicit-context-property lookup pattern inside
-  delegates/`Connections` blocks. This still works (Qt fully supports
-  it), it's just superseded by `pragma ComponentBehavior: Bound` +
-  `required property`. Not a bug, just not modernized everywhere yet.
-  `SettingsApp.qml`'s nav delegate was converted as a template for
-  doing the rest.
+- **`qmllint` needs the Qt6 binary, and this tree is not clean under it.**
+  `/usr/bin/qmllint` is the **Qt5** linter on a machine with both the Qt5
+  and Qt6 devel packages installed — it reports `qmllint 1.0`, analyses
+  nothing, and exits 0 with an empty log on all 82 files.
+  `scripts/lint.sh` now resolves `qmllint-qt6` explicitly and fails on an
+  empty log for that reason. Run `qmllint-qt6` by hand for the real
+  output. Under it the tree is **0 errors, ~3000 warnings** (the exact
+  count moves as files change, and drops while a file is mid-edit), and
+  the warnings are not one class: the large majority are `[import]` and
+  then `[unresolved-type]`, and both of those are just qmllint saying it
+  cannot resolve `Quickshell.*` — it has no import path for a module
+  Quickshell registers in-process, which is also why it cannot help with
+  a load-time import failure. What is left is ~500 `[unqualified]` across
+  ~37 files (the legacy implicit-context-property lookup inside
+  delegates/`Connections`; it works, and
+  `pragma ComponentBehavior: Bound` + `required property` supersedes it —
+  `SettingsApp.qml`'s nav delegate was converted as a template for doing
+  the rest), plus small counts of `[incompatible-type]`, `[required]` and
+  `[property-override]`. **None of them is the Round 7 bug class** —
+  nothing there is a `Service.member` that does not exist.
+  `scripts/ipc-audit.py` is the check that covers that, and it is clean
+  across 271 references.
+- **`journalctl` is not a way to read this shell's log.** Hyprland starts
+  Quickshell with stdout and stderr on `/dev/null`, so
+  `journalctl --user -b _PID=<pid>` answers `No entries` and
+  `journalctl --user -b | grep -i quickshell` turns up only systemd's own
+  start/stop lines and coredump records — both of which a shell that is failing
+  completely also satisfies, so neither is a check. The shell writes its own
+  log at `$XDG_RUNTIME_DIR/quickshell/by-pid/<pid>/log.log`, a symlink into
+  `by-id/<instance>/log.log`, and announces that directory as its third log
+  line (`Saving logs to ".../by-id/<instance>/log.qslog"`), so the directory is
+  not a guess. `log.qslog` is Quickshell's structured log; `log.log` beside it
+  is the same content as plain text, and is the one worth grepping. Read it
+  with `scripts/shell-log.sh`:
+
+  ```sh
+  scripts/shell-log.sh path                             # the resolved path
+  scripts/shell-log.sh tail 40                          # last 40 lines
+  scripts/shell-log.sh errors                           # ERROR lines only
+  scripts/shell-log.sh errors "2026-10-02 17:11:44"     # only since then
+  ```
+
+  `errors` exits 3 when it matched nothing, so it can be used as a check; every
+  mode exits 1 with one line on stderr when no shell is running. It reads the
+  *oldest* running instance (lowest PID — the session shell, not a scratch
+  `quickshell -c /tmp/...` one); `--pid <pid>` overrides that. The
+  `Reloading configuration...` / `Configuration Loaded` pairs in that log are
+  what a reload has to be judged against. A sibling gap, still open:
+  `install.sh --check` does not assert the log path resolves, so a Quickshell
+  that moved its runtime dir would only be noticed by reading this file by hand.
 - No visual regression testing — every fix in the CHANGELOG was
   verified by static audit (reading the actual Quickshell/service
   source, cross-checking property and function names) or by a real

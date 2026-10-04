@@ -38,14 +38,14 @@ Surface {
     
     
     
-    backgroundColor: "#000000"
+    backgroundColor: Theme.colors.background
 
     readonly property color accent: Theme.colors.accent
     readonly property color accentText: Theme.colors.accentText
     
     
     
-    readonly property color tileInactiveBg: Qt.rgba(1, 0.875, 0.75, 0.063)
+    readonly property color tileInactiveBg: Theme.colors.surface
     readonly property color dangerColor: Theme.colors.danger
 
     signal actionTaken()
@@ -157,7 +157,7 @@ Surface {
                 Layout.alignment: Qt.AlignHCenter
                 icon: tile.confirming ? "warning" : tile.icon
                 size: 22
-                iconColor: (tile.primary || tile.confirming) ? root.accentText : Qt.rgba(1, 1, 1, 0.9)
+                iconColor: (tile.primary || tile.confirming) ? root.accentText : Theme.withAlpha(Theme.colors.text, 0.9)
             }
 
             StyledText {
@@ -165,7 +165,7 @@ Surface {
                 font.pixelSize: 12
                 font.weight: tile.primary ? Font.DemiBold : Font.Medium
                 text: tile.confirming ? "Confirm?" : tile.label
-                textColor: (tile.primary || tile.confirming) ? root.accentText : Qt.rgba(1, 1, 1, 0.88)
+                textColor: (tile.primary || tile.confirming) ? root.accentText : Theme.withAlpha(Theme.colors.text, 0.88)
             }
         }
 

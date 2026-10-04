@@ -83,12 +83,12 @@ Item {
                 property string glyph: ""
                 property int delta: 0
                 width: 26; height: 26; radius: 13
-                color: arrowHover.hovered ? Qt.rgba(1, 1, 1, 0.09) : Qt.rgba(1, 1, 1, 0.05)
+                color: arrowHover.hovered ? Theme.colors.surfaceAlt : Theme.colors.surface
                 Icon {
                     anchors.centerIn: parent
                     icon: arrow.glyph
                     size: 15
-                    iconColor: Qt.rgba(1, 1, 1, 0.7)
+                    iconColor: Theme.withAlpha(Theme.colors.text, 0.7)
                 }
                 HoverHandler { id: arrowHover; cursorShape: Qt.PointingHandCursor }
                 TapHandler { onTapped: root.stepMonth(arrow.delta) }
@@ -106,7 +106,7 @@ Item {
                 text: root.monthNames[root.shown.getMonth()] + " " + root.shown.getFullYear()
                 font.pixelSize: 17
                 font.weight: Font.DemiBold
-                color: "#F6E2CB"
+                color: Theme.colors.text
             }
 
             PageArrow {
@@ -132,7 +132,7 @@ Item {
                     horizontalAlignment: Text.AlignHCenter
                     text: modelData
                     font.pixelSize: 12
-                    textColor: Qt.rgba(1, 1, 1, 0.45)
+                    textColor: Theme.withAlpha(Theme.colors.text, 0.45)
                 }
             }
         }
@@ -178,8 +178,8 @@ Item {
                         font.pixelSize: 14
                         font.weight: modelData.isToday ? Font.DemiBold : Font.Normal
                         color: modelData.isToday
-                            ? "#0B1512"
-                            : (modelData.inMonth ? "#F6E2CB" : Qt.rgba(1, 1, 1, 0.28))
+                            ? Theme.colors.accentText
+                            : (modelData.inMonth ? Theme.colors.text : Theme.withAlpha(Theme.colors.text, 0.28))
                     }
                 }
             }

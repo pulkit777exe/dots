@@ -1,10 +1,8 @@
-pragma Singleton
-
 import QtQuick
 import Quickshell
 import Quickshell.Io
 
-// Per-monitor overrides for the bar, layered over BarConfig.
+// Per-monitor overrides for the bar, layered over BarConfig, for ONE monitor.
 //
 // A file at monitors/<screen name>.json overrides only the keys it names.
 // Every other key falls through to the global value from bar-config.json,
@@ -24,9 +22,36 @@ import Quickshell.Io
 // Anything not in `allowed` is ignored, and says so in the log rather than
 // being applied silently. That is the whole point of the list: a typo in a
 // hand-written override should not quietly do nothing.
+//
+// ---------------------------------------------------------------------------
+// ONE instance per monitor, and `screenName` is given, never set. This file
+// used to be `pragma Singleton` with a mutable `screenName` and a
+// `loadFor(name)` that assigned it, and it was wrong for a reason the comment
+// above it used to insist was impossible. IslandMetrics.qml builds one
+// IslandMetrics per screen, so on a two-monitor machine two Islands called
+// `loadFor` on the one copy of this object; the last call won and both bars
+// read that monitor's file. There is no "each copy is asked for its own
+// screen" -- a Singleton has exactly one copy, which is the whole point of
+// the pragma, and the comment claiming otherwise was the bug's cover story.
+//
+// So this is now an ordinary QtObject, constructed per monitor by the thing
+// that already knows which monitor it is for, and `screenName` is a
+// `required property`: it is set once, at construction, from the owner's own
+// binding. There is no writer, so there is nothing for two screens to race
+// over, and the mistake cannot come back through a second call site.
+//
+// That is the same shape BrightnessMonitors.qml and BrightnessMonitor.qml
+// already use for the brightness fleet: per-screen instances held by the
+// parent, each handed its screen as an argument. Renaming this file to
+// BarConfigMonitor.qml would match BrightnessMonitor.qml exactly; the plural
+// name is historical and is the second half of why this read as safe.
+//
+// The plural name is the only thing here that is misleading, and it is left
+// alone deliberately: renaming the type means renaming the warning prefix,
+// which `monitors/README.md` quotes verbatim, for no behaviour change.
 
-Singleton {
-    id: root
+QtObject {
+    id: monitor
 
     // Keys a monitor file may set. Everything else is ignored on purpose.
     readonly property var allowed: [
@@ -40,10 +65,11 @@ Singleton {
         "notchFlare",
     ]
 
-    // The name of the monitor these values apply to, set by Island per
-    // screen instance. Quickshell builds one Island per screen, so each
-    // copy of this singleton is asked for its own screen's name.
-    property string screenName: ""
+    // The name of the monitor these values apply to, e.g. "eDP-1". Required,
+    // not optional: there is no sensible default screen, and a `required` that
+    // is never satisfied is a load-time error naming the owner rather than a
+    // monitor that silently gets nobody else's file.
+    required property string screenName
 
     // Overrides read from the file, as a plain object. Empty when the
     // monitor has no file, which is the common case.
@@ -61,11 +87,12 @@ Singleton {
         return fallback;
     }
 
-    function loadFor(name) {
-        screenName = name;
-    }
-
-    FileView {
+    // The file is read here, in a service that watches nothing user-visible --
+    // it is re-invoked whenever a monitor file is written. Nothing outside
+    // services/ touches this file: it is not on the shell/uis IPC table and it
+    // has no ConfigStore key, so keeping the read here costs no window and no
+    // reload.
+    readonly property FileView monitorFile: FileView {
         id: monitorFile
 
         // A binding, not an assignment. Setting `path` imperatively after
@@ -82,8 +109,8 @@ Singleton {
         //
         // shellDir, not configDir: configDir is deprecated and warns on
         // every startup.
-        path: root.screenName
-            ? Quickshell.shellDir + "/monitors/" + root.screenName + ".json"
+        path: monitor.screenName
+            ? Quickshell.shellDir + "/monitors/" + monitor.screenName + ".json"
             : ""
 
         watchChanges: true
@@ -95,8 +122,8 @@ Singleton {
         onLoaded: readIt()
         onFileChanged: readIt()
         onLoadFailed: {
-            root.overrides = ({});
-            root.rejected = [];
+            monitor.overrides = ({});
+            monitor.rejected = [];
         }
 
         function readIt() {
@@ -104,24 +131,24 @@ Singleton {
             try {
                 parsed = JSON.parse(text());
             } catch (e) {
-                console.warn("BarConfigMonitors: " + root.screenName
+                console.warn("BarConfigMonitors: " + monitor.screenName
                              + ".json is not valid JSON, ignoring it: " + e);
-                root.overrides = ({});
-                root.rejected = [];
+                monitor.overrides = ({});
+                monitor.rejected = [];
                 return;
             }
             if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-                console.warn("BarConfigMonitors: " + root.screenName
+                console.warn("BarConfigMonitors: " + monitor.screenName
                              + ".json must be a JSON object of key/value pairs, ignoring it");
-                root.overrides = ({});
-                root.rejected = [];
+                monitor.overrides = ({});
+                monitor.rejected = [];
                 return;
             }
 
             const good = {};
             const bad = [];
             for (const key of Object.keys(parsed)) {
-                if (root.allowed.indexOf(key) < 0) {
+                if (monitor.allowed.indexOf(key) < 0) {
                     bad.push(key);
                 } else if (typeof parsed[key] === "number" && isFinite(parsed[key])) {
                     good[key] = parsed[key];
@@ -129,10 +156,10 @@ Singleton {
                     bad.push(key + " (not a finite number)");
                 }
             }
-            root.overrides = good;
-            root.rejected = bad;
+            monitor.overrides = good;
+            monitor.rejected = bad;
             if (bad.length > 0) {
-                console.warn("BarConfigMonitors: " + root.screenName
+                console.warn("BarConfigMonitors: " + monitor.screenName
                              + ".json ignored " + bad.join(", ")
                              + " -- only geometry may be overridden per monitor");
             }

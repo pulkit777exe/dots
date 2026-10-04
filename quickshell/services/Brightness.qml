@@ -4,19 +4,50 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 
-
+// The shell-wide brightness: one number, one slider, one OSD.
+//
+// Where that number comes from is not this file's business. The panel
+// backlight lives in BacklightDevice.qml -- brightnessctl to read and write,
+// inotify-watch.py on the sysfs node to notice a change made outside the
+// shell -- and the per-screen monitors live in BrightnessMonitors.qml: one
+// BrightnessMonitor per screen, ddcutil to say which of them answer, and the
+// query grammar that picks one. What is here is the arbitration between the
+// two, the value the shell reports, and the IPC.
+//
+// The two set paths have two parsers on purpose and they are both below:
+// resolveMonitorTarget() for a monitor, setGlobalBrightness() for the panel.
+// See the comment on setGlobalBrightness() for why they must not be merged.
 
 Singleton {
     id: root
 
-    
-    
-    
+    BacklightDevice { id: backlight }
 
-    property string device: ""
-    property int max: 100
-    property int level: 0
-    property bool available: false
+    BrightnessMonitors {
+        id: fleet
+        requestOsd: (value) => root.osdRequested(value)
+        // The one writer of the level from outside this file: a monitor that
+        // changed without the shell asking -- a key on the display itself, a
+        // write that arrived over DDC -- reports here, and the OSD below
+        // fires off the same change signal a backlight write does.
+        syncLevel: (value) => { backlight.level = value; }
+    }
+
+    // The panel backlight as the shell sees it. Read-only views of the
+    // device's own answers, so nothing here can put the two out of step.
+    readonly property string device: backlight.device
+    readonly property int max: backlight.max
+    readonly property bool available: backlight.available
+
+    // The level lives on the backlight because every read of it starts there.
+    // The fleet writes into it from syncLevel below, so the shell still has
+    // exactly one brightness number whichever device answered.
+    readonly property int level: backlight.level
+
+    // `available` is the panel backlight's answer and `monitors` is the
+    // fleet's, and they are independent: an external display is a brightness
+    // control with no backlight behind it. The icon asks both.
+    readonly property var monitors: fleet.monitors
 
     readonly property string iconName: {
         if (!available && monitors.length === 0)
@@ -39,8 +70,10 @@ Singleton {
     onLevelChanged:
         osdRequested(level)
 
-    
-    
+    // The 1..100 clamp. 0 is what a slider would ask for at the bottom of a
+    // scale, and this is the one place both the IPC path and the keybinds
+    // pass through, so it is the one place that gets to decide what to do
+    // with it.
     function setBrightness(pct) {
         const clamped = Math.max(
             1,
@@ -56,85 +89,23 @@ Singleton {
             return
         }
 
-        setter.command = [
-            "brightnessctl",
-            "set",
-            clamped + "%"
-        ]
-
-        setter.running = true
+        // No monitor: the panel. percentArg() and the brightnessctl argv
+        // live with the backlight's other processes, in BacklightDevice.qml.
+        backlight.setPercent(clamped)
     }
 
     function step(delta) {
         setBrightness(level + delta)
     }
 
-    
-    
-    
-
-    property var ddcMonitors: []
-
-    readonly property var ddcMonitorMap: {
-        const map = {}
-
-        for (const monitor of ddcMonitors)
-            map[monitor.connector] = monitor
-
-        return map
+    // "active", "model:<name>", "serial:<value>", "id:<n>" or a bare
+    // connector name. Null when nothing matches, which is what sends setFor()
+    // to the panel instead.
+    function getMonitor(query) {
+        return fleet.getMonitor(query);
     }
-
-    readonly property var monitors:
-        variants.instances
-
 
     property int brightnessIncrement: 5
-
-    function getMonitor(query) {
-        if (!monitors || monitors.length === 0)
-            return null
-
-        if (query === "active") {
-            
-            return monitors[0]
-        }
-
-        if (query.startsWith("model:")) {
-            const model = query.slice(6)
-
-            return monitors.find(
-                monitor =>
-                    monitor.modelData.model === model
-            )
-        }
-
-        if (query.startsWith("serial:")) {
-            const serial = query.slice(7)
-
-            return monitors.find(
-                monitor =>
-                    monitor.modelData.serialNumber === serial
-            )
-        }
-
-        if (query.startsWith("id:")) {
-            const id =
-                parseInt(
-                    query.slice(3),
-                    10
-                )
-
-            return monitors.find(
-                monitor =>
-                    monitor.modelData.name === String(id)
-            )
-        }
-
-        return monitors.find(
-            monitor =>
-                monitor.modelData.name === query
-        )
-    }
 
     function increaseBrightness() {
         const monitor = getMonitor("active")
@@ -162,35 +133,20 @@ Singleton {
         }
     }
 
-    onMonitorsChanged: {
-        ddcMonitors = []
-        ddcProc.running = true
-    }
-
-    
-    
-    
-
-    
-    
-    
-    
-    
-    
-    
-    
-    
+    // ---- what the compositor says the outputs are ----------------------
+    //
+    // Kept here rather than in BrightnessMonitors.qml because it is display
+    // configuration, not brightness: the refresh rate and the scale of each
+    // output are read by the monitor cards in the control centre, and they
+    // come from hyprctl, not from a backlight.
     property var refreshRates: ({})
 
-    
-    
-    
-    
-    
-    
-    
     property var outputScales: ({})
 
+    // hyprctl has reported the refresh rate as a number under `refreshRate` and
+    // as a string under `refresh`, so this accepts either, and takes the
+    // millihertz form -- 60000 is 60Hz -- because CcMonitorCard renders the
+    // value straight into "N Hz" and 60000 is not a refresh rate anyone reads.
     Process {
         id: monitorProbe
         command: ["hyprctl", "-j", "monitors"]
@@ -203,9 +159,7 @@ Singleton {
                     const scales = {};
                     for (const m of parsed) {
                         if (!m || !m.name) continue;
-                        
-                        
-                        
+
                         let hz = (typeof m.refreshRate === "number") ? m.refreshRate : m.refresh;
                         if (typeof hz === "number" && hz > 1000) hz = hz / 1000;
                         if (typeof hz === "number" && isFinite(hz) && hz > 0)
@@ -217,238 +171,137 @@ Singleton {
                     root.refreshRates = map;
                     root.outputScales = scales;
                 } catch (e) {
-                    
-                    
+                    // Empty on purpose: this probe only supplies labels for
+                    // the monitor cards, and both properties keep their last
+                    // good values when the reply does not parse.
                 }
             }
         }
     }
 
-    Process {
-        id: discover
-
-        command: [
-            "brightnessctl",
-            "-m",
-            "-l"
-        ]
-
-        stdout: SplitParser {
-            splitMarker: "\n"
-
-            onRead: (line) => {
-                const parts = line.split(",")
-
-                if (
-                    parts.length >= 5 &&
-                    parts[1] === "backlight"
-                ) {
-                    root.device = parts[0]
-
-                    root.max =
-                        parseInt(parts[4]) || 100
-
-                    root.level =
-                        parseInt(parts[3]) || 0
-
-                    root.available = true
-
-                    watcher.running = false
-                    watcher.running = true
-                }
-            }
-        }
-    }
-
-    
-    
-    
+    // Called when the display page opens and when a monitor card asks for
+    // fresh numbers.
     function refreshMonitorInfo(): void {
         monitorProbe.running = true;
     }
 
+    // The value grammar a per-monitor `setFor` accepts: "50", "50%", "+0.1",
+    // "+5%", "0.1-" and "50%-" -- the last four relative, the first two
+    // absolute, with "%" meaning a hundredth of the monitor's own 0..1 level.
+    //
+    // The global path parses its argument separately and on purpose:
+    // setGlobalBrightness() treats "50%-" as unparseable where this reads it
+    // as -50, so the two are not merged.
+    function resolveMonitorTarget(monitor, value) {
+        if (value.endsWith("%-")) {
+            return (
+                monitor.brightness -
+                parseFloat(value.slice(0, -2)) / 100
+            );
+        }
+
+        if (value.startsWith("+") && value.endsWith("%")) {
+            return (
+                monitor.brightness +
+                parseFloat(value.slice(1, -1)) / 100
+            );
+        }
+
+        if (value.endsWith("%")) {
+            return parseFloat(value.slice(0, -1)) / 100;
+        }
+
+        if (value.startsWith("+")) {
+            return monitor.brightness + parseFloat(value.slice(1));
+        }
+
+        if (value.endsWith("-")) {
+            return (
+                monitor.brightness -
+                parseFloat(value.slice(0, -1))
+            );
+        }
+
+        return parseFloat(value);
+    }
+
+    // The reply both setFor() branches give when their parse fails. Shared
+    // because it is the same string in both -- and because it is the ONLY
+    // thing they have in common. The two parses are different parsers on
+    // purpose (see resolveMonitorTarget above), so there is nothing else here
+    // to factor out; see setGlobalBrightness() for why.
+    function parseFailure(value): string {
+        return (
+            "Failed to parse value: " +
+            value
+        );
+    }
+
+    // setFor()'s per-monitor branch. A monitor takes a 0..1 level, and its
+    // grammar includes the relative forms -- "+5", "+5%", "0.1-", "50%-" --
+    // that have no meaning on the global path.
+    function setMonitorBrightness(monitor, value): string {
+        const targetBrightness =
+            resolveMonitorTarget(monitor, value)
+
+        if (isNaN(targetBrightness)) {
+            return parseFailure(value)
+        }
+
+        monitor.setBrightness(
+            targetBrightness
+        )
+
+        return (
+            "Set monitor " +
+            monitor.modelData.name +
+            " brightness to " +
+            Number(
+                monitor.brightness
+            ).toFixed(2)
+        )
+    }
+
+    // setFor()'s global branch, on the backlight BacklightDevice.qml drives.
+    //
+    // This is NOT resolveMonitorTarget, and the difference is a grammar
+    // difference rather than a rounding one, so the two parsers stay apart:
+    //   monitor  "50%-" is -50, "0.1" is an absolute 0.1
+    //   global   "50%-" is unparseable, "0.1" is 10%
+    //   global   a bare number is a fraction of full scale, so it x100
+    // Merging them would either widen what the monitor path accepts or hand
+    // brightnessctl the monitor path's 0..1 argument on the percent path.
+    // parseFailure() above is the whole of what is genuinely shared.
+    function setGlobalBrightness(value): string {
+        let target
+
+        if (value.endsWith("%")) {
+            target =
+                parseFloat(
+                    value.slice(0, -1)
+                )
+        } else {
+            target =
+                parseFloat(value) * 100
+        }
+
+        if (isNaN(target)) {
+            return parseFailure(value)
+        }
+
+        root.setBrightness(target)
+
+        return (
+            "Set brightness to " +
+            root.level +
+            "%"
+        )
+    }
+
     Component.onCompleted: {
-        discover.running = true;
+        backlight.discover.running = true;
         monitorProbe.running = true;
     }
-
-    Process {
-        id: setter
-
-        onExited:
-            reader.running = true
-    }
-
-    Process {
-        id: watcher
-
-        command:
-            root.device
-                ? [
-                    Quickshell.shellDir +
-                        "/scripts/inotify-watch.py",
-                    "/sys/class/backlight/" +
-                        root.device +
-                        "/brightness"
-                  ]
-                : []
-
-        stdout: SplitParser {
-            splitMarker: "\n"
-
-            onRead: (line) =>
-                reader.running = true
-        }
-
-        onExited:
-            restartWatcher.start()
-    }
-
-    Timer {
-        id: restartWatcher
-
-        interval: 3000
-
-        onTriggered:
-            watcher.running = true
-    }
-
-    Process {
-        id: reader
-
-        command:
-            root.device
-                ? [
-                    "cat",
-                    "/sys/class/backlight/" +
-                        root.device +
-                        "/brightness"
-                  ]
-                : []
-
-        stdout: SplitParser {
-            splitMarker: "\n"
-
-            onRead: (line) => {
-                const raw = parseInt(line)
-
-                if (
-                    !isNaN(raw) &&
-                    root.max > 0
-                ) {
-                    root.level =
-                        Math.round(
-                            (raw / root.max) * 100
-                        )
-                }
-            }
-        }
-    }
-
-    
-    
-    
-
-    Variants {
-        id: variants
-
-        model:
-            Quickshell.screens
-
-        BrightnessMonitor {
-            ddcInfo:
-                root.ddcMonitorMap[
-                    modelData.name
-                ] ?? null
-
-            isDdc:
-                ddcInfo !== null
-
-            busNum:
-                ddcInfo &&
-                ddcInfo.busNum
-                    ? ddcInfo.busNum
-                    : ""
-
-            isAppleDisplay: false
-
-            getMonitorActive:
-                () =>
-                    root.getMonitor("active")
-
-            requestOsd:
-                (value) =>
-                    root.osdRequested(value)
-
-            syncLevel:
-                (value) =>
-                    root.level = value
-        }
-    }
-
-    
-    
-    
-
-    Process {
-        id: ddcProc
-
-        command: [
-            "bash",
-            "-c",
-            "command -v ddcutil >/dev/null && " +
-            "ddcutil detect --brief || true"
-        ]
-
-        stdout: StdioCollector {
-            onStreamFinished: {
-                try {
-                    root.ddcMonitors =
-                        text
-                        .trim()
-                        .split("\n\n")
-                        .filter(
-                            block =>
-                                block.startsWith("Display ")
-                        )
-                        .map(
-                            block => ({
-                                busNum:
-                                    (
-                                        block.match(
-                                            /I2C bus:[ ]*\/dev\/i2c-([0-9]+)/
-                                        ) ||
-                                        [, ""]
-                                    )[1],
-
-                                connector:
-                                    (
-                                        block.match(
-                                            /DRM connector:\s+(.*)/
-                                        ) ||
-                                        [, ""]
-                                    )[1]
-                                    .replace(
-                                        /^card\d+-/,
-                                        ""
-                                    )
-                            })
-                        )
-                        .filter(
-                            monitor =>
-                                monitor.busNum &&
-                                monitor.connector
-                        )
-                } catch (error) {
-                    root.ddcMonitors = []
-                }
-            }
-        }
-    }
-
-    
-    
-    
 
     IpcHandler {
         target: "brightness"
@@ -457,7 +310,11 @@ Singleton {
             return getFor("active")
         }
 
-        function getFor(query: string) {
+        // The return type must stay declared. get() above is annotated `: real`,
+        // and Qt types an unannotated callee as void, so dropping this makes the
+        // call a void->real coercion. It fires lazily, the first time something
+        // calls get(), so it can sit unnoticed for many reloads.
+        function getFor(query: string): real {
             const monitor =
                 root.getMonitor(query)
 
@@ -469,7 +326,11 @@ Singleton {
                 : -1
         }
 
-        function set(value: string) {
+        // Both handlers must keep an explicit `: string`. They return a value,
+        // so Qt types an unannotated callee as void and logs a coercion error
+        // on every call that reaches them -- the same class commit 9cbbffb
+        // fixed for the other handlers, which this sweep missed.
+        function set(value: string): string {
             return setFor(
                 "active",
                 value
@@ -479,123 +340,13 @@ Singleton {
         function setFor(
             query: string,
             value: string
-        ) {
+        ): string {
             const monitor =
                 root.getMonitor(query)
 
-            if (monitor) {
-                let targetBrightness
-
-                if (value.endsWith("%-")) {
-                    const p =
-                        parseFloat(
-                            value.slice(0, -2)
-                        )
-
-                    targetBrightness =
-                        monitor.brightness -
-                        p / 100
-
-                } else if (
-                    value.startsWith("+") &&
-                    value.endsWith("%")
-                ) {
-                    const p =
-                        parseFloat(
-                            value.slice(1, -1)
-                        )
-
-                    targetBrightness =
-                        monitor.brightness +
-                        p / 100
-
-                } else if (
-                    value.endsWith("%")
-                ) {
-                    const p =
-                        parseFloat(
-                            value.slice(0, -1)
-                        )
-
-                    targetBrightness =
-                        p / 100
-
-                } else if (
-                    value.startsWith("+")
-                ) {
-                    const increment =
-                        parseFloat(
-                            value.slice(1)
-                        )
-
-                    targetBrightness =
-                        monitor.brightness +
-                        increment
-
-                } else if (
-                    value.endsWith("-")
-                ) {
-                    const decrement =
-                        parseFloat(
-                            value.slice(0, -1)
-                        )
-
-                    targetBrightness =
-                        monitor.brightness -
-                        decrement
-
-                } else {
-                    targetBrightness =
-                        parseFloat(value)
-                }
-
-                if (isNaN(targetBrightness)) {
-                    return (
-                        "Failed to parse value: " +
-                        value
-                    )
-                }
-
-                monitor.setBrightness(
-                    targetBrightness
-                )
-
-                return (
-                    "Set monitor " +
-                    monitor.modelData.name +
-                    " brightness to " +
-                    Number(
-                        monitor.brightness
-                    ).toFixed(2)
-                )
-            }
-
-            let target
-
-            if (value.endsWith("%")) {
-                target =
-                    parseFloat(
-                        value.slice(0, -1)
-                    )
-            } else {
-                target =
-                    parseFloat(value) * 100
-            }
-
-            if (isNaN(target)) {
-                return (
-                    "Failed to parse value: " +
-                    value
-                )
-            }
-
-            root.setBrightness(target)
-
-            return (
-                "Set brightness to " +
-                root.level +
-                "%"
-            )
+            return monitor
+                ? root.setMonitorBrightness(monitor, value)
+                : root.setGlobalBrightness(value)
         }
     }
 }

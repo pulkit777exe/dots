@@ -1,90 +1,79 @@
+// Notifications -- the singleton the rest of the tree imports, and the
+// composition root for the three files it was split into:
+//
+//   NotificationState.qml     the toast list: D-Bus ingest, `notify`, expiry,
+//                             dismissal, action invoke, the notify sound
+//   NotificationWatchers.qml  what turns a change in another service into a
+//                             toast
+//   NotificationHistory.qml   notifs.json, both directions
+//
+// This file is the seam, not the implementation. It owns exactly four things
+// that cannot move:
+//
+//   * the `Notifications` name itself -- qmldir declares the singleton, and
+//     40 references across the tree spell it `Notifications.<member>`
+//   * both IpcHandlers, because `qs ipc call` addresses them by target and the
+//     documented table is checked against the running shell
+//   * the PersistentProperties that make `dnd` survive a restart
+//   * the wiring between the three, which is the only place both ends of each
+//     dependency are in scope at once
+//
+// Everything below that is a forwarder. The forwarders are load-bearing, not
+// boilerplate: scripts/ipc-audit.py self-tests on ("Notifications", "dismiss")
+// and NotificationStack.qml calls Notifications.dismiss() and
+// Notifications.invokeAction(), so a name that stops being a real member of
+// this object fails the audit and breaks the toast buttons.
+//
+// The three helpers are plain types, not singletons, and each needs a qmldir
+// entry: a same-directory type does NOT resolve from inside a module singleton
+// ("Type X is not a type", measured). services/BrightnessMonitor.qml is the
+// existing precedent for that shape.
+
 pragma Singleton
 pragma ComponentBehavior: Bound
 
-
-
-
-
 import QtQuick
 import Quickshell
-import Quickshell.Services.Notifications
 import Quickshell.Io
-
-
 
 Singleton {
     id: root
 
-    
+    // ------------------------------------------------------------------
+    // the public surface. Every name here is referenced from outside this
+    // file, so every name here has to stay a real member of this object.
 
-    property var active: []
+    // The toast list, oldest first. Ten references, and shell.qml:333 uses its
+    // length as a Region click-mask, so it has to be a plain writable
+    // property rather than something only this file can assign.
+    property alias active: state.active
 
-    signal notificationAdded(var notification)
-    signal notificationRemoved(int id)
+    // What NotificationStack draws: the toasts that should be up right now,
+    // which is `active` minus the ones read back off disk as history.
+    readonly property var popups: state.popups
 
-    
+    readonly property var notClosed: state.notClosed
 
+    // Do not disturb. Seven references including a write at
+    // surfaces/ControlCenter.qml:1666, which is the only DND toggle in the
+    // tree. This alias and the PersistentProperties it points at are
+    // deliberately unmoved: the value is the one thing here that has to
+    // outlive a restart, and the reloadable is the one object whose
+    // registration is not something to relocate for tidiness.
     property alias dnd: props.dnd
 
-    property bool loaded: false
+    property alias loaded: state.loaded
 
-    readonly property var notClosed:
-        active
+    property alias defaultExpireTimeout: state.defaultExpireTimeout
+    property alias fullscreenExpireTimeout: state.fullscreenExpireTimeout
+    property alias urgentExpireTimeout: state.urgentExpireTimeout
 
-    readonly property var popups:
-        active.filter(n => n.popup !== false)
+    PersistentProperties {
+        id: props
 
-    property int defaultExpireTimeout: ConfigStore.notifPopupTimeoutMs
-    property int fullscreenExpireTimeout: 3000
-    property int urgentExpireTimeout: ConfigStore.notifUrgentTimeoutMs
+        reloadableId: "notifs"
 
-    property bool expire: true
-
-    function hasFullscreen(): bool {
-        return false
-    }
-
-    function shouldShowPopup(): bool {
-        if (props.dnd)
-            return false
-
-        try {
-            if (
-                UiState &&
-                (
-                    UiState.launcherOpen ||
-                    UiState.controlCenterOpen
-                )
-            ) {
-                return false
-            }
-        } catch (e) {}
-
-        if (hasFullscreen())
-            return false
-
-        return true
-    }
-
-    
-    
-    
-    
-    
-    
-    
-    function playNotifySound(): void {
-        if (!ConfigStore.notifSoundEnabled) return
-        soundPlayer.command = [
-            "bash", "-c",
-            "canberra-gtk-play -i message-new-instant 2>/dev/null || " +
-            "paplay /usr/share/sounds/freedesktop/stereo/message-new-instant.oga 2>/dev/null"
-        ]
-        soundPlayer.running = true
-    }
-
-    Process {
-        id: soundPlayer
+        property bool dnd: false
     }
 
     onDndChanged: {
@@ -99,316 +88,61 @@ Singleton {
         }
     }
 
-    onActiveChanged: {
-        if (loaded)
-            saveTimer.restart()
+    // ------------------------------------------------------------------
+    // the three pieces
+
+    NotificationState {
+        id: state
+
+        // One hop. An alias cannot reach through a grandchild
+        // ("Invalid alias target location", measured), so this is a binding
+        // rather than an alias onto state.popups.
+        dnd: props.dnd
+
+        // Nudge to persist. State owns the list and history owns the disk, and
+        // neither can name the other's file, so the callback is injected here.
+        // `history` unqualified: an id is a scope name, not a property, so
+        // `root.history` is undefined (measured).
+        requestSave: () => history.restartSave()
     }
 
-    Timer {
-        id: saveTimer
+    NotificationWatchers {
+        id: watchers
 
-        interval: 1000
-
-        onTriggered: {
-            storage.setText(
-                JSON.stringify(
-                    root.notClosed.map(n => ({
-                        time: new Date().toISOString(),
-
-                        id: n.id,
-                        summary: n.summary,
-                        body: n.body,
-
-                        appIcon: n.appIcon,
-                        appName: n.appName,
-
-                        image: n.image,
-
-                        expireTimeout:
-                            n.expireTimeout ??
-                            root.defaultExpireTimeout,
-
-                        urgency: n.urgency,
-                        actions: n.actions
-                    }))
+        // One capability, handed over rather than reached for: the watchers
+        // turn events into toasts and cannot do anything else to the list.
+        notify:
+            (summary, body, appName, appIcon, urgency, actions) =>
+                state.notify(
+                    summary,
+                    body,
+                    appName,
+                    appIcon,
+                    urgency,
+                    actions
                 )
-            )
-        }
     }
 
-    PersistentProperties {
-        id: props
+    NotificationHistory {
+        id: history
 
-        reloadableId: "notifs"
-
-        property bool dnd: false
+        store: state
     }
 
-    
-
-    NotificationServer {
-        id: server
-
-        keepOnReload: false
-
-        bodySupported: true
-        bodyMarkupSupported: true
-
-        actionsSupported: true
-
-        imageSupported: true
-        persistenceSupported: true
-
-        bodyHyperlinksSupported: true
-        bodyImagesSupported: true
-
-        onNotification: (notification) => {
-            const shouldPopup =
-                root.shouldShowPopup()
-
-            const entry = {
-                id: notification.id,
-
-                appName:
-                    notification.appName || "",
-
-                appIcon:
-                    notification.appIcon || "",
-
-                summary:
-                    notification.summary || "",
-
-                body:
-                    notification.body || "",
-
-                urgency:
-                    notification.urgency,
-
-                actions:
-                    (notification.actions || [])
-                        .map(a => ({
-                            id: a.identifier,
-                            label: a.text
-                        })),
-
-                image:
-                    notification.image || "",
-
-                popup:
-                    shouldPopup,
-
-                expireTimeout:
-                    notification.expireTimeout
-            }
-
-            let list =
-                root.active.slice()
-
-            list.push(entry)
-
-            root.active = list
-
-            root.notificationAdded(entry)
-
-            if (shouldPopup) root.playNotifySound()
-
-            const isCritical =
-                notification.urgency ===
-                NotificationUrgency.Critical
-
-            const timeoutMs =
-                notification.expireTimeout > 0
-                    ? notification.expireTimeout
-                    : (
-                        isCritical
-                            ? root.urgentExpireTimeout
-                            : (
-                                root.hasFullscreen()
-                                    ? root.fullscreenExpireTimeout
-                                    : root.defaultExpireTimeout
-                            )
-                    )
-
-            
-            
-            
-            
-            
-            
-            expireTimerComponent.createObject(
-                root,
-                {
-                    targetId: entry.id,
-                    interval: timeoutMs
-                }
-            )
-
-            notification.tracked = true
-        }
-    }
-
-    Component {
-        id: expireTimerComponent
-
-        Timer {
-            property int targetId: -1
-
-            running: true
-            repeat: false
-
-            onTriggered: {
-                root.dismiss(targetId)
-                destroy()
-            }
-        }
-    }
-
-    
+    // ------------------------------------------------------------------
+    // forwarders. See the note at the top of the file: these are audited.
 
     function dismiss(id: int): void {
-        const idx =
-            root.active.findIndex(
-                n => n.id === id
-            )
-
-        if (idx === -1)
-            return
-
-        let list =
-            root.active.slice()
-
-        list.splice(idx, 1)
-
-        root.active = list
-
-        root.notificationRemoved(id)
-
-        
-
-        const handle =
-            Array.from(
-                server.trackedNotifications?.values ?? []
-            ).find(
-                n => n.id === id
-            )
-
-        if (handle)
-            handle.dismiss()
+        state.dismiss(id)
     }
 
-    function invokeAction(
-        id: int,
-        actionId: string
-    ): void {
-        
-
-        const handle =
-            Array.from(
-                server.trackedNotifications?.values ?? []
-            ).find(
-                n => n.id === id
-            )
-
-        if (handle)
-            handle.invokeAction(actionId)
-
-        dismiss(id)
+    function invokeAction(id: int, actionId: string): void {
+        state.invokeAction(id, actionId)
     }
 
     function clearAll(): void {
-        for (const n of root.active.slice())
-            dismiss(n.id)
+        state.clearAll()
     }
-
-    
-
-    FileView {
-        id: storage
-
-        printErrors: true
-
-        path:
-            Quickshell.statePath(
-                "notifs.json"
-            )
-
-        onLoaded: {
-            try {
-                const data =
-                    JSON.parse(text())
-
-                let list =
-                    root.active.slice()
-
-                for (const notif of data) {
-                    list.push({
-                        id:
-                            notif.id ??
-                            notif.notificationId ??
-                            Math.floor(
-                                Math.random() * 1000000
-                            ),
-
-                        appName:
-                            notif.appName ?? "",
-
-                        appIcon:
-                            notif.appIcon ?? "",
-
-                        summary:
-                            notif.summary ?? "",
-
-                        body:
-                            notif.body ?? "",
-
-                        urgency:
-                            notif.urgency ??
-                            NotificationUrgency.Normal,
-
-                        actions:
-                            notif.actions ?? [],
-
-                        image:
-                            notif.image ?? "",
-
-                        popup:
-                            false
-                    })
-                }
-
-                root.active = list
-            } catch (e) {
-                console.warn(
-                    "Notifications: failed to parse state",
-                    path,
-                    e
-                )
-            }
-
-            root.loaded = true
-        }
-
-        onLoadFailed: (err) => {
-            console.warn(
-                "Notifications: failed to load",
-                path,
-                err
-            )
-
-            root.loaded = true
-
-            if (
-                err ===
-                FileViewError.FileNotFound
-            ) {
-                Qt.callLater(
-                    () => setText("[]")
-                )
-            }
-        }
-    }
-
-    
 
     function notify(
         summary,
@@ -418,591 +152,24 @@ Singleton {
         urgency,
         actions
     ) {
-        
-        
-        
-        
-        const name =
-            appName || "System"
-
-        const icon =
-            appIcon || "notifications"
-
-        const level =
-            urgency !== undefined
-                ? urgency
-                : NotificationUrgency.Normal
-
-        const actionList =
-            actions || []
-
-        const notifId =
-            Math.floor(
-                Math.random() * 899999
-            ) + 100000
-
-        const shouldPopup =
-            root.shouldShowPopup()
-
-        const entry = {
-            id: notifId,
-
-            appName: name,
-            appIcon: icon,
-
-            summary:
-                summary || "",
-
-            body:
-                body || "",
-
-            urgency:
-                level,
-
-            actions:
-                actionList,
-
-            image:
-                "",
-
-            popup:
-                shouldPopup,
-
-            expireTimeout:
-                level === NotificationUrgency.Critical
-                    ? root.urgentExpireTimeout
-                    : root.defaultExpireTimeout
-        }
-
-        let list =
-            root.active.slice()
-
-        list.push(entry)
-
-        root.active = list
-
-        root.notificationAdded(entry)
-
-        if (shouldPopup) {
-            root.playNotifySound()
-        }
-
-        
-        
-        
-        
-        
-        
-        expireTimerComponent.createObject(
-            root,
-            {
-                targetId: notifId,
-                interval: entry.expireTimeout
-            }
-        )
-
-        return notifId
+        return state.notify(
+            summary,
+            body,
+            appName,
+            appIcon,
+            urgency,
+            actions
+        );
     }
 
-    
-
-    
-    Connections {
-        target: Battery
-
-        property bool wasCharging:
-            Battery.charging
-
-        property bool initialised: false
-
-        property bool warnedLow: false
-        property bool warnedCritical: false
-
-        function onChargingChanged() {
-            if (!initialised) {
-                initialised = true
-                wasCharging =
-                    Battery.charging
-                return
-            }
-
-            if (
-                Battery.charging !==
-                wasCharging
-            ) {
-                wasCharging =
-                    Battery.charging
-
-                if (Battery.charging) {
-                    warnedLow = false
-                    warnedCritical = false
-
-                    root.notify(
-                        "Charger Connected",
-
-                        "Battery is now charging (" +
-                        Battery.percentage +
-                        "%)",
-
-                        "Power",
-
-                        "battery_charging_full"
-                    )
-                } else {
-                    root.notify(
-                        "Charger Disconnected",
-
-                        "Running on battery power (" +
-                        Battery.percentage +
-                        "%)",
-
-                        "Power",
-
-                        "battery_alert"
-                    )
-                }
-            }
-        }
-
-        function onBatteryLow() {
-            if (warnedLow)
-                return
-
-            warnedLow = true
-
-            root.notify(
-                "Low Battery",
-
-                Battery.percentage +
-                "% remaining. Consider connecting a charger.",
-
-                "Power",
-
-                "battery_saver",
-
-                NotificationUrgency.Critical
-            )
-        }
-
-        function onBatteryCritical() {
-            if (warnedCritical)
-                return
-
-            warnedCritical = true
-
-            root.notify(
-                "Critical Battery",
-
-                Battery.percentage +
-                "% remaining. Plug in immediately to avoid shutdown!",
-
-                "Power",
-
-                "battery_alert",
-
-                NotificationUrgency.Critical
-            )
-        }
-    }
-
-    property bool systemNotifsReady: false
-
-    Timer {
-        interval: 3000
-
-        running: true
-        repeat: false
-
-        onTriggered:
-            root.systemNotifsReady = true
-    }
-
-    
-    Connections {
-        target: Bluetooth
-
-        property bool wasEnabled:
-            Bluetooth.enabled
-
-        function onEnabledChanged() {
-            if (!root.systemNotifsReady) {
-                wasEnabled =
-                    Bluetooth.enabled
-                return
-            }
-
-            if (
-                Bluetooth.enabled !==
-                wasEnabled
-            ) {
-                wasEnabled =
-                    Bluetooth.enabled
-
-                if (Bluetooth.enabled) {
-                    root.notify(
-                        "Bluetooth Enabled",
-                        "Bluetooth adapter turned on",
-                        "Bluetooth",
-                        "bluetooth"
-                    )
-                } else {
-                    root.notify(
-                        "Bluetooth Disabled",
-                        "Bluetooth adapter turned off",
-                        "Bluetooth",
-                        "bluetooth_disabled"
-                    )
-                }
-            }
-        }
-    }
-
-    
-    Connections {
-        target: Wifi
-
-        property bool wasConnected:
-            Wifi.connected
-
-        function onConnectedChanged() {
-            if (!root.systemNotifsReady) {
-                wasConnected =
-                    Wifi.connected
-                return
-            }
-
-            if (
-                Wifi.connected !==
-                wasConnected
-            ) {
-                wasConnected =
-                    Wifi.connected
-
-                if (Wifi.connected) {
-                    root.notify(
-                        "Wi-Fi Connected",
-
-                        "Connected to " +
-                        (Wifi.ssid || "network"),
-
-                        "Network",
-
-                        "wifi"
-                    )
-                } else {
-                    root.notify(
-                        "Wi-Fi Disconnected",
-
-                        "Disconnected from network",
-
-                        "Network",
-
-                        "wifi_off"
-                    )
-                }
-            }
-        }
-    }
-
-    
-    Connections {
-        target: PowerProfile
-
-        property bool initialised: false
-
-        function onProfileChanged(profile) {
-            if (!initialised) {
-                initialised = true
-                return
-            }
-
-            const activeProfile =
-                profile ||
-                PowerProfile.active
-
-            const modeName =
-                activeProfile.charAt(0).toUpperCase()
-                +
-                activeProfile.slice(1)
-
-            root.notify(
-                "Power Profile Changed",
-
-                "Switched to " +
-                modeName +
-                " mode",
-
-                "Power",
-
-                "speed"
-            )
-        }
-    }
-
-    
-    Connections {
-        target: NightLight
-
-        property bool initialised: false
-
-        function onToggled(enabled) {
-            if (!initialised) {
-                initialised = true
-                return
-            }
-
-            root.notify(
-                "Night Light",
-
-                enabled
-                    ? "Screen warmth enabled"
-                    : "Screen warmth disabled",
-
-                "Display",
-
-                "nightlight"
-            )
-        }
-    }
-
-    
-    Connections {
-        target: IdleInhibit
-
-        property bool initialised: false
-
-        property bool wasActive:
-            IdleInhibit.active
-
-        function onActiveChanged() {
-            if (!initialised) {
-                initialised = true
-                wasActive =
-                    IdleInhibit.active
-                return
-            }
-
-            if (
-                IdleInhibit.active !==
-                wasActive
-            ) {
-                wasActive =
-                    IdleInhibit.active
-
-                root.notify(
-                    "Keep-Awake Inhibitor",
-
-                    IdleInhibit.active
-                        ? "Screen sleep inhibited"
-                        : "Screen sleep allowed",
-
-                    "System",
-
-                    "coffee"
-                )
-            }
-        }
-    }
-
-    
-    Connections {
-        target: Theme
-
-        property bool initialised: false
-
-        property string lastName:
-            Theme.currentName
-
-        function onThemeChanged(name) {
-            if (!initialised) {
-                initialised = true
-                lastName = name
-                return
-            }
-
-            if (name !== lastName) {
-                lastName = name
-
-                root.notify(
-                    "Theme Changed",
-
-                    "Applied " +
-                    (
-                        Theme.displayName ||
-                        name
-                    ) +
-                    " theme",
-
-                    "Appearance",
-
-                    "palette"
-                )
-            }
-        }
-    }
-
-    
-    Connections {
-        target: Volume
-
-        property bool initialised: false
-
-        property bool wasMuted:
-            Volume.muted
-
-        function onMutedChanged() {
-            if (!initialised) {
-                initialised = true
-                wasMuted =
-                    Volume.muted
-                return
-            }
-
-            if (
-                Volume.muted !==
-                wasMuted
-            ) {
-                wasMuted =
-                    Volume.muted
-
-                if (Volume.muted) {
-                    root.notify(
-                        "Audio Muted",
-
-                        "Sound output muted",
-
-                        "Audio",
-
-                        "volume_mute"
-                    )
-                } else {
-                    root.notify(
-                        "Audio Unmuted",
-
-                        "Sound output at " +
-                        Volume.volumePercent +
-                        "%",
-
-                        "Audio",
-
-                        "volume_up"
-                    )
-                }
-            }
-        }
-    }
-
-    
-    Connections {
-        target: Media
-
-        property bool initialised: false
-        property string lastTrackKey: ""
-
-        function maybeToast() {
-            if (
-                !ConfigStore.mediaShowToast
-            )
-                return
-
-            if (!Media.playing)
-                return
-
-            const key =
-                Media.title +
-                "|" +
-                Media.artist
-
-            if (
-                !Media.title ||
-                key === lastTrackKey ||
-                key === "|"
-            )
-                return
-
-            lastTrackKey = key
-
-            if (!initialised) {
-                initialised = true
-                return
-            }
-
-            const body =
-                Media.artist
-                    ? Media.artist +
-                      (
-                          Media.album
-                              ? " · " +
-                                Media.album
-                              : ""
-                      )
-                    : ""
-
-            root.notify(
-                "Now Playing",
-
-                Media.title +
-                (
-                    body
-                        ? "\n" + body
-                        : ""
-                ),
-
-                "Music",
-
-                "music_note"
-            )
-        }
-
-        function onTitleChanged() {
-            maybeToast()
-        }
-
-        function onArtistChanged() {
-            maybeToast()
-        }
-
-        function onPlayingChanged() {
-            if (Media.playing) {
-                initialised = true
-                maybeToast()
-            }
-        }
-    }
-
-    
-    
-    
-    
-    Connections {
-        target: Clipboard
-
-        property bool initialised: false
-
-        function onEntryCopied(text) {
-            if (!initialised) {
-                initialised = true
-                return
-            }
-
-            const preview =
-                text.length > 60
-                    ? text.slice(0, 60) + "…"
-                    : text
-
-            root.notify(
-                "Copied to Clipboard",
-
-                preview,
-
-                "System",
-
-                "content_copy"
-            )
-        }
-    }
-
-    
+    // ------------------------------------------------------------------
+    // IPC.
+    //
+    // Both targets stay here. A function declared inside an IpcHandler is
+    // reachable over `qs ipc call` but is NOT a member of the singleton, so
+    // these names are deliberately not on the object above; that is the trap
+    // scripts/ipc-audit.py exists to catch, and the round trip is described in
+    // quickshell/CHANGELOG.md under Notifications.toggleDnd().
 
     IpcHandler {
         target: "notifs"

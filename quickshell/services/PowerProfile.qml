@@ -5,6 +5,7 @@ pragma Singleton
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import Quickshell.Services.UPower as QsUPower
 
 
 
@@ -77,7 +78,6 @@ Singleton {
                     root.available = true;
                     root.usePlatformFallback = false;
                     root.active = val;
-                    monitor.running = true;
                 }
             }
         }
@@ -126,30 +126,57 @@ Singleton {
     }
     Component.onCompleted: probe.running = true
 
-    Process {
-        id: monitor
-        command: ["powerprofilesctl", "monitor"]
-        stdout: SplitParser {
-            splitMarker: "\n"
-            onRead: (line) => {
-                
-                
-                const val = line.trim();
-                if (root.profiles.includes(val)) {
-                    root.active = val;
-                    root.profileChanged(val);
-                }
-            }
+    // The daemon's ActiveProfile is tracked by subscribing to it.
+    //
+    // It used to be tracked by running `powerprofilesctl monitor`, which is not
+    // a subcommand of this tool -- it exits 2 with "invalid choice: 'monitor'".
+    // The Process had no stderr collector and the shell's fd 2 is /dev/null, so
+    // every rejection was thrown away; onExited then started a 3000ms timer
+    // that restarted it. A fork every three seconds, for as long as the shell
+    // was up: 19/min measured, ~27360/day, ~95ms of CPU each, and it never said
+    // a word about why.
+    //
+    // Quickshell 0.3.1 already binds that same D-Bus property. QsUPower's
+    // PowerProfiles singleton mirrors
+    // org.freedesktop.UPower.PowerProfiles.ActiveProfile and emits
+    // profileChanged when it changes, so this is event-driven and forks nothing
+    // at all -- which is how services/Wifi.qml already tracks NetworkManager,
+    // through a process that stays alive instead of one that is respawned.
+    //
+    // There is no timer here to re-arm and nothing restarts on failure, so there
+    // is no loop left for a bad command to feed.
+    //
+    // QsUPower.PowerProfile.toString() is Qt's default enum-to-string and
+    // answers "Balanced", not the "balanced" that powerprofilesctl prints and
+    // that `power get` has always returned, so the enum is mapped to the wire
+    // name explicitly. The cases are the enum constants themselves rather than
+    // 0/1/2.
+    function daemonProfileName() {
+        switch (QsUPower.PowerProfiles.profile) {
+            case QsUPower.PowerProfile.PowerSaver: return "power-saver";
+            case QsUPower.PowerProfile.Balanced: return "balanced";
+            case QsUPower.PowerProfile.Performance: return "performance";
         }
-        onExited: (code, status) => {
-            if (root.usePlatformFallback) {
-                
-                return;
-            }
-            restartTimer.start()
-        }
+        return "";
     }
-    Timer { id: restartTimer; interval: 3000; onTriggered: monitor.running = true }
+
+    function adoptDaemonProfile() {
+        // While the daemon has not been confirmed reachable, or while the sysfs
+        // path is the one in charge, the answer belongs to somebody else. Until
+        // `probe` has run, QsUPower's property holds a default enum value that
+        // is indistinguishable from a real reading, so adopting it then would
+        // flash the wrong profile into the UI and into `power get`.
+        if (root.usePlatformFallback || !root.available) return;
+        const name = root.daemonProfileName();
+        if (name.length === 0 || name === root.active) return;
+        root.active = name;
+        root.profileChanged(name);
+    }
+
+    Connections {
+        target: QsUPower.PowerProfiles
+        function onProfileChanged() { root.adoptDaemonProfile() }
+    }
 
     IpcHandler {
         target: "powerprofile"

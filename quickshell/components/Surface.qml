@@ -28,13 +28,17 @@ Item {
     
     
     property color backgroundColor: Theme.panelFill
-    property color borderColor: Qt.rgba(1, 1, 1, 0.07)
+    property color borderColor: Theme.withAlpha(Theme.colors.text, 0.07)
     property real borderWidth: 1
 
     property bool shadow: true
     
     
-    property color shadowColor: Qt.rgba(0, 0, 0, 0.20)
+    // A drop shadow, same reasoning as Scrim.qml: it darkens whatever is behind
+    // the panel, which no palette key describes. Expressed as a fraction of
+    // `panelFill` (Theme's constant #000000) so it still renders byte-identical
+    // to the `Qt.rgba(0, 0, 0, 0.20)` it replaced.
+    property color shadowColor: Theme.withAlpha(Theme.panelFill, 0.20)
     property real shadowBlur: 0.85
     property real shadowVerticalOffset: 14
     property real shadowHorizontalOffset: 0
@@ -63,7 +67,7 @@ Item {
             shadowEnabled: true
             autoPaddingEnabled: true
             shadowBlur: root.shadowBlur * (DeviceProfile.lowSpec ? 0.55 : 1.0)
-            shadowColor: DeviceProfile.lowSpec ? Qt.rgba(0,0,0,0.14) : root.shadowColor
+            shadowColor: DeviceProfile.lowSpec ? Theme.withAlpha(Theme.panelFill, 0.14) : root.shadowColor
             shadowVerticalOffset: root.shadowVerticalOffset * (DeviceProfile.lowSpec ? 0.6 : 1.0)
             shadowHorizontalOffset: root.shadowHorizontalOffset
             blurEnabled: false

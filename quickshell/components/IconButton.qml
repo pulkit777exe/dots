@@ -7,9 +7,9 @@ Item {
     property string icon: "play_arrow"
     property int size: 28
     property int iconSize: 14
-    property color iconColor: Qt.rgba(1, 1, 1, 0.92)
-    property color hoverColor: Qt.rgba(1, 1, 1, 0.12)
-    property color pressedColor: Qt.rgba(1, 1, 1, 0.2)
+    property color iconColor: Theme.withAlpha(Theme.colors.text, 0.92)
+    property color hoverColor: Theme.withAlpha(Theme.colors.text, 0.12)
+    property color pressedColor: Theme.withAlpha(Theme.colors.text, 0.2)
     property bool primary: false
     property bool enabled: true
 

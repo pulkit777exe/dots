@@ -82,13 +82,9 @@ Singleton {
         
         
         
-        else if (prev && !next) {
-            root.requestEnded(false);
-        }
         
         
         else if (prev && next && prev.cookie !== next.cookie) {
-            root.requestEnded(false);
             root.requestBegan(next);
         }
 
@@ -96,7 +92,6 @@ Singleton {
     }
 
     signal requestBegan(var request)
-    signal requestEnded(bool success)
 
     PolkitAgent {
         id: agent

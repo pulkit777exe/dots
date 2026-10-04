@@ -12,8 +12,8 @@ Item {
     property alias text: input.text
     property string placeholderText: "Search..."
     property int iconSize: 18
-    property color textColor: Qt.rgba(1, 1, 1, 0.92)
-    property color placeholderColor: Qt.rgba(1, 1, 1, 0.35)
+    property color textColor: Theme.withAlpha(Theme.colors.text, 0.92)
+    property color placeholderColor: Theme.withAlpha(Theme.colors.text, 0.35)
 
     signal accepted()
     signal navigateLeft()
@@ -41,7 +41,9 @@ Item {
         Icon {
             icon: "search"
             size: root.iconSize
-            iconColor: input.activeFocus ? Qt.rgba(1, 1, 1, 0.65) : Qt.rgba(1, 1, 1, 0.4)
+            iconColor: input.activeFocus
+                ? Theme.withAlpha(Theme.colors.text, 0.65)
+                : Theme.withAlpha(Theme.colors.text, 0.4)
         }
 
         Item {

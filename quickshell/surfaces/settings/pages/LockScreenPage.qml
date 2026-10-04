@@ -49,7 +49,7 @@ ColumnLayout {
                 Layout.fillWidth: true
                 spacing: 2
                 StyledText { font.pixelSize: 13; font.weight: Font.DemiBold; text: "Lock Session Now" }
-                StyledText { font.pixelSize: 11; textColor: Qt.rgba(1,1,1,0.6); text: "Triggers hyprlock / system session lock" }
+                StyledText { font.pixelSize: 11; textColor: Theme.withAlpha(Theme.colors.text, 0.6); text: "Triggers hyprlock / system session lock" }
             }
 
             Rectangle {

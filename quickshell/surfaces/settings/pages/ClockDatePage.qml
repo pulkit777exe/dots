@@ -33,7 +33,7 @@ ColumnLayout {
             StyledText {
                 Layout.alignment: Qt.AlignHCenter
                 font.pixelSize: 13
-                textColor: Qt.rgba(1, 1, 1, 0.6)
+                textColor: Theme.withAlpha(Theme.colors.text, 0.6)
                 text: Qt.formatDate(new Date(), "dddd, MMMM d, yyyy")
             }
         }

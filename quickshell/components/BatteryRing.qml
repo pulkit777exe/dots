@@ -6,8 +6,8 @@ Item {
 
     property int percentage: Battery.percentage
     property bool charging: Battery.charging
-    property color strokeColor: charging ? Theme.colors.accent : Qt.rgba(1, 1, 1, 0.95)
-    property color trackColor: Qt.rgba(1, 1, 1, 0.15)
+    property color strokeColor: charging ? Theme.colors.accent : Theme.withAlpha(Theme.colors.text, 0.95)
+    property color trackColor: Theme.withAlpha(Theme.colors.text, 0.15)
     property real strokeWidth: 2.2
 
     implicitWidth: 32

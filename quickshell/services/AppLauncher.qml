@@ -13,9 +13,6 @@ Singleton {
     property var allApps: []     
     property var results: []     
 
-    signal launched(var app)
-    signal launchFailed(string command)
-
     function setQuery(text) {
         query = text;
         refilter();
@@ -24,16 +21,12 @@ Singleton {
     function launch(result) {
         const app = allApps.find(a => a.name === result.title);
         if (!app) {
-            launchFailed(result.title ?? "");
             return;
         }
         
         const entry = findEntry(result.title);
         if (entry) {
             entry.execute();
-            launched(app);
-        } else {
-            launchFailed(result.title ?? "");
         }
     }
 

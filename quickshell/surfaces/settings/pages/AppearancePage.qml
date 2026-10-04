@@ -32,7 +32,7 @@ ColumnLayout {
                 IconButton { icon: "chevron_right"; size: 28; iconSize: 16; onClicked: UiState.toggleThemePicker() }
             }
 
-            Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: Qt.rgba(1, 1, 1, 0.06) }
+            Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: Theme.colors.divider }
 
             RowLayout {
                 Layout.fillWidth: true
@@ -91,13 +91,13 @@ ColumnLayout {
                         Layout.fillWidth: true
                         Layout.preferredHeight: 32
                         radius: 8
-                        color: ConfigStore.wallpaperTransitionStyle === modelData.key ? Theme.colors.accent : Qt.rgba(1, 1, 1, 0.06)
+                        color: ConfigStore.wallpaperTransitionStyle === modelData.key ? Theme.colors.accent : Theme.colors.surface
 
                         StyledText {
                             anchors.centerIn: parent
                             font.pixelSize: 11
                             font.weight: ConfigStore.wallpaperTransitionStyle === modelData.key ? Font.DemiBold : Font.Normal
-                            textColor: ConfigStore.wallpaperTransitionStyle === modelData.key ? Theme.colors.accentText : Qt.rgba(1, 1, 1, 0.85)
+                            textColor: ConfigStore.wallpaperTransitionStyle === modelData.key ? Theme.colors.accentText : Theme.withAlpha(Theme.colors.text, 0.85)
                             text: modelData.name
                         }
 
@@ -119,14 +119,11 @@ ColumnLayout {
         onMoved: (v) => ConfigStore.setWallpaperTransitionDuration(Math.round(v))
     }
 
-    RowLayout {
-        Layout.fillWidth: true
-        StyledText { variant: "mediaTitle"; font.pixelSize: 13; text: "Dark Mode Base" }
-        Item { Layout.fillWidth: true }
-        Toggle {
-            checked: Theme.darkMode
-            accentColor: Theme.colors.accent
-            onToggled: (v) => Theme.darkMode = v
-        }
-    }
+    // The "Dark Mode Base" toggle that used to live here wrote
+    // `Theme.darkMode`, which is `readonly` and derived from the palette via
+    // `isDarkPreset()`. Every one of the six palettes is dark, so there is
+    // nothing to switch to and the control silently did nothing. Removed
+    // rather than given a writable override: a light palette does not exist,
+    // and inventing the plumbing for one would be an abstraction for a
+    // hypothetical future.
 }

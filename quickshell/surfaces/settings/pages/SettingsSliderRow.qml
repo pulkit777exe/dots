@@ -44,7 +44,7 @@ Item {
                 
                 
                 
-                textColor: Qt.rgba(1, 0.97, 0.925, 0.95)
+                textColor: Theme.withAlpha(Theme.colors.text, 0.9)
             }
             Item { Layout.fillWidth: true }
             StyledText {
@@ -53,7 +53,7 @@ Item {
                 
                 font.pixelSize: 13
                 text: root.value.toFixed(root.decimals) + root.suffix
-                textColor: Qt.rgba(1, 0.98, 0.95, 0.55)
+                textColor: Theme.withAlpha(Theme.colors.text, 0.5)
             }
         }
 
@@ -69,7 +69,7 @@ Item {
                 radius: 2
                 
                 
-                color: Qt.rgba(1, 0.93, 0.88, 0.11)
+                color: Theme.colors.surfaceAlt
             }
 
             Rectangle {
@@ -91,7 +91,7 @@ Item {
                 
                 width: 14; height: 14
                 radius: 7
-                color: "#F6E2CB"
+                color: Theme.colors.text
                 anchors.verticalCenter: parent.verticalCenter
                 x: Math.max(0, Math.min(track.width - width, fill.width - width / 2))
                 scale: dragArea.pressed ? 1.15 : 1.0

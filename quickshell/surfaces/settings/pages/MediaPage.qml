@@ -32,7 +32,7 @@ ColumnLayout {
                 Rectangle {
                     anchors.fill: parent
                     radius: 12
-                    color: Qt.rgba(1, 1, 1, 0.08)
+                    color: Theme.colors.surface
                     clip: true
 
                     Image {
@@ -46,7 +46,7 @@ ColumnLayout {
                         anchors.centerIn: parent
                         icon: "music_note"
                         size: 26
-                        iconColor: Qt.rgba(1, 1, 1, 0.4)
+                        iconColor: Theme.withAlpha(Theme.colors.text, 0.4)
                         visible: Media.artUrl.length === 0
                     }
                 }
@@ -67,7 +67,7 @@ ColumnLayout {
                 StyledText {
                     Layout.fillWidth: true
                     font.pixelSize: 12
-                    textColor: Qt.rgba(1, 1, 1, 0.6)
+                    textColor: Theme.withAlpha(Theme.colors.text, 0.6)
                     text: Media.artist ? (Media.artist + (Media.album ? " • " + Media.album : "")) : "Connect a player like Spotify or browser"
                     elide: Text.ElideRight
                 }

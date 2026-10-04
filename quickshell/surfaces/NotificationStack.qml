@@ -45,7 +45,7 @@ Item {
                 
                 icon: modelData.urgency === 2 ? "priority_high" : ""
                 iconColor: Theme.colors.accent
-                iconBackground: "#211c1b"
+                iconBackground: Theme.colors.surfaceAlt
 
                 appName: modelData.appName
                 title: modelData.summary

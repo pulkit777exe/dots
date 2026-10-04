@@ -59,7 +59,7 @@ Item {
             text: root.currentTime
             font.pixelSize: 24
             font.weight: Font.DemiBold
-            color: "#F7EFE1"
+            textColor: Theme.colors.text
         }
 
         
@@ -90,8 +90,8 @@ Item {
                     Rectangle {
                         anchors.fill: parent
                         radius: 8
-                        color: Qt.rgba(1, 1, 1, 0.08)
-                        border.color: Qt.rgba(1, 1, 1, 0.12)
+                        color: Theme.withAlpha(Theme.colors.text, 0.08)
+                        border.color: Theme.colors.border
                         border.width: 1
                         visible: modelData.isToday
                     }
@@ -107,8 +107,8 @@ Item {
                             font.pixelSize: modelData.isToday ? 10 : 11
                             font.weight: modelData.isToday ? Font.Bold : Font.Normal
                             color: modelData.isSunday
-                                ? "#E05252"
-                                : (modelData.isToday ? "#FFFFFF" : Qt.rgba(1, 1, 1, 0.6))
+                                ? Theme.colors.danger
+                                : (modelData.isToday ? Theme.colors.text : Theme.withAlpha(Theme.colors.text, 0.6))
                         }
 
                         
@@ -119,7 +119,7 @@ Item {
                             font.weight: modelData.isToday ? Font.Bold : Font.Normal
                             color: modelData.isToday
                                 ? Theme.colors.accent
-                                : (modelData.isSunday ? "#E05252" : Qt.rgba(1, 1, 1, 0.85))
+                                : (modelData.isSunday ? Theme.colors.danger : Theme.withAlpha(Theme.colors.text, 0.85))
                         }
                     }
                 }

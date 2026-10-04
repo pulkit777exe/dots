@@ -12,7 +12,7 @@ Item {
     property string variant: "filled"   
     property color accentColor: Theme.colors.accent
     property color filledTextColor: Theme.colors.accentText
-    property color ghostTextColor: Qt.rgba(1, 1, 1, 0.85)
+    property color ghostTextColor: Theme.withAlpha(Theme.colors.text, 0.85)
     property bool enabled: true
 
     signal clicked()
@@ -30,11 +30,11 @@ Item {
                 return mouseArea.pressed ? Qt.darker(root.accentColor, 1.12) : root.accentColor
             }
             if (root.variant === "ghost" || root.variant === "secondary") {
-                if (mouseArea.pressed) return Qt.rgba(1, 1, 1, 0.18)
-                if (mouseArea.containsMouse) return Qt.rgba(1, 1, 1, 0.14)
-                return Qt.rgba(1, 1, 1, 0.08)
+                if (mouseArea.pressed) return Theme.withAlpha(Theme.colors.text, 0.18)
+                if (mouseArea.containsMouse) return Theme.withAlpha(Theme.colors.text, 0.14)
+                return Theme.withAlpha(Theme.colors.text, 0.08)
             }
-            return mouseArea.containsMouse ? Qt.rgba(1, 1, 1, 0.08) : "transparent"
+            return mouseArea.containsMouse ? Theme.withAlpha(Theme.colors.text, 0.08) : "transparent"
         }
         Behavior on color { ColorAnimation { duration: MotionConfig.hover() } }
     }

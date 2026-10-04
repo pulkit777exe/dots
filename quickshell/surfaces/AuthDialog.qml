@@ -4,64 +4,49 @@ import QtQuick.Layouts
 import "../components"
 import "../services"
 
+// AuthDialog.qml -- the polkit authentication prompt.
+//
+// What is in this file is the dialog: its size, the four strings it reads off
+// the pending request, and how those strings and the two buttons are arranged.
+// That is all. Three pieces of it each have a file of their own, because each
+// is a separate thing to change and each would otherwise be a lump in the
+// middle of a layout:
+//
+//   AuthPromptMessage.qml  the inset: the request's message and action id
+//   AuthPasswordField.qml  the box, its label, and getting the caret into it
+//   AuthActions.qml        Cancel and Authenticate
+//
+// Everything to do with polkit itself lives in services/Auth.qml: the agent,
+// the flow, and the `pending` record. This file reads `pending` and answers
+// with a password; it never calls submit() or cancelAuthenticationRequest()
+// directly. AuthOverlay.qml is the only thing in the tree that does that, and
+// it does it from the two signals below -- so those two signals are this file's
+// public API and are wired from a file that is not this one to change. They
+// stay exactly as they were, names and payload.
+//
+// The measurement contract with the overlay: AuthOverlay centres this, so the
+// height is content plus a fixed band rather than a number. 430 wide, and the
+// +31 is the padding around the column below.
+
 Surface {
     id: root
 
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
     width: 430
     implicitHeight: column.implicitHeight + 31
 
     cornerRadius: 26
 
-    
-    
-    
-    backgroundColor: "#000000"
+    backgroundColor: Theme.colors.background
 
     property color accent: Theme.colors.accent
-
-    
-    
-    
-    readonly property color insetFill: "#100e0c"
-    readonly property color fieldFill: "#000000"
-    readonly property color badgeInset: "#211c1b"
 
     readonly property var pendingRequest: Auth.pending
 
     readonly property string dialogTitle: "Authentication required"
 
+    // Every field is defaulted: `pending` is null whenever there is no request,
+    // and this dialog is constructed once when the shell loads rather than per
+    // request, so the empty-prompt state is the state it starts in.
     readonly property string message:
         pendingRequest ? pendingRequest.message : ""
 
@@ -74,6 +59,26 @@ Surface {
     signal authenticateRequested(string password)
     signal cancelled()
 
+    // A new request, not a new dialog: clear whatever was typed for the last
+    // one and take the caret back. Polkit retries a wrong password against the
+    // SAME AuthFlow rather than raising a new request, so this also fires on
+    // the retry -- which is why the field is emptied rather than kept.
+    //
+    // callLater, not direct: shell.qml gives the overlay window keyboard focus
+    // in the same change that raises this dialog, and a forceActiveFocus()
+    // issued before the window holds it is discarded.
+    Connections {
+        target: Auth
+
+        function onRequestBegan() {
+            passwordField.text = ""
+
+            Qt.callLater(function() {
+                passwordField.focusInput()
+            })
+        }
+    }
+
     ColumnLayout {
         id: column
 
@@ -85,34 +90,27 @@ Surface {
 
         spacing: 0
 
-        
-        
-        
-
         RowLayout {
             Layout.fillWidth: true
-            
-            
-            
+
             Layout.preferredHeight: 30
+
             spacing: 13
 
-            
-            
-            
-            
-            
             Rectangle {
                 Layout.preferredWidth: 29
                 Layout.preferredHeight: 29
+
                 radius: width / 2
 
                 color: root.accent
 
                 Icon {
                     anchors.centerIn: parent
+
                     icon: "lock"
                     size: 16
+
                     iconColor: Theme.colors.accentText
                 }
             }
@@ -126,232 +124,45 @@ Surface {
                 font.pixelSize: 18
                 font.weight: Font.DemiBold
 
-                color: "#FFFFFF"
+                color: Theme.colors.text
 
+                // A fixed string, so this cannot currently elide. It is here
+                // rather than absent because the title is a property: the day
+                // it stops being fixed, this is what stops the row overflowing
+                // rather than the button being pushed off the dialog.
                 elide: Text.ElideRight
             }
         }
 
-        
-        
-        
-        
-        
-        
-        
-
-        Rectangle {
+        AuthPromptMessage {
             Layout.fillWidth: true
             Layout.topMargin: 10
             Layout.bottomMargin: 12
 
-            
-            implicitHeight: messageCol.implicitHeight + 21
-            radius: 14
-
-            color: root.insetFill
-
-            ColumnLayout {
-                id: messageCol
-
-                anchors.fill: parent
-                anchors.leftMargin: 12
-                anchors.rightMargin: 12
-                anchors.topMargin: 11
-                anchors.bottomMargin: 10
-
-                spacing: 0
-
-                StyledText {
-                    Layout.fillWidth: true
-
-                    visible: root.message.length > 0
-
-                    text: root.message
-
-                    color: "#FFFFFF"
-
-                    font.pixelSize: 15
-                    font.weight: Font.DemiBold
-                    
-                    
-                    
-                    
-                    lineHeight: 1.0
-
-                    wrapMode: Text.WordWrap
-                }
-
-                StyledText {
-                    Layout.fillWidth: true
-                    Layout.topMargin: 4
-
-                    visible: root.actionId.length > 0
-
-                    text: root.actionId
-
-                    color: "#8a8a8a"
-
-                    font.pixelSize: 13
-
-                    elide: Text.ElideRight
-                }
-            }
+            message: root.message
+            actionId: root.actionId
         }
 
-        
-        
-        
+        AuthPasswordField {
+            id: passwordField
 
-        StyledText {
             Layout.fillWidth: true
 
-            visible: root.message.length > 0 || root.actionId.length > 0
+            // The caret logic is in the field; all it needs to know is that
+            // something is waiting to be answered.
+            active: Boolean(root.pendingRequest)
 
-            text: "Password"
+            labelVisible:
+                root.message.length > 0 ||
+                root.actionId.length > 0
 
-            color: "#7a7a7a"
-
-            font.pixelSize: 13
+            // Enter in the box and the Authenticate button are the same
+            // request, so both land on one line here rather than each reaching
+            // for the field.
+            onSubmitted: root.authenticateRequested(
+                passwordField.text
+            )
         }
-
-        
-        
-        
-        
-        
-        
-
-        Rectangle {
-            id: passwordBox
-
-            Layout.fillWidth: true
-            Layout.topMargin: 11
-            
-            
-            Layout.preferredHeight: 42
-
-            radius: height / 2
-
-            color: root.fieldFill
-
-            border.width: 1
-            border.color: Qt.rgba(root.accent.r, root.accent.g, root.accent.b, 0.25)
-
-            Behavior on border.color {
-                ColorAnimation { duration: MotionConfig.hover() }
-            }
-
-            Rectangle {
-                id: fieldBadge
-
-                anchors.left: parent.left
-                
-                
-                anchors.leftMargin: 5
-                anchors.verticalCenter: parent.verticalCenter
-
-                width: 26
-                height: 26
-                radius: width / 2
-
-                color: root.badgeInset
-
-                Icon {
-                    anchors.centerIn: parent
-                    icon: "lock"
-                    size: 14
-                    iconColor: "#9a9a9a"
-                }
-            }
-
-            TextInput {
-                id: passwordField
-
-                anchors.fill: parent
-                
-                
-                
-                anchors.leftMargin: 38
-                anchors.rightMargin: 15
-
-                verticalAlignment: TextInput.AlignVCenter
-
-                
-                
-                
-                
-                
-                
-                
-                
-                
-                
-                
-                
-                
-                
-                
-                echoMode: TextInput.Password
-
-                color: "#FFFFFF"
-
-                font.family: "SF Pro Display"
-                font.pixelSize: 16
-
-                clip: true
-                selectByMouse: true
-                focus: true
-                activeFocusOnTab: true
-
-                StyledText {
-                    anchors.left: parent.left
-                    anchors.verticalCenter: parent.verticalCenter
-
-                    visible:
-                        passwordField.text.length === 0
-
-                    
-                    
-                    
-                    
-                    text: "Enter your password"
-
-                    font.family: "SF Pro Display"
-                    font.pixelSize: 16
-                    color: "#8a8a8a"
-                }
-
-                onAccepted:
-                    root.authenticateRequested(text)
-
-                Component.onCompleted: {
-                    if (Auth.pending)
-                        forceActiveFocus()
-                }
-
-                onVisibleChanged: {
-                    if (visible && Auth.pending)
-                        forceActiveFocus()
-                }
-
-                Connections {
-                    target: Auth
-
-                    function onRequestBegan() {
-                        passwordField.text = ""
-
-                        Qt.callLater(function() {
-                            passwordField.forceActiveFocus()
-                        })
-                    }
-                }
-            }
-        }
-
-        
-        
-        
 
         StyledText {
             Layout.fillWidth: true
@@ -359,6 +170,10 @@ Surface {
 
             visible: root.errorText.length > 0
 
+            // polkit's own words: `errorText` is supplementaryMessage when
+            // supplementaryIsError is set (services/Auth.qml), which is the
+            // agent's explanation of why the last attempt was refused. Shown
+            // verbatim, in danger, above the buttons that retry it.
             text: root.errorText
 
             color: Theme.colors.danger
@@ -368,118 +183,17 @@ Surface {
             wrapMode: Text.WordWrap
         }
 
-        
-        
-        
-
-        RowLayout {
+        AuthActions {
             Layout.fillWidth: true
             Layout.topMargin: 11
 
-            spacing: 8
+            accent: root.accent
 
-            Item {
-                Layout.fillWidth: true
-            }
+            onCancelPressed: root.cancelled()
 
-            
-            
-            
-
-            Rectangle {
-                id: cancelButton
-
-                
-                
-                Layout.preferredWidth: 73
-                Layout.preferredHeight: 32
-
-                radius: height / 2
-
-                color:
-                    cancelMouse.containsMouse
-                        ? "#1c1917"
-                        : root.insetFill
-
-                Behavior on color {
-                    ColorAnimation {
-                        duration: MotionConfig.hover()
-                    }
-                }
-
-                StyledText {
-                    anchors.centerIn: parent
-
-                    text: "Cancel"
-
-                    font.pixelSize: 15
-                    font.weight: Font.Medium
-
-                    color: "#e6e6e6"
-                }
-
-                MouseArea {
-                    id: cancelMouse
-
-                    anchors.fill: parent
-
-                    hoverEnabled: true
-
-                    onClicked:
-                        root.cancelled()
-                }
-            }
-
-            
-            
-            
-
-            Rectangle {
-                id: authenticateButton
-
-                
-                
-                
-                Layout.preferredWidth: 110
-                Layout.preferredHeight: 32
-
-                radius: height / 2
-
-                color:
-                    authenticateMouse.pressed
-                        ? Theme.colors.accentAlt
-                        : root.accent
-
-                Behavior on color {
-                    ColorAnimation {
-                        duration: MotionConfig.hover()
-                    }
-                }
-
-                StyledText {
-                    anchors.centerIn: parent
-
-                    text: "Authenticate"
-
-                    font.pixelSize: 15
-                    font.weight: Font.DemiBold
-
-                    color: Theme.colors.accentText
-                }
-
-                MouseArea {
-                    id: authenticateMouse
-
-                    anchors.fill: parent
-
-                    hoverEnabled: true
-
-                    onClicked:
-                        root.authenticateRequested(
-                            passwordField.text
-                        )
-                }
-            }
+            onAuthenticatePressed: root.authenticateRequested(
+                passwordField.text
+            )
         }
     }
 }

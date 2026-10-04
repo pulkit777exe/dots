@@ -66,7 +66,7 @@ Surface {
             }
             
             size: 12
-            iconColor: Qt.rgba(1, 1, 1, 0.95)
+            iconColor: Theme.colors.text
         }
 
         
@@ -77,7 +77,7 @@ Surface {
             radius: ConfigStore.osdLevelBarThickness / 2
             
             
-            color: "#1f1d1d"
+            color: Theme.colors.surface
             clip: true
 
             Rectangle {
@@ -99,7 +99,7 @@ Surface {
             font.weight: Font.Medium
             
             Layout.leftMargin: 14
-            textColor: Qt.rgba(1, 1, 1, 0.85)
+            textColor: Theme.withAlpha(Theme.colors.text, 0.85)
             text: Math.round(root.muted ? 0 : root.level) + "%"
         }
     }

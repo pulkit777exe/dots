@@ -6,13 +6,38 @@ import Quickshell.Services.Notifications
 import "../components"
 import "../services"
 
+// Notification.qml -- one toast.
+//
+// What is in this file is the toast: its size and frame, the three ways it can
+// be handed a notification, and the four pieces of chrome that belong to no
+// one part of it. Three pieces each have a file of their own, because each is
+// a separate thing to change:
+//
+//   NotificationBadge.qml    the circle: the notification's icon, or the first
+//                            letter of its app name
+//   NotificationText.qml     the three lines: sender, headline, body
+//   NotificationActions.qml  the sender's action buttons
+//
+// What did NOT move is the interpretation of an entry. `entry` below is a
+// property in this file rather than a fourth component because it is a question
+// about where the toast was given its data -- as a Quickshell Notification, as
+// a Notifications.popups row, or as loose properties -- and answering it needs
+// the properties themselves. Moving it would have meant passing eleven values
+// through to learn what the eleventh was for.
+//
+// The toast list itself is services/Notifications.qml, and it is the seam into
+// NotificationState.qml (the list), NotificationWatchers.qml (what turns an
+// event elsewhere into a toast) and NotificationHistory.qml (notifs.json).
+// This file reads `Notifications.popups` through NotificationStack.qml and
+// holds no notification state of its own.
+
 Surface {
     id: root
 
-    
-    
-    
-
+    // The three sources, in the order they are consulted. `notification` takes
+    // a Quickshell Notification object and `modelData` a plain row from
+    // Notifications.popups; both are accepted so this file can be dropped
+    // into either a NotificationServer delegate or a Repeater.
     property var notification: null
     property var modelData: null
 
@@ -28,14 +53,15 @@ Surface {
     property var actions: []
     property string image: ""
 
-    property color iconBackground: "#211c1b"
+    property color iconBackground: Theme.colors.surfaceAlt
     property color iconColor: Theme.colors.accent
 
-    
-    
-    
-    
+    // Deliberately NOT derived from `entry`, unlike every other read of an
+    // entry's fields below: this asks whether a glyph was *supplied*, which
+    // only the loose properties can say. With a notification or a modelData,
+    // a toast with no supplied glyph falls back to the app's initial.
     readonly property bool hasGlyph: (root.icon !== "" || root.appIcon !== "")
+
     readonly property string initial: {
         const n = String(root.entry.appName || "").trim();
         return n.length > 0 ? n.charAt(0).toUpperCase() : "";
@@ -62,49 +88,47 @@ Surface {
         }
     }
 
-    
-    
-    
+    // The two fallback chains, once, here. `title` before `summary` and
+    // `subtitle` before `body` are both about the entry rather than about how
+    // text is drawn, and NotificationStack.qml fills `title` with the summary
+    // and leaves `subtitle` empty -- so both rungs are live today.
+    readonly property string headline:
+        root.entry.title || root.entry.summary || ""
+
+    readonly property string bodyText:
+        root.entry.subtitle || root.entry.body || ""
+
+    // Which icon the badge shows, resolved to one name. Anything the sender
+    // named wins; then its app icon; and a toast with neither is not a bare
+    // grey disc -- a critical one says so, and the rest say "a notification".
+    readonly property string glyph: {
+        if (root.entry.icon)
+            return root.entry.icon
+
+        if (root.entry.appIcon)
+            return root.entry.appIcon
+
+        return root.entry.urgency === NotificationUrgency.Critical
+            ? "warning"
+            : "notifications"
+    }
 
     signal clicked
     signal dismissed
     signal actionInvoked(string actionId)
 
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-
+    // 449 is ConfigStore.notifWidth's default, and in the one place this is
+    // used -- NotificationStack's Repeater, with Layout.fillWidth -- the
+    // layout overwrites it anyway. Left as a literal on purpose: making it
+    // read the setting is a behaviour change, not a split.
     width: 449
 
-    
-    
-    
-    
-    implicitHeight:
-        content.implicitHeight + 24
+    implicitHeight: content.implicitHeight + 24
 
     cornerRadius: 27
 
-    
-    
-    backgroundColor: "#000000"
+    backgroundColor: Theme.colors.background
 
-    
-    
     borderWidth: 0
 
     shadow: true
@@ -112,10 +136,8 @@ Surface {
     opacity: 0
     scale: 0.97
 
-    
-    
-    
-
+    // Fade and lift together, from nothing: a toast that appears fully opaque
+    // at 0.97 reads as a stuck panel rather than an arrival.
     Component.onCompleted: {
         if (MotionConfig.reduceMotion) {
             root.opacity = 1
@@ -145,19 +167,14 @@ Surface {
         }
     }
 
-    
-    
-    
-
+    // Over the whole toast rather than on the close button, so clicking
+    // anywhere that is not a button runs the notification's default action --
+    // which is what NotificationStack.qml does with `clicked`.
     TapHandler {
         onTapped: root.clicked()
     }
 
     HoverHandler { id: hover }
-
-    
-    
-    
 
     ColumnLayout {
         id: content
@@ -171,164 +188,28 @@ Surface {
 
         spacing: 0
 
-        
-        
-        
-
         RowLayout {
             Layout.fillWidth: true
             spacing: 12
 
-            
-            
-            
-            
-            
-            
-            
-            
-            
+            NotificationBadge {
+                hasGlyph: root.hasGlyph
+                glyph: root.glyph
+                initial: root.initial
 
-            Rectangle {
-                Layout.preferredWidth: 37
-                Layout.preferredHeight: 37
-                Layout.alignment: Qt.AlignVCenter
-
-                radius: width / 2
-
-                color: root.iconBackground
-
-                Icon {
-                    anchors.centerIn: parent
-
-                    visible: root.hasGlyph
-
-                    icon:
-                        root.entry.icon
-                            ? root.entry.icon
-                            : (
-                                root.entry.appIcon
-                                    ? root.entry.appIcon
-                                    : (
-                                        root.entry.urgency ===
-                                        NotificationUrgency.Critical
-                                            ? "warning"
-                                            : "notifications"
-                                    )
-                            )
-
-                    size: 18
-
-                    iconColor: root.iconColor
-                }
-
-                
-                StyledText {
-                    anchors.centerIn: parent
-
-                    visible: !root.hasGlyph && root.initial !== ""
-
-                    text: root.initial
-
-                    font.family: "SF Pro Display"
-                    font.pixelSize: 13
-                    font.weight: Font.DemiBold
-
-                    color: root.iconColor
-                }
+                badgeColor: root.iconBackground
+                glyphColor: root.iconColor
             }
 
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-
-            Item {
-                id: textCol
-
-                Layout.fillWidth: true
-                Layout.alignment: Qt.AlignVCenter
-
-                readonly property bool hasBody:
-                    Boolean(root.entry.subtitle || root.entry.body)
-
-                implicitHeight: hasBody ? 44 : 30
-                height: implicitHeight
-
-                StyledText {
-                    width: parent.width
-                    height: 12
-                    verticalAlignment: Text.AlignVCenter
-
-                    text:
-                        root.entry.appName ||
-                        "Notification"
-
-                    textColor: "#8a8a8a"
-
-                    font.pixelSize: 12
-                    font.weight: Font.Medium
-
-                    elide: Text.ElideRight
-                }
-
-                StyledText {
-                    width: parent.width
-                    height: 16
-                    y: 14
-                    verticalAlignment: Text.AlignVCenter
-
-                    text:
-                        root.entry.title ||
-                        root.entry.summary ||
-                        ""
-
-                    textColor: "#FFFFFF"
-
-                    font.pixelSize: 14
-                    font.weight: Font.DemiBold
-
-                    elide: Text.ElideRight
-                }
-
-                StyledText {
-                    width: parent.width
-                    height: 14
-                    y: 30
-                    verticalAlignment: Text.AlignVCenter
-
-                    visible: parent.hasBody
-
-                    text:
-                        root.entry.subtitle ||
-                        root.entry.body ||
-                        ""
-
-                    textColor: "#8a8a8a"
-
-                    font.pixelSize: 11
-
-                    elide: Text.ElideRight
-                }
+            NotificationText {
+                appName: root.entry.appName
+                headline: root.headline
+                body: root.bodyText
             }
 
-            
-            
-            
-            
-            
-            
-            
-            
-
+            // Hidden until the pointer is over the toast, and then only the
+            // button -- a permanently visible close on every toast is a row of
+            // crosses down the side of the screen.
             IconButton {
                 Layout.alignment: Qt.AlignVCenter
 
@@ -336,7 +217,9 @@ Surface {
                 visible: opacity > 0.01
 
                 Behavior on opacity {
-                    NumberAnimation { duration: MotionConfig.fade() }
+                    NumberAnimation {
+                        duration: MotionConfig.fade()
+                    }
                 }
 
                 icon: "close"
@@ -344,18 +227,19 @@ Surface {
                 size: 26
                 iconSize: 15
 
-                iconColor: "#8a8a8a"
+                iconColor: Theme.withAlpha(Theme.colors.text, 0.55)
 
                 onClicked: root.dismissed()
             }
         }
 
-        
-        
-        
-
+        // A sender may attach an image; most do not. The band is 0 when there
+        // is none rather than merely invisible -- an invisible item in a layout
+        // is skipped, but so is its top margin, and 11 is what separates an
+        // image from the header above it.
         Rectangle {
             Layout.fillWidth: true
+
             Layout.preferredHeight: visible ? 160 : 0
             Layout.topMargin: visible ? 11 : 0
 
@@ -363,7 +247,7 @@ Surface {
 
             radius: 13
 
-            color: "#181614"
+            color: Theme.colors.surface
 
             clip: true
 
@@ -372,49 +256,31 @@ Surface {
 
                 source: root.entry.image || ""
 
+                // Cropped rather than fitted: an image that is not the shape of
+                // 160px would otherwise letterbox inside a band sized for it,
+                // and the band does not resize to suit the image.
                 fillMode: Image.PreserveAspectCrop
 
+                // A remote image must not hold the shell's frame budget while
+                // it loads, and the same URL is very likely to arrive again.
                 asynchronous: true
                 cache: true
                 smooth: true
             }
         }
 
-        
-        
-        
+        // `hasActions` rather than `visible`: the top margin is a layout
+        // decision made by this file, and the visibility belongs to the row
+        // that knows whether it has anything to show.
+        NotificationActions {
+            id: actionBar
 
-        Flow {
             Layout.fillWidth: true
-            Layout.topMargin: visible ? 9 : 0
+            Layout.topMargin: actionBar.hasActions ? 9 : 0
 
-            visible:
-                Array.isArray(root.entry.actions) &&
-                root.entry.actions.length > 0
+            actionList: root.entry.actions
 
-            spacing: 6
-
-            Repeater {
-                model:
-                    Array.isArray(root.entry.actions)
-                        ? root.entry.actions
-                        : []
-
-                delegate: StyledButton {
-                    required property var modelData
-
-                    text:
-                        modelData.label || ""
-
-                    variant:
-                        "ghost"
-
-                    onClicked:
-                        root.actionInvoked(
-                            modelData.id || ""
-                        )
-                }
-            }
+            onInvoked: (actionId) => root.actionInvoked(actionId)
         }
     }
 }

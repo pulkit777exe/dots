@@ -35,7 +35,7 @@ Surface {
     
     
     
-    backgroundColor: Qt.rgba(1, 0.875, 0.75, 0.063)
+    backgroundColor: Theme.colors.surface
     borderWidth: 0
     shadow: false
 
