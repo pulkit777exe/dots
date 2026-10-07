@@ -33,7 +33,10 @@ ShellRoot {
             required property var modelData
             screen: modelData
             anchors { top: true; bottom: true; left: true; right: true }
-            exclusiveZone: 0
+            // -1: don't get pushed down by the bar's reserved strip -- a
+            // full-screen surface must cover the full screen (otherwise the
+            // top 40px fall through to hyprpaper and the wallpaper seams).
+            exclusiveZone: -1
             color: "black"
             WlrLayershell.layer: WlrLayer.Background
             WlrLayershell.namespace: "quickshell-wallpaper"
@@ -56,7 +59,7 @@ ShellRoot {
             required property var modelData
             screen: modelData
             anchors { top: true; bottom: true; left: true; right: true }
-            exclusiveZone: 0
+            exclusiveZone: -1
             color: "transparent"
             WlrLayershell.layer: WlrLayer.Top
             WlrLayershell.namespace: "quickshell-backdrop"
@@ -182,7 +185,7 @@ ShellRoot {
             required property var modelData
             screen: modelData
             anchors { top: true; bottom: true; left: true; right: true }
-            exclusiveZone: 0
+            exclusiveZone: -1
             color: "transparent"
             WlrLayershell.layer: WlrLayer.Top
             WlrLayershell.namespace: "quickshell-settings"
