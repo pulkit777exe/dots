@@ -16,7 +16,15 @@ PopupPanel {
 
     readonly property int sidebarWidth: 220
     readonly property int bottomInset: 16
-    implicitHeight: contentFlick.y + contentFlick.contentHeight + bottomInset
+    // Height = fixed chrome above the page (top margin, nav row, spacing)
+    // + the page itself. Stated explicitly rather than read back off the
+    // layout: once the host caps the height, the layout compresses and a
+    // y-based binding would feed that back in (binding loop). Past the cap
+    // the Flickable below does the scrolling, like any app window.
+    readonly property real chromeHeight: 16 + 30 + 6 + bottomInset
+    property real maxHeight: 0
+    implicitHeight: Math.min(chromeHeight + contentFlick.contentHeight,
+                              maxHeight > 0 ? maxHeight : 1e9)
 
     readonly property var navItems: [
         { title: "Bar & Island", icon: "crop_landscape", page: 0 },

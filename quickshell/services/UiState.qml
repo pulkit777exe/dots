@@ -17,6 +17,10 @@ Singleton {
     property string ccView: "home"
 
     readonly property bool anyOpen: mode !== UiState.Mode.Closed
+    // The bar popups (control centre, pickers, power menu, launcher) share a
+    // backdrop and the bar's keyboard grab. The settings app is its own
+    // desktop window: no dim, no grab -- it must not trip those triggers.
+    readonly property bool popupOpen: anyOpen && !settingsOpen
     readonly property bool controlCenterOpen: mode === UiState.Mode.ControlCenter
     readonly property bool settingsOpen: mode === UiState.Mode.Settings
     readonly property bool themePickerOpen: mode === UiState.Mode.ThemePicker

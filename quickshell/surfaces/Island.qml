@@ -22,7 +22,9 @@ Item {
     // A popup or an exclusive fullscreen window both take the bar away.
     // Toasts keep it: they are transient shell feedback, and hiding the bar
     // over a fullscreen window while one is on screen is the known case.
-    readonly property bool hidden: UiState.anyOpen
+    // The settings app is a window on the desktop, not a bar popup: the
+    // island stays put behind it.
+    readonly property bool hidden: UiState.popupOpen
         || (Compositor.activeWindowFullscreen && Notifications.toasts.length === 0)
 
     opacity: hidden ? 0 : 1
