@@ -35,7 +35,7 @@ Item {
             Layout.preferredHeight: 60
             radius: 13
             color: Theme.cc.item
-            border.color: Theme.colors.accent
+            border.color: Theme.accentFor("control-center")
             border.width: 1
             visible: Wifi.connected
 
@@ -47,7 +47,7 @@ Item {
                     Layout.preferredWidth: 40
                     Layout.preferredHeight: 40
                     radius: width / 2
-                    color: Theme.colors.accent
+                    color: Theme.accentFor("control-center")
 
                     Icon {
                         anchors.centerIn: parent
@@ -88,7 +88,7 @@ Item {
                         anchors.centerIn: parent
                         text: "Disconnect"
                         font.pixelSize: Theme.px(11)
-                        color: Theme.colors.accent
+                        color: Theme.accentFor("control-center")
                     }
                     MouseArea {
                         anchors.fill: parent
@@ -117,7 +117,7 @@ Item {
                     Layout.preferredWidth: 6
                     Layout.preferredHeight: 6
                     radius: 3
-                    color: Theme.colors.accent
+                    color: Theme.accentFor("control-center")
                 }
                 Label { text: "Scanning"; font.pixelSize: Theme.px(11); color: Theme.withAlpha(Theme.colors.text, 0.48) }
             }

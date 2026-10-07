@@ -52,6 +52,7 @@ RowLayout {
     }
 
     Toggle {
+        accent: Theme.accentFor("control-center")
         visible: header.toggleVisible
         checked: header.toggleOn
         onToggled: header.toggled()

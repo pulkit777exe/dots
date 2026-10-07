@@ -158,7 +158,7 @@ PopupPanel {
                         width: 3
                         height: 24
                         radius: 2
-                        color: Theme.colors.accent
+                        color: Theme.accentFor("launcher")
                     }
 
                     RowLayout {

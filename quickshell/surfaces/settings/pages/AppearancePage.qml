@@ -32,7 +32,7 @@ ColumnLayout {
                 color: Theme.withAlpha(Theme.colors.text, 0.9)
                 elide: Text.ElideRight
             }
-            StyledButton { label: "Change"; onClicked: UiState.toggleThemePicker() }
+            StyledButton { label: "Change"; accent: Theme.accentFor("settings"); onClicked: UiState.toggleThemePicker() }
         }
 
         SettingsDivider {}
@@ -49,7 +49,7 @@ ColumnLayout {
                 color: Theme.withAlpha(Theme.colors.text, 0.9)
                 elide: Text.ElideRight
             }
-            StyledButton { label: "Choose"; onClicked: UiState.toggleWallpaperPicker() }
+            StyledButton { label: "Choose"; accent: Theme.accentFor("settings"); onClicked: UiState.toggleWallpaperPicker() }
         }
     }
 
@@ -81,7 +81,7 @@ ColumnLayout {
                         radius: 12
                         color: "transparent"
                         border.width: Config.accentOverride === modelData ? 2 : 0
-                        border.color: Theme.colors.accent
+                        border.color: Theme.accentFor("settings")
 
                         Rectangle {
                             anchors.centerIn: parent

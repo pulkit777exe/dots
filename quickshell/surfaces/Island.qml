@@ -164,7 +164,7 @@ Item {
             width: 3
             height: 3
             radius: 1.5
-            color: Theme.colors.accent
+            color: Theme.accentFor("island")
             anchors.verticalCenter: parent.verticalCenter
         }
         Label {
@@ -181,6 +181,7 @@ Item {
     WorkspaceBars {                      // dots: x16, centred at rest, y46 rich
         id: bars
         screenName: island.screenName
+        accent: Theme.accentFor("island")
         x: island.pad
         y: island.zoneY(46, height)
     }
@@ -272,7 +273,7 @@ Item {
                     height: 1.5
                     radius: 0.75
                     color: index < Math.round(Media.progress * 12)
-                        ? Theme.colors.accent
+                        ? Theme.accentFor("island")
                         : Theme.withAlpha(Theme.colors.text, 0.25)
                 }
             }
@@ -287,9 +288,11 @@ Item {
         y: (island.height - height) / 2
 
         SignalBars {
+            accent: Theme.accentFor("island")
             strength: Wifi.enabled && Wifi.connected ? Wifi.strength : 0
         }
         BatteryBadge {
+            accent: Theme.accentFor("island")
             percentage: Battery.percentage
             charging: Battery.charging
         }

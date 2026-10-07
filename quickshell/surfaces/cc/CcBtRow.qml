@@ -15,7 +15,7 @@ Rectangle {
     Layout.preferredHeight: 46
     radius: 12
     color: area.containsMouse ? Theme.cc.itemHover : Theme.cc.item
-    border.color: device.connected ? Theme.colors.accent : Theme.cc.border
+    border.color: device.connected ? Theme.accentFor("control-center") : Theme.cc.border
     border.width: 1
     Behavior on color { ColorAnimation { duration: Config.hover() } }
 
@@ -30,7 +30,7 @@ Rectangle {
             Layout.preferredWidth: 28
             Layout.preferredHeight: 28
             radius: width / 2
-            color: row.connected ? Theme.colors.accent : Theme.withAlpha(Theme.colors.text, 0.12)
+            color: row.connected ? Theme.accentFor("control-center") : Theme.withAlpha(Theme.colors.text, 0.12)
             Behavior on color { ColorAnimation { duration: Config.hover() } }
 
             Icon {
@@ -62,7 +62,7 @@ Rectangle {
         Label {
             text: row.connected ? "Disconnect" : (row.paired ? "Connect" : "Pair")
             font.pixelSize: Theme.px(11)
-            color: Theme.colors.accent
+            color: Theme.accentFor("control-center")
         }
     }
 

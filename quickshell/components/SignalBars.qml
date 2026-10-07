@@ -8,6 +8,7 @@ Item {
     id: root
 
     property int strength: 0
+    property color accent: Theme.colors.accent
 
     readonly property var heights: [3.5, 5.6, 7.2, 10]
 
@@ -25,7 +26,7 @@ Item {
             radius: 1.25
             x: index * (2.5 + 1.4)
             y: root.height - height
-            color: lit ? Theme.colors.accent : Theme.withAlpha(Theme.colors.text, 0.25)
+            color: lit ? accent : Theme.withAlpha(Theme.colors.text, 0.25)
             Behavior on color { ColorAnimation { duration: Config.hover() } }
         }
     }

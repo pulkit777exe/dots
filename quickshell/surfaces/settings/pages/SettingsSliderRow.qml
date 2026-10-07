@@ -50,6 +50,7 @@ Item {
 
         FillSlider {
             Layout.fillWidth: true
+            accent: Theme.accentFor("settings")
             Layout.preferredHeight: 16
             value: root.fraction
             onMoved: (f) => root.moved(root.clamp(root.from + f * (root.to - root.from)))

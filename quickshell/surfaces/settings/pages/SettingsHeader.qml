@@ -29,13 +29,13 @@ Surface {
             Layout.preferredWidth: 56
             Layout.preferredHeight: 56
             radius: 28
-            color: Qt.alpha(Theme.colors.accent, 0.18)
+            color: Qt.alpha(Theme.accentFor("settings"), 0.18)
 
             Icon {
                 anchors.centerIn: parent
                 icon: root.icon
                 size: 26
-                iconColor: Theme.colors.accent
+                iconColor: Theme.accentFor("settings")
             }
         }
 

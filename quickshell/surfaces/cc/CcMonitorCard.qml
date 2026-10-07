@@ -33,7 +33,7 @@ Rectangle {
                 Layout.preferredHeight: 30
                 radius: 15
                 color: card.monitor && card.monitor.focused
-                    ? Theme.colors.accent : Theme.withAlpha(Theme.colors.text, 0.20)
+                    ? Theme.accentFor("control-center") : Theme.withAlpha(Theme.colors.text, 0.20)
                 Behavior on color { ColorAnimation { duration: Config.hover() } }
 
                 Icon {
@@ -68,7 +68,7 @@ Rectangle {
                 visible: card.monitor && card.monitor.focused
                 text: "focused"
                 font.pixelSize: Theme.px(11)
-                color: Theme.colors.accent
+                color: Theme.accentFor("control-center")
             }
         }
 
@@ -95,7 +95,7 @@ Rectangle {
                     height: 28
                     width: scaleLabel.implicitWidth + 20
                     radius: height / 2
-                    color: selected ? Theme.colors.accent
+                    color: selected ? Theme.accentFor("control-center")
                         : (scaleArea.containsMouse ? Theme.cc.itemHover
                            : Theme.withAlpha(Theme.colors.text, 0.12))
                     Behavior on color { ColorAnimation { duration: Config.hover() } }

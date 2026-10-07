@@ -54,20 +54,24 @@ Singleton {
         return merged;
     }
 
-    // The two colours no palette has a say in: the base every translucent
-    // surface composites against, and the shell's own near-black chrome
-    // (control centre cards, tracks, borders) which is deliberately not
-    // themed -- panels read the same on every palette.
-    readonly property color panelFill: "#000000"
+    // Panel chrome, derived from the active palette so every surface
+    // re-tints with the theme: panels take the palette background, cards
+    // the surface ladder (surface -> surfaceAlt -> surfaceElevated), and
+    // hairlines the palette's alpha border. Tracks are that background
+    // pushed darker -- the one derivation, since no palette has a
+    // "recessed" key. The drop-shadow tint is the single neutral left: a
+    // shadow is occlusion over an arbitrary wallpaper, not chrome.
+    readonly property color panelFill: colors.background
+    readonly property color shadowTint: "#000000"
     readonly property QtObject cc: QtObject {
-        readonly property color surface: "#000000"
-        readonly property color card: "#171514"
-        readonly property color cardHover: "#211e1c"
-        readonly property color item: "#25211f"
-        readonly property color itemHover: "#302b29"
-        readonly property color track: "#080808"
-        readonly property color trackCard: "#11100f"
-        readonly property color border: "#2d2927"
+        readonly property color surface: root.colors.background
+        readonly property color card: root.colors.surface
+        readonly property color cardHover: root.colors.surfaceAlt
+        readonly property color item: root.colors.surfaceAlt
+        readonly property color itemHover: root.colors.surfaceElevated
+        readonly property color track: Qt.darker(root.colors.background, 1.7)
+        readonly property color trackCard: Qt.darker(root.colors.background, 1.35)
+        readonly property color border: root.colors.border
     }
 
     signal themeChanged(string name)

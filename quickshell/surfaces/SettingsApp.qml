@@ -94,7 +94,7 @@ PopupPanel {
                         width: navList.width
                         height: 40
                         radius: 10
-                        color: navRow.active ? Qt.alpha(Theme.colors.accent, 0.18)
+                        color: navRow.active ? Qt.alpha(Theme.accentFor("settings"), 0.18)
                             : (navHover.containsMouse ? Theme.cc.itemHover : "transparent")
                         Behavior on color { ColorAnimation { duration: Config.hover() } }
 
@@ -108,7 +108,7 @@ PopupPanel {
                                 Layout.preferredWidth: 28
                                 Layout.preferredHeight: 28
                                 radius: 14
-                                color: Theme.colors.accent
+                                color: Theme.accentFor("settings")
                                 opacity: navRow.active ? 1 : 0.3
                                 Behavior on opacity { NumberAnimation { duration: Config.fade() } }
 

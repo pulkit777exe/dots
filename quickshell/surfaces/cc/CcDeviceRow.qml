@@ -30,7 +30,7 @@ Rectangle {
             Layout.preferredWidth: 29
             Layout.preferredHeight: 29
             radius: width / 2
-            color: row.selected ? Theme.colors.accent : Theme.withAlpha(Theme.colors.text, 0.20)
+            color: row.selected ? Theme.accentFor("control-center") : Theme.withAlpha(Theme.colors.text, 0.20)
             Behavior on color { ColorAnimation { duration: Config.hover() } }
 
             Icon {
@@ -54,7 +54,7 @@ Rectangle {
             visible: row.selected
             icon: "check"
             size: 14
-            iconColor: Theme.colors.accent
+            iconColor: Theme.accentFor("control-center")
         }
     }
 

@@ -106,7 +106,7 @@ Item {
                         Layout.preferredWidth: 6
                         Layout.preferredHeight: 6
                         radius: 3
-                        color: Theme.colors.accent
+                        color: Theme.accentFor("control-center")
                     }
                     Label { text: "Scanning"; font.pixelSize: Theme.px(11); color: Theme.withAlpha(Theme.colors.text, 0.55) }
                 }

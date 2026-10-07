@@ -61,7 +61,7 @@ Item {
                         Layout.preferredWidth: 30
                         Layout.preferredHeight: 30
                         radius: 15
-                        color: NightLight.enabled ? Theme.colors.accent
+                        color: NightLight.enabled ? Theme.accentFor("control-center")
                             : Theme.withAlpha(Theme.colors.text, 0.20)
                         Behavior on color { ColorAnimation { duration: Config.hover() } }
 
@@ -86,6 +86,7 @@ Item {
                     }
 
                     Toggle {
+                        accent: Theme.accentFor("control-center")
                         checked: NightLight.enabled
                         onToggled: NightLight.toggle()
                     }

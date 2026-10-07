@@ -144,7 +144,7 @@ Item {
                     visible: Notifications.history.length > 0
                     text: "Clear all"
                     font.pixelSize: Theme.px(12)
-                    color: Theme.colors.accent
+                    color: Theme.accentFor("control-center")
                     TapHandler { onTapped: Notifications.clearAll() }
                     HoverHandler { cursorShape: Qt.PointingHandCursor }
                 }
@@ -189,7 +189,7 @@ Item {
                                     Layout.preferredHeight: 32
                                     Layout.alignment: Qt.AlignVCenter
                                     radius: width / 2
-                                    color: Theme.colors.accent
+                                    color: Theme.accentFor("control-center")
                                     opacity: modelData.urgent ? 1 : 0.35
                                 }
                                 Icon {

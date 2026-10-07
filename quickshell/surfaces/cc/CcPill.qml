@@ -13,7 +13,7 @@ Rectangle {
     property string icon: ""
     property string title: ""
     property string subtitle: ""
-    property color accent: Theme.colors.accent
+    property color accent: Theme.accentFor("control-center")
 
     signal clicked()
 

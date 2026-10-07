@@ -127,7 +127,7 @@ PopupPanel {
                     clip: true
                     color: Theme.cc.trackCard
                     border.width: card.selected ? 2 : 1
-                    border.color: card.selected ? Theme.colors.accent : Theme.cc.border
+                    border.color: card.selected ? Theme.accentFor("wallpaper-picker") : Theme.cc.border
 
                     Image {
                         anchors.fill: parent
@@ -153,7 +153,7 @@ PopupPanel {
                         anchors.top: parent.top
                         anchors.right: parent.right
                         anchors.margins: 8
-                        color: Theme.colors.accent
+                        color: Theme.accentFor("wallpaper-picker")
                     }
                 }
 

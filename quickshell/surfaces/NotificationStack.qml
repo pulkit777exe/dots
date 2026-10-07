@@ -35,7 +35,7 @@ Item {
 
                 cornerRadius: 15
                 backgroundColor: Theme.cc.card
-                borderColor: entry.urgent ? Theme.colors.accent : Theme.cc.border
+                borderColor: entry.urgent ? Theme.accentFor("notifications") : Theme.cc.border
 
                 // Slide in from the right, under a fade.
                 opacity: 0
@@ -86,7 +86,7 @@ Item {
                             anchors.centerIn: parent
                             icon: card.entry.appIcon || "notifications"
                             size: 18
-                            iconColor: Theme.colors.accent
+                            iconColor: Theme.accentFor("notifications")
                         }
                     }
 

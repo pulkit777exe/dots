@@ -22,7 +22,7 @@ Item {
     property real borderWidth: 1
 
     property bool shadow: true
-    property color shadowColor: Theme.withAlpha(Theme.panelFill, 0.20)
+    property color shadowColor: Theme.withAlpha(Theme.shadowTint, 0.20)
 
     default property alias content: body.data
 

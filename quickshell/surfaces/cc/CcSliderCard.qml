@@ -12,7 +12,7 @@ Rectangle {
     property string label: ""
     property string icon: ""
     property real value: 0             // 0..1
-    property color accent: Theme.colors.accent
+    property color accent: Theme.accentFor("control-center")
 
     signal moved(real fraction)
     signal scrolled(int direction)

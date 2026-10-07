@@ -47,7 +47,7 @@ PopupPanel {
             anchors.fill: parent
             radius: 18
             color: tile.confirming ? Theme.colors.danger
-                : tile.primary ? Theme.colors.accent
+                : tile.primary ? Theme.accentFor("power-menu")
                 : tile.isHovered ? Qt.lighter(Theme.colors.surface, 1.25)
                 : Theme.colors.surface
             Behavior on color { ColorAnimation { duration: Config.hover() } }

@@ -15,6 +15,7 @@ Item {
     // Set per screen by the island; the slots are the same five everywhere,
     // so occupancy is read globally instead of filtered to this monitor.
     property string screenName: ""
+    property color accent: Theme.colors.accent
 
     readonly property int barWidth: 6
     readonly property int barHeight: 10
@@ -61,7 +62,7 @@ Item {
                 width: 8.4
                 height: 12.5
                 radius: width / 2
-                color: Theme.withAlpha(Theme.colors.accent, 0.16)
+                color: Theme.withAlpha(accent, 0.16)
                 opacity: bar.active ? 1 : 0
                 Behavior on opacity { NumberAnimation { duration: Config.hover(); easing.type: Easing.OutCubic } }
             }
@@ -72,7 +73,7 @@ Item {
             Rectangle {
                 anchors.fill: parent
                 radius: width / 2
-                color: bar.active ? Theme.colors.accent
+                color: bar.active ? accent
                     : bar.occupied ? Theme.withAlpha(Theme.colors.foreground, 0.8)
                     : Theme.colors.muted
                 Behavior on color { ColorAnimation { duration: Config.hover() } }

@@ -29,6 +29,7 @@ Item {
         }
 
         Toggle {
+            accent: Theme.accentFor("settings")
             checked: root.checked
             onToggled: (v) => root.toggled(v)
         }

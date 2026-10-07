@@ -25,6 +25,7 @@ Item {
             Layout.fillWidth: true
             Layout.preferredHeight: 26
             icon: slider.icon
+            accent: Theme.accentFor("control-center")
             trackColor: slider.trackColor
             value: slider.value
             onMoved: f => slider.moved(f)

@@ -10,7 +10,7 @@ Rectangle {
 
     property bool active: false
     property string icon: ""
-    property color accent: Theme.colors.accent
+    property color accent: Theme.accentFor("control-center")
 
     signal clicked()
 
