@@ -2,37 +2,31 @@ import QtQuick
 import QtQuick.Layouts
 import "../services"
 
+// The transparent search input used by the theme picker (and, at a smaller
+// height, the settings sidebar): magnifier, text, placeholder, and the
+// keyboard contract every picker shares -- arrows navigate, Enter accepts,
+// Escape closes.
 
-
-
-
-Item {
+Rectangle {
     id: root
 
+    property string placeholderText: ""
+    property bool externalNavigation: false   // arrows always navigate, not just at line edges
     property alias text: input.text
-    property string placeholderText: "Search..."
-    property int iconSize: 18
-    property color textColor: Theme.withAlpha(Theme.colors.text, 0.92)
-    property color placeholderColor: Theme.withAlpha(Theme.colors.text, 0.35)
+    readonly property bool inputFocused: input.activeFocus
+
+    property int fieldHeight: 40
 
     signal accepted()
     signal navigateLeft()
     signal navigateRight()
     signal navigateUp()
     signal navigateDown()
-    
-    property bool externalNavigation: false
 
-    implicitHeight: 40
+    function forceInputFocus() { input.forceActiveFocus(); }
 
-    readonly property bool hasFocus: input.activeFocus
-
-    function focusInput() {
-        input.forceActiveFocus()
-        
-        
-        if (!input.activeFocus) Qt.callLater(() => input.forceActiveFocus())
-    }
+    implicitHeight: fieldHeight
+    color: "transparent"
 
     RowLayout {
         anchors.fill: parent
@@ -40,59 +34,51 @@ Item {
 
         Icon {
             icon: "search"
-            size: root.iconSize
-            iconColor: input.activeFocus
+            size: 18
+            Layout.alignment: Qt.AlignVCenter
+            iconColor: root.inputFocused
                 ? Theme.withAlpha(Theme.colors.text, 0.65)
                 : Theme.withAlpha(Theme.colors.text, 0.4)
+            Behavior on iconColor { ColorAnimation { duration: Config.hover() } }
         }
 
         Item {
             Layout.fillWidth: true
             Layout.fillHeight: true
 
-            StyledText {
-                anchors.verticalCenter: parent.verticalCenter
-                variant: "body"
-                text: root.placeholderText
-                textColor: root.placeholderColor
-                opacity: input.text.length === 0 ? 1 : 0
-                visible: opacity > 0
-                Behavior on opacity { NumberAnimation { duration: MotionConfig.hover(); easing.type: Easing.OutCubic } }
-            }
-
             TextInput {
                 id: input
                 anchors.fill: parent
                 verticalAlignment: TextInput.AlignVCenter
-                color: root.textColor
-                font.pixelSize: 14
+                font.family: "SF Pro Display"
+                font.pixelSize: Theme.px(14)
+                color: Theme.withAlpha(Theme.colors.text, 0.92)
                 clip: true
-                onAccepted: root.accepted()
+                selectionColor: Theme.withAlpha(Theme.colors.accent, 0.35)
 
-                Keys.onDownPressed: (event) => {
-                    root.navigateDown()
-                    event.accepted = true
-                }
-                Keys.onUpPressed: (event) => {
-                    root.navigateUp()
-                    event.accepted = true
-                }
-                Keys.onLeftPressed: (event) => {
-                    if (root.externalNavigation || (input.cursorPosition === 0 && input.selectionStart === input.selectionEnd)) {
-                        root.navigateLeft()
-                        event.accepted = true
+                Keys.onReturnPressed: root.accepted()
+                Keys.onEnterPressed: root.accepted()
+                Keys.onEscapePressed: { UiState.closeAll(); event.accepted = true; }
+                Keys.onPressed: (event) => {
+                    if (event.key === Qt.Key_Left && root.externalNavigation) {
+                        root.navigateLeft(); event.accepted = true;
+                    } else if (event.key === Qt.Key_Right && root.externalNavigation) {
+                        root.navigateRight(); event.accepted = true;
+                    } else if (event.key === Qt.Key_Up) {
+                        root.navigateUp(); event.accepted = true;
+                    } else if (event.key === Qt.Key_Down) {
+                        root.navigateDown(); event.accepted = true;
                     }
                 }
-                Keys.onRightPressed: (event) => {
-                    if (root.externalNavigation || (input.cursorPosition === input.text.length && input.selectionStart === input.selectionEnd)) {
-                        root.navigateRight()
-                        event.accepted = true
-                    }
-                }
-                Keys.onEscapePressed: (event) => {
-                    UiState.closeAll()
-                    event.accepted = true
-                }
+            }
+
+            Label {
+                anchors.fill: parent
+                verticalAlignment: TextInput.AlignVCenter
+                text: root.placeholderText
+                font.pixelSize: Theme.px(12)
+                color: Theme.withAlpha(Theme.colors.text, 0.35)
+                visible: input.text.length === 0 && !input.activeFocus
             }
         }
     }

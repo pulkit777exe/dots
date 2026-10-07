@@ -17,7 +17,6 @@
 -- Key choices avoid existing binds in applications.lua/navigation.lua/
 -- window.lua/mouse.lua/resize.lua/workspaces.lua/screenshots.lua:
 --   - L is `hyprlock` in applications.lua → power menu on SUPER+SHIFT+L
---   - V is `toggle floating` in window.lua → clipboard on SUPER+C (was P)
 --
 
 local mod = "SUPER"
@@ -38,25 +37,11 @@ hl.bind("Super_R", hl.dsp.global("quickshell:toggleLauncher"), { release = true 
 qs_global("D", "toggleLauncher")        -- launcher (Command Palette) — kept as alternative
 qs_global("N", "toggleControlCenter")   -- control center
 qs_global("S", "toggleSettings")        -- settings app
-qs_global("C", "toggleClipboard")       -- clipboard history (SUPER+C per user, C not P/V)
 qs_global("T", "toggleThemePicker")     -- theme picker (Island morph)
 qs_global("W", "toggleWallpaperPicker") -- wallpaper picker
--- Media card. Keybinds.qml exposed toggleMedia (GlobalShortcut + IPC) and
--- Island.qml mounts MediaPlayerSurface when UiState.mediaOpen, but nothing
--- bound it — the surface was implemented and completely unreachable except
--- by typing `quickshell ipc call shell toggleMedia`. M is free.
-qs_global("M", "toggleMedia")
-
--- Key choices avoid existing binds in applications.lua/navigation.lua/
--- window.lua/mouse.lua/resize.lua/workspaces.lua/screenshots.lua:
---   - L is `hyprlock` in applications.lua → power menu on SUPER+SHIFT+L
---   - V is `toggle floating` in window.lua → clipboard on SUPER+C (was P)
---   - M was free → media card on SUPER+M
---
-hl.bind(
-    mod .. " + SHIFT + C",
-    hl.dsp.global("quickshell:toggleCalendar")
-)
+-- SUPER+C, SUPER+M and SUPER+SHIFT+C used to reach clipboard, media card
+-- and calendar; all three surfaces are gone from the shell, so the binds
+-- went with them rather than left to fire at names nothing registers.
 
 -- Power menu — SHIFT+L (plain L is lock)
 hl.bind(

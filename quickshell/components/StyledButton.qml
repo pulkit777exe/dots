@@ -1,62 +1,49 @@
 import QtQuick
 import "../services"
 
+// The pill button used by the settings app (power modes, lock).
 
-
-
-
-Item {
+Rectangle {
     id: root
 
-    property string text: ""
-    property string variant: "filled"   
-    property color accentColor: Theme.colors.accent
-    property color filledTextColor: Theme.colors.accentText
-    property color ghostTextColor: Theme.withAlpha(Theme.colors.text, 0.85)
-    property bool enabled: true
+    property string label: ""
+    property bool filled: false
+    property color accent: Theme.colors.accent
 
     signal clicked()
 
-    implicitWidth: label.implicitWidth + 32
+    implicitWidth: labelText.implicitWidth + 32
     implicitHeight: 36
-    opacity: enabled ? 1 : 0.4
-    scale: mouseArea.pressed ? 0.96 : 1.0
-    Behavior on opacity { OpacityAnimator { duration: MotionConfig.fade(); easing.type: Easing.OutCubic } }
+    radius: height / 2
+
+    readonly property color baseColor: filled
+        ? accent
+        : Theme.withAlpha(Theme.colors.text, 0.08)
+
+    color: press.containsMouse && press.pressed
+        ? (filled ? Qt.darker(accent, 1.12) : Theme.withAlpha(Theme.colors.text, 0.18))
+        : (press.containsMouse && !filled ? Theme.withAlpha(Theme.colors.text, 0.14) : baseColor)
+
+    Behavior on color { ColorAnimation { duration: Config.hover() } }
+
+    scale: press.pressed ? 0.96 : 1.0
     Behavior on scale {
-        enabled: !MotionConfig.reduceMotion
+        enabled: !Config.reduceMotion
         SpringAnimation { spring: 6; damping: 0.7; mass: 0.4 }
     }
 
-    Rectangle {
-        anchors.fill: parent
-        radius: height / 2
-        color: {
-            if (root.variant === "filled") {
-                return mouseArea.pressed ? Qt.darker(root.accentColor, 1.12) : root.accentColor
-            }
-            if (root.variant === "ghost" || root.variant === "secondary") {
-                if (mouseArea.pressed) return Theme.withAlpha(Theme.colors.text, 0.18)
-                if (mouseArea.containsMouse) return Theme.withAlpha(Theme.colors.text, 0.14)
-                return Theme.withAlpha(Theme.colors.text, 0.08)
-            }
-            return mouseArea.containsMouse ? Theme.withAlpha(Theme.colors.text, 0.08) : "transparent"
-        }
-        Behavior on color { ColorAnimation { duration: MotionConfig.hover() } }
-    }
-
-    StyledText {
-        id: label
+    Label {
+        id: labelText
         anchors.centerIn: parent
-        variant: "mediaTitle"
-        font.pixelSize: 13
-        text: root.text
-        textColor: root.variant === "filled" ? root.filledTextColor : root.ghostTextColor
+        text: root.label
+        font.pixelSize: Theme.px(13)
+        font.weight: Font.DemiBold
+        color: root.filled ? Theme.colors.accentText : Theme.withAlpha(Theme.colors.text, 0.85)
     }
 
     MouseArea {
-        id: mouseArea
+        id: press
         anchors.fill: parent
-        enabled: root.enabled
         hoverEnabled: true
         cursorShape: Qt.PointingHandCursor
         onClicked: root.clicked()

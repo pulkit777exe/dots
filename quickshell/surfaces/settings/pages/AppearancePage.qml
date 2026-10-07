@@ -7,75 +7,97 @@ ColumnLayout {
     id: root
     spacing: 12
 
+    // "" is the theme's own accent; the rest are fixed overrides.
+    readonly property var accentSwatches: ["", "#3ed0af", "#eb6f65", "#a7c080",
+                                           "#e5c07b", "#7aa2f7", "#d38aea", "#7dcfff"]
+    readonly property color baseAccent: (Theme.current && Theme.current.colors && Theme.current.colors.accent)
+        ? Theme.current.colors.accent : Theme.fallbackColors.accent
+
     SettingsHeader {
         icon: "palette"
         title: "Appearance"
-        subtitle: "Theme, wallpaper, fonts, corners, and surface depth."
+        subtitle: "Theme, wallpaper, accent, and type."
     }
 
     SettingsCard {
         RowLayout {
             Layout.fillWidth: true
-            Layout.preferredHeight: 38
-            StyledText { Layout.fillWidth: true; font.pixelSize: 13; font.weight: Font.DemiBold; text: "Theme" }
-            RowLayout {
-                spacing: 4
-                StyledText { font.pixelSize: 12; color: Theme.withAlpha(Theme.colors.text, 0.6); text: Theme.displayName || Theme.currentName }
-                Icon { icon: "chevron_right"; size: 16; iconColor: Theme.withAlpha(Theme.colors.text, 0.4) }
+            Layout.preferredHeight: 46
+            spacing: 12
+
+            Label {
+                Layout.fillWidth: true
+                text: "Theme — " + Theme.displayName
+                font.pixelSize: Theme.px(13)
+                color: Theme.withAlpha(Theme.colors.text, 0.9)
+                elide: Text.ElideRight
             }
-            HoverHandler { cursorShape: Qt.PointingHandCursor }
-            TapHandler { onTapped: UiState.toggleThemePicker() }
+            StyledButton { label: "Change"; onClicked: UiState.toggleThemePicker() }
         }
 
         SettingsDivider {}
 
         RowLayout {
             Layout.fillWidth: true
-            Layout.preferredHeight: 38
-            StyledText { Layout.fillWidth: true; font.pixelSize: 13; font.weight: Font.DemiBold; text: "Wallpaper" }
-            RowLayout {
-                spacing: 4
-                StyledText { font.pixelSize: 12; color: Theme.withAlpha(Theme.colors.text, 0.6); text: "Choose..." }
-                Icon { icon: "chevron_right"; size: 16; iconColor: Theme.withAlpha(Theme.colors.text, 0.4) }
-            }
-            HoverHandler { cursorShape: Qt.PointingHandCursor }
-            TapHandler { onTapped: UiState.toggleWallpaperPicker() }
-        }
-    }
+            Layout.preferredHeight: 46
+            spacing: 12
 
-    SettingsSectionLabel {
-        label: "Accent"
+            Label {
+                Layout.fillWidth: true
+                text: "Wallpaper"
+                font.pixelSize: Theme.px(13)
+                color: Theme.withAlpha(Theme.colors.text, 0.9)
+                elide: Text.ElideRight
+            }
+            StyledButton { label: "Choose"; onClicked: UiState.toggleWallpaperPicker() }
+        }
     }
 
     SettingsCard {
         RowLayout {
             Layout.fillWidth: true
-            Layout.preferredHeight: 42
-            StyledText { Layout.fillWidth: true; font.pixelSize: 13; font.weight: Font.DemiBold; text: "Accent colour" }
+            Layout.preferredHeight: 44
+            spacing: 12
+
+            Label {
+                Layout.fillWidth: true
+                text: "Accent colour"
+                font.pixelSize: Theme.px(13)
+                color: Theme.withAlpha(Theme.colors.text, 0.9)
+            }
 
             Row {
-                spacing: 8
+                spacing: 6
+
                 Repeater {
-                    model: ["#3ed0af", "#eb6f65", "#a7c080", "#e5c07b", "#7aa2f7", "#d38aea", "#7dcfff"]
+                    model: root.accentSwatches
+
                     Rectangle {
+                        id: swatch
                         required property var modelData
-                        required property int index
-                        width: 20
-                        height: 20
-                        radius: 10
-                        color: modelData
+
+                        width: 24
+                        height: 24
+                        radius: 12
+                        color: "transparent"
+                        border.width: Config.accentOverride === modelData ? 2 : 0
+                        border.color: Theme.colors.accent
 
                         Rectangle {
                             anchors.centerIn: parent
-                            width: 6
-                            height: 6
-                            radius: 3
-                            color: "#101010"
-                            visible: index === 0
+                            width: 16
+                            height: 16
+                            radius: 8
+                            color: swatch.modelData === "" ? root.baseAccent : swatch.modelData
+                            border.width: swatch.modelData === "" ? 1 : 0
+                            border.color: Theme.withAlpha(Theme.colors.text, 0.25)
                         }
 
-                        HoverHandler { cursorShape: Qt.PointingHandCursor }
-                        TapHandler {}
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: Config.set("accentOverride", swatch.modelData)
+                        }
                     }
                 }
             }
@@ -83,46 +105,19 @@ ColumnLayout {
 
         SettingsDivider {}
 
-        RowLayout {
-            Layout.fillWidth: true
-            Layout.preferredHeight: 42
-            StyledText { Layout.fillWidth: true; font.pixelSize: 13; font.weight: Font.DemiBold; text: "Custom (#rrggbb)" }
-            Rectangle {
-                Layout.preferredWidth: 140
-                Layout.preferredHeight: 28
-                radius: 6
-                color: Theme.colors.surfaceAlt
-                border.width: 1
-                border.color: Theme.withAlpha(Theme.colors.text, 0.08)
-                TextInput {
-                    anchors.fill: parent
-                    anchors.margins: 4
-                    anchors.leftMargin: 8
-                    font.pixelSize: 12
-                    color: Theme.colors.text
-                    clip: true
-                    verticalAlignment: TextInput.AlignVCenter
-                }
-            }
+        SettingsSliderRow {
+            label: "Font size"
+            value: Config.fontSize
+            from: 11; to: 20; suffix: " px"
+            onMoved: (v) => Config.set("fontSize", Math.round(v))
         }
 
         SettingsDivider {}
 
         SettingsToggleRow {
-            label: "Color burst (a different palette colour per surface)"
-            checked: false
-        }
-    }
-
-    SettingsSectionLabel {
-        label: "Type"
-    }
-
-    SettingsCard {
-        SettingsSliderRow {
-            label: "Font size"
-            value: 15
-            from: 11; to: 20; suffix: " px"
+            label: "Colour burst (a different accent per surface)"
+            checked: Config.colorBurst
+            onToggled: (v) => Config.set("colorBurst", v)
         }
     }
 }

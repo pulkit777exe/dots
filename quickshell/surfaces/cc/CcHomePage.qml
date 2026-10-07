@@ -1,148 +1,238 @@
-pragma ComponentBehavior: Bound
-
 import QtQuick
+import QtQuick.Layouts
+import Quickshell
 import "../../components"
 import "../../services"
 
-
-// CcHomePage.qml -- the control centre's home grid.
-//
-// Extracted from ControlCenter.qml. The grid, the row table and the input-leak
-// gate all move together because they are one thing: which cells sit on top of
-// what, and which of them still take a click. `firstRowBottom` is the line the
-// drill card covers from, and ControlCenter reads it to place that card, so the
-// gate and the geometry cannot come apart.
+// The control centre's home grid: two rows of pills + discs, the Sound and
+// Display slider cards, and the notification card. During a drill only row 0
+// keeps taking clicks -- the drill card covers the rest.
 
 Item {
-    id: root
+    id: page
 
-
-    CcTokens { id: cc }
-    anchors { top: parent.top; left: parent.left; right: parent.right; margins: 14 }
-
-    // ControlCenter owns the view name and the popover anchor; this page only
-    // says which cell was pressed.
+    signal drill(string page)
     property bool drillOpen: false
-    property Item panel
-    signal drillRequested(string view, point origin)
 
-    readonly property var layoutItems: ControlCenterLayout.items
-    readonly property int cols: ControlCenterLayout.columns
-
-
-    readonly property real cellW: (width - (cols - 1) * 10) / cols
-
-
-    function colX(c) { return c * (cellW + 10) }
-
-
-    // The control-centre layout is sparse and user-editable, so derive offsets
-    // from the rows that actually exist instead of maintaining a fixed-size
-    // table. This stays correct for both the default grid and rearranged items.
-    readonly property var rowTops: {
-        const heights = {}
-        for (const item of layoutItems) {
-            const row = item.row
-            heights[row] = Math.max(heights[row] || 0, rowHeightFor(item))
-        }
-
-        const rows = Object.keys(heights).map(Number).sort((a, b) => a - b)
-        const tops = {}
-        let y = 0
-        for (const row of rows) {
-            tops[row] = y
-            y += heights[row] + 10
-        }
-        return tops
+    // Row geometry, shared with ControlCenter: row 0 is 60 tall (the discs),
+    // the gap is 10, and the drill card starts 5 px into that gap.
+    readonly property real rowH: 60
+    readonly property real firstRowBottom: rowH + 5
+    readonly property real notifH: {
+        const n = Notifications.history.length;
+        const list = n > 0 ? Math.min(72 * n - 8, Config.notifHistoryHeight) : 17;
+        return Math.max(176, 16 + 8 + list + 28);
     }
+    readonly property real contentBottom: 264 + notifH     // 4 rows above the card
+    implicitHeight: contentBottom
 
-    readonly property var rows: Object.keys(rowTops).map(Number).sort((a, b) => a - b)
+    // Cells under row 0 stop taking input while the drill card covers them.
+    function liveAt(bottom): bool { return !drillOpen || bottom <= firstRowBottom; }
 
-    function rowTop(row) { return rowTops[row] ?? 0 }
+    RowLayout {                                // row 0: wifi, focus, lock
+        width: parent.width
+        height: rowH
+        spacing: 10
 
-    readonly property real firstRowBottom: {
-        if (rows.length < 2) return Math.min(height, 70)
-        return rowTop(rows[1]) - 5
-    }
-
-
-    function rowHeightFor(it) {
-        switch (it.type) {
-        case "lock": case "nightLight": case "idleInhibit": case "battery":
-            return 60
-        case "sound": case "display":
-            return 52
-        case "notifications":
-            return root.notifHomeHeight
-        default:
-            return 57
+        CcPill {
+            Layout.fillWidth: true
+            Layout.alignment: Qt.AlignTop
+            enabled: page.liveAt(rowH)
+            active: Wifi.enabled && Wifi.connected
+            icon: Wifi.iconName
+            title: "Wi-Fi"
+            subtitle: Wifi.subtitle
+            onClicked: { Wifi.scan(); page.drill("wifi"); }
+        }
+        CcPill {
+            Layout.fillWidth: true
+            Layout.alignment: Qt.AlignTop
+            enabled: page.liveAt(rowH)
+            active: Notifications.dnd
+            icon: "do_not_disturb_on"
+            title: "Focus"
+            subtitle: Notifications.dnd ? "On" : "Off"
+            onClicked: Notifications.toggleDnd()
+        }
+        CcIconButton {
+            icon: "lock"
+            onClicked: { Quickshell.execDetached(["hyprlock"]); UiState.closeAll(); }
         }
     }
 
+    RowLayout {                                // row 1: bluetooth, game mode, night light
+        y: 70
+        width: parent.width
+        height: rowH
+        spacing: 10
 
-    // The notification row's reserved height. This is the arithmetic the card
-    // in CcControl actually draws -- 14 margin + the header row + 8 spacing +
-    // the list + 14 margin -- because the row table cannot read the card's own
-    // implicitHeight from here, and writing a second, differently-shaped
-    // formula for it is exactly how the two drifted: this used to reserve
-    // 44 + min(64n, hist), which at two notifications came to 176 while the
-    // card drew 188, so the last row overflowed the height the panel was sized
-    // from. 16 is the header row's line box (StyledText at pixelSize 12) and
-    // 17 the empty-state line's; the 176 floor covers the empty case, where
-    // the arithmetic would ask for only 69.
-    readonly property int notifHomeHeight: {
-        const n = Notifications.active.length
-        const inner = n > 0
-            ? 16 + 8 + Math.min(72 * n - 8, ConfigStore.notifHistoryHeight)
-            : 16 + 8 + 17
-        return Math.max(176, inner + 28)
-    }
-
-    // The grid's own bottom, in page coordinates: the deepest cell's lower
-    // edge. It follows the resolved row offsets, so a rearrangement cannot
-    // leave a hand-maintained panel height behind.
-    readonly property real contentBottom: {
-        let bottom = 0
-        for (const it of layoutItems) {
-            const cellBottom = rowTop(it.row) + rowHeightFor(it)
-            if (cellBottom > bottom) bottom = cellBottom
+        CcPill {
+            Layout.fillWidth: true
+            Layout.alignment: Qt.AlignTop
+            enabled: page.liveAt(70 + rowH)
+            active: Bluetooth.enabled
+            icon: Bluetooth.iconName
+            title: "Bluetooth"
+            subtitle: !Bluetooth.enabled ? "Off"
+                : (Bluetooth.connectedName.length > 0 ? Bluetooth.connectedName : "On")
+            onClicked: { Bluetooth.scan(); page.drill("bluetooth"); }
         }
-        return bottom
+        CcPill {
+            Layout.fillWidth: true
+            Layout.alignment: Qt.AlignTop
+            enabled: page.liveAt(70 + rowH)
+            active: PowerProfile.active === "performance"
+            icon: "sports_esports"
+            title: "Game Mode"
+            subtitle: PowerProfile.active === "performance" ? "On" : "Off"
+            onClicked: PowerProfile.setProfile(
+                PowerProfile.active === "performance" ? "balanced" : "performance")
+        }
+        CcIconButton {
+            active: NightLight.enabled
+            icon: NightLight.enabled ? "dark_mode" : "nightlight"
+            onClicked: NightLight.toggle()
+        }
     }
 
-    Repeater {
-        model: root.layoutItems
+    CcSliderCard {                             // sound
+        y: 140
+        width: parent.width
+        label: "Sound"
+        icon: Volume.muted ? "volume_off" : (Volume.volumePercent > 50 ? "volume_up" : "volume_down")
+        value: Volume.muted ? 0 : Volume.volumePercent / 100
+        onMoved: f => Volume.setVolume(f * 100)
+        onScrolled: d => Volume.setVolume(
+            Math.max(0, Math.min(100, Volume.volumePercent + d * 5)))
+        onChevronClicked: page.drill("sound")
+    }
 
-        delegate: CcControl {
-            id: placed
-            required property var modelData
+    CcSliderCard {                             // display
+        y: 202
+        width: parent.width
+        label: "Display"
+        icon: "wb_sunny"
+        value: Math.max(0.04, Brightness.level / 100)
+        onMoved: f => Brightness.setBrightness(Math.round(f * 100))
+        onScrolled: d => Brightness.step(d * 5)
+        onChevronClicked: page.drill("display")
+    }
 
-            readonly property real w: root.colX(modelData.colSpan) - 10
-            readonly property real yTop: root.rowTop(modelData.row)
+    Rectangle {                                // notifications
+        y: 264
+        width: parent.width
+        height: notifH
+        radius: 14
+        color: Theme.cc.card
+        border.color: Theme.cc.border
+        border.width: 1
 
-            controlType: modelData.type
-            x: root.colX(modelData.col)
-            y: yTop
-            width: w
-            height: placed.cellHeight
+        ColumnLayout {
+            anchors { fill: parent; margins: 14 }
+            spacing: 8
 
-            // A drill page is drawn over this grid from firstRowBottom
-            // down, and the card covering it is a plain Rectangle -- it
-            // takes no input, so every cell underneath stayed clickable
-            // through it. The Bluetooth page's on/off switch lands exactly
-            // on the Night Light disc in row 1, so one tap turned Bluetooth
-            // off *and* the night light on (the screen going yellow); the
-            // same leak made the drill pages' back arrow re-open the page
-            // it sits on. Cells the drill card covers stop taking input
-            // while it covers them, and only then: on the home view every
-            // cell is the way into a page, so all of them stay live. Row 0
-            // ends above that line and keeps working during a drill, which
-            // is what makes it the page switcher.
-            enabled: !root.drillOpen
-                || yTop + cellHeight <= root.firstRowBottom
+            RowLayout {
+                Layout.fillWidth: true
+                Label {
+                    text: "Notifications"
+                    font.pixelSize: Theme.px(12)
+                    font.weight: Font.Medium
+                    color: Theme.withAlpha(Theme.colors.text, 0.55)
+                    Layout.fillWidth: true
+                }
+                Label {
+                    visible: Notifications.history.length > 0
+                    text: "Clear all"
+                    font.pixelSize: Theme.px(12)
+                    color: Theme.colors.accent
+                    TapHandler { onTapped: Notifications.clearAll() }
+                    HoverHandler { cursorShape: Qt.PointingHandCursor }
+                }
+            }
 
-            panel: root.panel
-            onDrillRequested: (view, origin) => root.drillRequested(view, origin)
+            Label {
+                visible: Notifications.history.length === 0
+                text: "No notifications"
+                font.pixelSize: Theme.px(13)
+                color: Theme.withAlpha(Theme.colors.text, 0.35)
+            }
+
+            Item {                              // the list, capped
+                Layout.fillWidth: true
+                Layout.preferredHeight: Math.min(notifList.implicitHeight,
+                                                 Config.notifHistoryHeight)
+                visible: Notifications.history.length > 0
+                clip: true
+
+                Flickable {
+                    anchors.fill: parent
+                    contentWidth: width
+                    contentHeight: notifList.implicitHeight
+                    clip: true
+                    boundsBehavior: Flickable.StopAtBounds
+
+                    Column {
+                        id: notifList
+                        width: parent.width
+                        spacing: 8
+
+                        Repeater {
+                            model: Notifications.history
+                            delegate: RowLayout {
+                                required property var modelData
+                                width: notifList.width
+                                height: 64
+                                spacing: 10
+
+                                Rectangle {                      // urgency dot
+                                    Layout.preferredWidth: 4
+                                    Layout.preferredHeight: 32
+                                    Layout.alignment: Qt.AlignVCenter
+                                    radius: width / 2
+                                    color: Theme.colors.accent
+                                    opacity: modelData.urgent ? 1 : 0.35
+                                }
+                                Icon {
+                                    icon: modelData.appIcon || "notifications"
+                                    size: 18
+                                    Layout.alignment: Qt.AlignVCenter
+                                }
+                                ColumnLayout {
+                                    Layout.fillWidth: true
+                                    Layout.alignment: Qt.AlignVCenter
+                                    spacing: 1
+                                    Label {
+                                        Layout.fillWidth: true
+                                        text: modelData.summary
+                                        font.pixelSize: Theme.px(13)
+                                        font.weight: Font.DemiBold
+                                        color: Theme.colors.text
+                                        elide: Text.ElideRight
+                                    }
+                                    Label {
+                                        Layout.fillWidth: true
+                                        visible: Config.notifShowBodyText
+                                        text: modelData.body
+                                        font.pixelSize: Theme.px(11)
+                                        color: Theme.withAlpha(Theme.colors.text, 0.55)
+                                        elide: Text.ElideRight
+                                        maximumLineCount: 2
+                                        wrapMode: Text.WrapAtWordBoundaryOrAnywhere
+                                    }
+                                }
+                                Icon {
+                                    icon: "close"
+                                    size: 14
+                                    iconColor: Theme.withAlpha(Theme.colors.text, 0.4)
+                                    Layout.alignment: Qt.AlignVCenter
+                                    HoverHandler { cursorShape: Qt.PointingHandCursor }
+                                    TapHandler { onTapped: Notifications.dismiss(modelData.key) }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }

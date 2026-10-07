@@ -1,224 +1,103 @@
-// Notifications -- the singleton the rest of the tree imports, and the
-// composition root for the three files it was split into:
-//
-//   NotificationState.qml     the toast list: D-Bus ingest, `notify`, expiry,
-//                             dismissal, action invoke, the notify sound
-//   NotificationWatchers.qml  what turns a change in another service into a
-//                             toast
-//   NotificationHistory.qml   notifs.json, both directions
-//
-// This file is the seam, not the implementation. It owns exactly four things
-// that cannot move:
-//
-//   * the `Notifications` name itself -- qmldir declares the singleton, and
-//     40 references across the tree spell it `Notifications.<member>`
-//   * both IpcHandlers, because `qs ipc call` addresses them by target and the
-//     documented table is checked against the running shell
-//   * the PersistentProperties that make `dnd` survive a restart
-//   * the wiring between the three, which is the only place both ends of each
-//     dependency are in scope at once
-//
-// Everything below that is a forwarder. The forwarders are load-bearing, not
-// boilerplate: scripts/ipc-audit.py self-tests on ("Notifications", "dismiss")
-// and NotificationStack.qml calls Notifications.dismiss() and
-// Notifications.invokeAction(), so a name that stops being a real member of
-// this object fails the audit and breaks the toast buttons.
-//
-// The three helpers are plain types, not singletons, and each needs a qmldir
-// entry: a same-directory type does NOT resolve from inside a module singleton
-// ("Type X is not a type", measured). services/BrightnessMonitor.qml is the
-// existing precedent for that shape.
-
 pragma Singleton
-pragma ComponentBehavior: Bound
 
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import Quickshell.Services.Notifications
+
+// The notification server: everything that arrives goes to `history` (which
+// the control centre lists), and unless Focus/DND is on it also becomes a
+// toast until its timeout. Toast expiry only ends the popup -- the entry
+// stays in history until dismissed or cleared.
+//
+// Two facts about Quickshell 0.3.1 that are not in its docs: expireTimeout
+// is milliseconds despite the docs saying seconds (dividing makes toasts
+// live 1000x too long), and a handle must be both `tracked = true` and
+// `.dismiss()`ed or it strands in the server's map.
 
 Singleton {
     id: root
 
-    // ------------------------------------------------------------------
-    // the public surface. Every name here is referenced from outside this
-    // file, so every name here has to stay a real member of this object.
+    property var history: []   // newest first, [{key, appName, appIcon, summary, body, urgent, handle}]
+    property var toasts: []    // [{key, deadline}] -- a subset of history
 
-    // The toast list, oldest first. Ten references, and shell.qml:333 uses its
-    // length as a Region click-mask, so it has to be a plain writable
-    // property rather than something only this file can assign.
-    property alias active: state.active
+    readonly property bool dnd: Config.dnd
 
-    // What NotificationStack draws: the toasts that should be up right now,
-    // which is `active` minus the ones read back off disk as history.
-    readonly property var popups: state.popups
+    function setDnd(v: bool) { Config.set("dnd", v); }
+    function toggleDnd() { Config.set("dnd", !Config.dnd); }
 
-    readonly property var notClosed: state.notClosed
-
-    // Do not disturb. Seven references including a write at
-    // surfaces/ControlCenter.qml:1666, which is the only DND toggle in the
-    // tree. This alias and the PersistentProperties it points at are
-    // deliberately unmoved: the value is the one thing here that has to
-    // outlive a restart, and the reloadable is the one object whose
-    // registration is not something to relocate for tidiness.
-    property alias dnd: props.dnd
-
-    property alias loaded: state.loaded
-
-    property alias defaultExpireTimeout: state.defaultExpireTimeout
-    property alias fullscreenExpireTimeout: state.fullscreenExpireTimeout
-    property alias urgentExpireTimeout: state.urgentExpireTimeout
-
-    PersistentProperties {
-        id: props
-
-        reloadableId: "notifs"
-
-        property bool dnd: false
+    readonly property NotificationServer server: NotificationServer {
+        keepOnReload: false
+        bodySupported: true
+        bodyMarkupSupported: true
+        actionsSupported: true
+        imageSupported: true
+        persistenceSupported: true
+        bodyHyperlinksSupported: true
+        bodyImagesSupported: true
+        onNotification: (n) => root.ingest(n)
     }
 
-    onDndChanged: {
-        if (dnd) {
-            console.log(
-                "Do not disturb enabled — popup notifications disabled"
-            )
-        } else {
-            console.log(
-                "Do not disturb disabled — popup notifications enabled"
-            )
+    function ingest(n) {
+        const entry = {
+            key: n.id,
+            appName: n.appName || "",
+            appIcon: n.appIcon || "",
+            summary: n.summary || "",
+            body: n.body || "",
+            urgent: n.urgency === NotificationUrgency.Critical,
+            handle: n
+        };
+        history = [entry].concat(history).slice(0, 100);
+
+        if (!Config.dnd) {
+            // Client-set lifetime wins; otherwise urgent gets the long one.
+            const timeout = n.expireTimeout > 0
+                ? n.expireTimeout
+                : (entry.urgent ? Config.notifUrgentTimeoutMs : Config.notifPopupTimeoutMs);
+            toasts = toasts.concat([{ key: entry.key, deadline: Date.now() + timeout }]);
+        }
+
+        n.tracked = true;
+        sweep.restart();
+    }
+
+    // Drops expired toasts; runs only while something is on screen.
+    Timer {
+        id: sweep
+        interval: 500
+        repeat: true
+        running: root.toasts.length > 0
+        onTriggered: {
+            const now = Date.now();
+            root.toasts = root.toasts.filter(t => t.deadline > now);
         }
     }
 
-    // ------------------------------------------------------------------
-    // the three pieces
-
-    NotificationState {
-        id: state
-
-        // One hop. An alias cannot reach through a grandchild
-        // ("Invalid alias target location", measured), so this is a binding
-        // rather than an alias onto state.popups.
-        dnd: props.dnd
-
-        // Nudge to persist. State owns the list and history owns the disk, and
-        // neither can name the other's file, so the callback is injected here.
-        // `history` unqualified: an id is a scope name, not a property, so
-        // `root.history` is undefined (measured).
-        requestSave: () => history.restartSave()
+    function entryFor(key) {
+        for (const e of history) if (e.key === key) return e;
+        return null;
     }
 
-    NotificationWatchers {
-        id: watchers
-
-        // One capability, handed over rather than reached for: the watchers
-        // turn events into toasts and cannot do anything else to the list.
-        notify:
-            (summary, body, appName, appIcon, urgency, actions) =>
-                state.notify(
-                    summary,
-                    body,
-                    appName,
-                    appIcon,
-                    urgency,
-                    actions
-                )
+    function dismiss(key) {
+        const e = entryFor(key);
+        if (e && e.handle) e.handle.dismiss();
+        history = history.filter(x => x.key !== key);
+        toasts = toasts.filter(t => t.key !== key);
     }
 
-    NotificationHistory {
-        id: history
-
-        store: state
+    function clearAll() {
+        for (const e of history) if (e.handle) e.handle.dismiss();
+        history = [];
+        toasts = [];
     }
-
-    // ------------------------------------------------------------------
-    // forwarders. See the note at the top of the file: these are audited.
-
-    function dismiss(id: int): void {
-        state.dismiss(id)
-    }
-
-    function invokeAction(id: int, actionId: string): void {
-        state.invokeAction(id, actionId)
-    }
-
-    function clearAll(): void {
-        state.clearAll()
-    }
-
-    function notify(
-        summary,
-        body,
-        appName,
-        appIcon,
-        urgency,
-        actions
-    ) {
-        return state.notify(
-            summary,
-            body,
-            appName,
-            appIcon,
-            urgency,
-            actions
-        );
-    }
-
-    // ------------------------------------------------------------------
-    // IPC.
-    //
-    // Both targets stay here. A function declared inside an IpcHandler is
-    // reachable over `qs ipc call` but is NOT a member of the singleton, so
-    // these names are deliberately not on the object above; that is the trap
-    // scripts/ipc-audit.py exists to catch, and the round trip is described in
-    // quickshell/CHANGELOG.md under Notifications.toggleDnd().
 
     IpcHandler {
         target: "notifs"
-
-        function clear(): void {
-            for (
-                const n of root.active.slice()
-            ) {
-                root.dismiss(n.id)
-            }
-        }
-
-        function isDndEnabled(): bool {
-            return root.dnd
-        }
-
-        function toggleDnd(): void {
-            root.dnd =
-                !root.dnd
-        }
-
-        function enableDnd(): void {
-            root.dnd = true
-        }
-
-        function disableDnd(): void {
-            root.dnd = false
-        }
-
-        function list(): string {
-            return root.active
-                .map(
-                    n =>
-                        `${n.appName}: ${n.summary}`
-                )
-                .join("\n")
-        }
-    }
-
-    IpcHandler {
-        target: "notifications"
-
-        function clear(): void {
-            root.clearAll()
-        }
-
-        function toggleDnd(): void {
-            root.dnd =
-                !root.dnd
-        }
+        function clear(): void { root.clearAll(); }
+        function dismiss(key: string): void { root.dismiss(parseInt(key)); }
+        function count(): int { return root.history.length; }
+        function toggleDnd(): void { root.toggleDnd(); }
+        function isDndEnabled(): bool { return root.dnd; }
     }
 }

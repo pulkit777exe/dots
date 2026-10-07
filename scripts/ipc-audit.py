@@ -201,7 +201,7 @@ def main():
         ("Volume", "setVolume"), ("Brightness", "setBrightness"),
         ("Notifications", "dismiss"),
         ("Media", "togglePlay"),
-        ("Theme", "colors"), ("ControlCenterLayout", "catalogue"),
+        ("Theme", "colors"), ("Wifi", "networks"),
     ]
     broken = [f"{s}.{m}" for s, m in probe if m not in info[s][0]]
     if broken:

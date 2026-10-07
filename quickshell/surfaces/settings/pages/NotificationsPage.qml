@@ -3,14 +3,6 @@ import QtQuick.Layouts
 import "../../../components"
 import "../../../services"
 
-
-
-
-
-
-
-
-
 ColumnLayout {
     id: root
     spacing: 12
@@ -22,69 +14,39 @@ ColumnLayout {
     }
 
     SettingsCard {
-        SettingsSliderRow {
-            label: "Popup timeout"
-            value: ConfigStore.notifPopupTimeoutMs
-            from: 1000; to: 10000; suffix: " ms"
-            onMoved: (v) => ConfigStore.setNotifPopupTimeoutMs(Math.round(v))
+        SettingsToggleRow {
+            label: "Do not disturb"
+            checked: Config.dnd
+            onToggled: (v) => Config.set("dnd", v)
         }
-
         SettingsDivider {}
-
-        SettingsSliderRow {
-            label: "Urgent timeout"
-            value: ConfigStore.notifUrgentTimeoutMs
-            from: 2000; to: 20000; suffix: " ms"
-            onMoved: (v) => ConfigStore.setNotifUrgentTimeoutMs(Math.round(v))
-        }
-
-        SettingsDivider {}
-
-        SettingsSliderRow {
-            label: "Width"
-            value: ConfigStore.notifWidth
-            from: 320; to: 640; suffix: " px"
-            onMoved: (v) => ConfigStore.setNotifWidth(Math.round(v))
-        }
-
-        SettingsDivider {}
-
         SettingsToggleRow {
             label: "Show body text"
-            checked: ConfigStore.notifShowBodyText
-            onToggled: (v) => ConfigStore.setNotifShowBodyText(v)
+            checked: Config.notifShowBodyText
+            onToggled: (v) => Config.set("notifShowBodyText", v)
         }
-
-        SettingsDivider {}
-
-        SettingsSliderRow {
-            label: "History height"
-            value: ConfigStore.notifHistoryHeight
-            from: 100; to: 400; suffix: " px"
-            onMoved: (v) => ConfigStore.setNotifHistoryHeight(Math.round(v))
-        }
-    }
-
-    SettingsSectionLabel {
-        label: "Volume / Brightness OSD"
-        upperCase: true
     }
 
     SettingsCard {
         SettingsSliderRow {
-            label: "On-screen time"
-            value: ConfigStore.osdOnScreenTimeMs
-            from: 500; to: 4000; suffix: " ms"
-            onMoved: (v) => ConfigStore.setOsdOnScreenTimeMs(Math.round(v))
+            label: "Popup timeout"
+            value: Config.notifPopupTimeoutMs
+            from: 500; to: 10000; suffix: " ms"
+            onMoved: (v) => Config.set("notifPopupTimeoutMs", Math.round(v))
         }
-
         SettingsDivider {}
-
         SettingsSliderRow {
-            label: "Level bar thickness"
-            value: ConfigStore.osdLevelBarThickness
-            from: 3; to: 14; suffix: " px"
-            onMoved: (v) => ConfigStore.setOsdLevelBarThickness(Math.round(v))
+            label: "Urgent timeout"
+            value: Config.notifUrgentTimeoutMs
+            from: 1000; to: 20000; suffix: " ms"
+            onMoved: (v) => Config.set("notifUrgentTimeoutMs", Math.round(v))
+        }
+        SettingsDivider {}
+        SettingsSliderRow {
+            label: "History height"
+            value: Config.notifHistoryHeight
+            from: 50; to: 600; suffix: " px"
+            onMoved: (v) => Config.set("notifHistoryHeight", Math.round(v))
         }
     }
 }

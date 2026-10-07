@@ -3,15 +3,7 @@ import QtQuick.Layouts
 import "../../../components"
 import "../../../services"
 
-
-
-
-
-
-
-
-
-
+// Hero header: accent disc, title, one-line description.
 
 Surface {
     id: root
@@ -22,11 +14,7 @@ Surface {
 
     Layout.fillWidth: true
     implicitHeight: 150
-    cornerRadius: 18
-    
-    
-    
-    
+    cornerRadius: 15
     backgroundColor: Theme.colors.surface
     borderWidth: 0
     shadow: false
@@ -41,10 +29,6 @@ Surface {
             Layout.preferredWidth: 56
             Layout.preferredHeight: 56
             radius: 28
-            
-            
-            
-            
             color: Qt.alpha(Theme.colors.accent, 0.18)
 
             Icon {
@@ -55,18 +39,18 @@ Surface {
             }
         }
 
-        StyledText {
+        Label {
             Layout.alignment: Qt.AlignHCenter
             Layout.fillWidth: true
             horizontalAlignment: Text.AlignHCenter
             text: root.title
-            font.pixelSize: 20
+            font.pixelSize: Theme.px(20)
             font.weight: Font.DemiBold
             color: Theme.colors.text
             elide: Text.ElideRight
         }
 
-        StyledText {
+        Label {
             Layout.alignment: Qt.AlignHCenter
             Layout.fillWidth: true
             horizontalAlignment: Text.AlignHCenter
@@ -74,7 +58,7 @@ Surface {
             maximumLineCount: 2
             elide: Text.ElideRight
             text: root.subtitle
-            font.pixelSize: 13
+            font.pixelSize: Theme.px(13)
             color: Theme.withAlpha(Theme.colors.text, 0.45)
         }
     }

@@ -3,108 +3,88 @@ import QtQuick.Layouts
 import "../../components"
 import "../../services"
 
+// Bluetooth drill page: connected, saved, then nearby devices.
 
-// CcBluetoothPage.qml -- the control centre's Bluetooth page.
-//
-// Extracted from ControlCenter.qml. The geometry, the slide-in and the
-// fade are CcDrillPage's; what is left is this page's own content.
-// `back()` goes to ControlCenter, which owns `view` -- a page does not
-// know the name of the view it came from.
-
-CcDrillPage {
-    id: root
-
-    property real inset: 10
+Item {
+    id: page
 
     signal back()
 
-
-    CcTokens { id: cc }
-
-
-    contentHeight: btFlickContent.implicitHeight
-
+    readonly property real contentHeight: col.implicitHeight + 26
+    implicitHeight: contentHeight
 
     ColumnLayout {
-        id: btFlickContent
-        width: root.width
+        id: col
+        anchors { top: parent.top; left: parent.left; right: parent.right }
+        anchors.topMargin: 12
         spacing: 0
-        Item { Layout.preferredHeight: 12 }
 
-
-        CcSubPageHeader {
+        CcHeader {
             Layout.fillWidth: true
             title: "Bluetooth"
             toggleVisible: true
             toggleOn: Bluetooth.enabled
-            onBack: root.back()
-            onToggled: { Bluetooth.toggle(); Bluetooth.refresh(); }
+            onBack: page.back()
+            onToggled: { Bluetooth.toggle(); Bluetooth.scan(); }
         }
 
-        Item { Layout.preferredHeight: 12 }
+        Item { Layout.preferredHeight: 14; Layout.fillWidth: true }
 
-        Item { Layout.preferredHeight: 14 }
-
-
-        Item {
-            id: btConnectedWrap
+        ColumnLayout {
             Layout.fillWidth: true
-            implicitHeight: btConnectedCol.implicitHeight
-            visible: Bluetooth.devices.filter(d => d.connected).length > 0
+            spacing: 6
+            visible: Bluetooth.devices.some(d => d.connected)
 
-            ColumnLayout {
-                id: btConnectedCol
-                width: parent.width
-                spacing: 6
-
-                CcSectionLabel { text: "Connected" }
-
-                Repeater {
-                    model: Bluetooth.devices.filter(d => d.connected)
-                    CcBtRow {
-                        required property var modelData
-                        Layout.fillWidth: true
-                        device: modelData
-                        onConnect: Bluetooth.connectDevice(modelData.mac)
-                        onDisconnect: Bluetooth.disconnectDevice(modelData.mac)
-                        onPair: Bluetooth.pair(modelData.mac)
-                    }
+            Label {
+                text: "Connected"
+                font.pixelSize: Theme.px(11)
+                color: Theme.withAlpha(Theme.colors.text, 0.48)
+            }
+            Repeater {
+                model: Bluetooth.devices.filter(d => d.connected)
+                CcBtRow {
+                    required property var modelData
+                    Layout.fillWidth: true
+                    device: modelData
+                    onAction: modelData.connected
+                        ? Bluetooth.disconnectDevice(modelData.mac)
+                        : Bluetooth.connectDevice(modelData.mac)
                 }
             }
         }
 
-        Item { Layout.preferredHeight: btConnectedWrap.visible ? 12 : 0 }
-
-
         Item {
-            id: btSavedWrap
+            Layout.preferredHeight: 12
             Layout.fillWidth: true
-            implicitHeight: btSavedCol.implicitHeight
-            visible: Bluetooth.devices.filter(d => d.paired && !d.connected).length > 0
+            visible: Bluetooth.devices.some(d => d.connected)
+        }
 
-            ColumnLayout {
-                id: btSavedCol
-                width: parent.width
-                spacing: 6
+        ColumnLayout {
+            Layout.fillWidth: true
+            spacing: 6
+            visible: Bluetooth.devices.some(d => d.paired && !d.connected)
 
-                CcSectionLabel { text: "Saved" }
-
-                Repeater {
-                    model: Bluetooth.devices.filter(d => d.paired && !d.connected)
-                    CcBtRow {
-                        required property var modelData
-                        Layout.fillWidth: true
-                        device: modelData
-                        onConnect: Bluetooth.connectDevice(modelData.mac)
-                        onDisconnect: Bluetooth.disconnectDevice(modelData.mac)
-                        onPair: Bluetooth.pair(modelData.mac)
-                    }
+            Label {
+                text: "Saved"
+                font.pixelSize: Theme.px(11)
+                color: Theme.withAlpha(Theme.colors.text, 0.48)
+            }
+            Repeater {
+                model: Bluetooth.devices.filter(d => d.paired && !d.connected)
+                CcBtRow {
+                    required property var modelData
+                    Layout.fillWidth: true
+                    device: modelData
+                    onAction: Bluetooth.connectDevice(modelData.mac)
                 }
             }
         }
 
-        Item { Layout.preferredHeight: btSavedWrap.visible ? 12 : 0 }
-
+        Item {
+            Layout.preferredHeight: 12
+            Layout.fillWidth: true
+            visible: Bluetooth.devices.some(d => d.paired && !d.connected)
+        }
 
         ColumnLayout {
             Layout.fillWidth: true
@@ -113,13 +93,22 @@ CcDrillPage {
 
             RowLayout {
                 Layout.fillWidth: true
-                CcSectionLabel { text: "Nearby" }
-                Item { Layout.fillWidth: true }
+                Label {
+                    Layout.fillWidth: true
+                    text: "Nearby"
+                    font.pixelSize: Theme.px(11)
+                    color: Theme.withAlpha(Theme.colors.text, 0.48)
+                }
                 RowLayout {
                     spacing: 6
                     visible: Bluetooth.scanning
-                    Rectangle { Layout.preferredWidth: 6; Layout.preferredHeight: 6; radius: 3; color: Theme.colors.accent }
-                    StyledText { text: "Scanning"; font.pixelSize: 11; color: cc.textSub }
+                    Rectangle {
+                        Layout.preferredWidth: 6
+                        Layout.preferredHeight: 6
+                        radius: 3
+                        color: Theme.colors.accent
+                    }
+                    Label { text: "Scanning"; font.pixelSize: Theme.px(11); color: Theme.withAlpha(Theme.colors.text, 0.55) }
                 }
             }
 
@@ -129,13 +118,20 @@ CcDrillPage {
                     required property var modelData
                     Layout.fillWidth: true
                     device: modelData
-                    onConnect: Bluetooth.connectDevice(modelData.mac)
-                    onDisconnect: Bluetooth.disconnectDevice(modelData.mac)
-                    onPair: Bluetooth.pair(modelData.mac)
+                    onAction: Bluetooth.pair(modelData.mac)
                 }
+            }
+
+            Label {
+                visible: Bluetooth.nearbyDevices.length === 0 && !Bluetooth.scanning
+                text: "No devices found"
+                font.pixelSize: Theme.px(12)
+                color: Theme.withAlpha(Theme.colors.text, 0.48)
+                Layout.fillWidth: true
+                horizontalAlignment: Text.AlignHCenter
             }
         }
 
-        Item { Layout.preferredHeight: 4 }
+        Item { Layout.preferredHeight: 4; Layout.fillWidth: true }
     }
 }

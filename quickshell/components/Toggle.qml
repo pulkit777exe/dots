@@ -1,70 +1,41 @@
 import QtQuick
 import "../services"
 
+// The 44x26 switch used by settings rows and the control centre.
 
-
-
-Item {
+Rectangle {
     id: root
 
     property bool checked: false
-    property color accentColor: Theme.colors.accent
-    
-    
-    
-    
-    
-    
-    
-    
-    // The knob. Was the hardcoded cream `#F6E2CB` on every theme; `text` is the
-    // closest palette key (on gruvbox, #ebdbb2 -- an 11/15/31 shift) and is a
-    // palette key rather than a colour the palette never chose. `accentText`
-    // would be the token for a glyph drawn ON an accent fill; this is a knob
-    // that sits on the off-track, and it wants the light end of the ramp. A
-    // caller that wants the on-accent knob overrides it -- surfaces/cc/ does,
-    // with `cc.onAccent`.
-    property color offColor: Theme.withAlpha(Theme.colors.text, 0.11)
-    property color thumbColor: Theme.colors.text
-    property bool enabled: true
+    property color accent: Theme.colors.accent
 
-    signal toggled(bool checked)
+    signal toggled(bool value)
 
-    implicitWidth: 44
-    implicitHeight: 26
+    width: 44
+    height: 26
+    radius: height / 2
+    color: checked ? accent : Theme.withAlpha(Theme.colors.text, 0.11)
     opacity: enabled ? 1 : 0.4
-    Behavior on opacity { OpacityAnimator { duration: MotionConfig.fade(); easing.type: Easing.OutCubic } }
+
+    Behavior on color { ColorAnimation { duration: Config.hover() } }
 
     Rectangle {
-        id: track
-        anchors.fill: parent
-        radius: height / 2
-        color: root.checked ? root.accentColor : root.offColor
-        Behavior on color { ColorAnimation { duration: MotionConfig.hover() } }
-    }
-
-    Rectangle {
-        id: thumb
-        
-        
-        width: parent.height - 8
-        height: width
+        width: 18
+        height: 18
         radius: width / 2
-        color: root.thumbColor
+        color: Theme.colors.text
+        x: root.checked ? root.width - width - 4 : 4
         anchors.verticalCenter: parent.verticalCenter
-        x: root.checked ? parent.width - width - 4 : 4
+
         Behavior on x {
-            enabled: !MotionConfig.reduceMotion
+            enabled: !Config.reduceMotion
             SpringAnimation { spring: 5.5; damping: 0.68; mass: 0.4 }
         }
     }
 
-    TapHandler {
-        enabled: root.enabled
+    MouseArea {
+        anchors.fill: parent
         cursorShape: Qt.PointingHandCursor
-        onTapped: {
-            root.checked = !root.checked
-            root.toggled(root.checked)
-        }
+        onClicked: root.toggled(!root.checked)
     }
 }

@@ -3,209 +3,73 @@ import QtQuick.Layouts
 import "../components"
 import "../services"
 
-// Launcher.qml -- the app launcher.
-//
-// What is left here is the launcher's own state and the timing around it:
-//
-//   * which row is selected, and the arrow keys that move it
-//   * the debounce, and the crossfade, that turn a keystroke into a query
-//   * the focus retry that puts the caret in the search field before the user
-//     can type
-//   * the panel's own appear animation
-//
-// Three things that used to be here are not any more, because each is a
-// separate thing to change and each now has a file of its own:
-//
-//   LauncherSearch.qml    the search field and the keys that reach it
-//   LauncherResults.qml   the rows, the sliding highlight, the row count
-//
-// `AppLauncher.setQuery`, the launching of a result and the IPC behind both are
-// in services/AppLauncher.qml, and this file only reads them: there is no
-// Process here and none should arrive, for the reason ClipboardHistory.qml gives
-// -- a panel that indexes .desktop files cannot be reasoned about by reading
-// the panel.
+// The app launcher: a centred card under the bar. Search field on top,
+// filtered list below, first row selected so Enter always has a target.
+// AppLauncher owns discovery and the query; this file owns the selection
+// and the keyboard.
 
-Surface {
+PopupPanel {
     id: root
 
-    cornerRadius: 20
+    open: UiState.launcherOpen
+
+    width: 550
+    cornerRadius: 22
     backgroundColor: Theme.panelFill
 
-    // Written by IslandPanel too, which passes AppLauncher.results in
-    // from outside rather than letting this file reach for it.
-    property var results: AppLauncher.results
-
+    readonly property var results: AppLauncher.results
     property int selectedIndex: 0
-    property int hoverIndex: -1
 
-    implicitHeight: column.implicitHeight + 38
+    readonly property int rowHeight: 52
+    readonly property int maxVisibleRows: 7
 
-    transformOrigin: Item.Center
+    implicitHeight: column.implicitHeight + 32
 
-    opacity: 0
-    scale: 0.96
+    function moveSelection(delta: int) {
+        if (results.length === 0) return;
+        selectedIndex = Math.max(0, Math.min(results.length - 1, selectedIndex + delta));
+        ensureVisible(selectedIndex);
+    }
 
-    signal activated(var result)
+    // Keep the selected row inside the scroller when the arrows walk off it.
+    function ensureVisible(index: int) {
+        const top = index * rowHeight;
+        if (top < list.contentY)
+            list.contentY = top;
+        else if (top + rowHeight > list.contentY + list.height)
+            list.contentY = Math.max(0, Math.min(top + rowHeight - list.height, list.contentHeight - list.height));
+    }
 
-    // 180ms: long enough that a fast typist produces one query rather than
-    // eight, short enough that the list does not feel like it is ignoring the
-    // keyboard. repeat: false so it is a debounce and not a poll.
-    Timer {
-        id: searchDebounce
+    function launchIndex(index: int) {
+        if (index < 0 || index >= results.length) return;
+        selectedIndex = index;
+        AppLauncher.launch(results[index]);
+        UiState.close();
+    }
 
-        interval: 180
-        repeat: false
+    function activateSelection() { launchIndex(selectedIndex); }
 
-        onTriggered: {
-            searchTransition.restart()
+    // Reopening starts clean: empty search, first row, and a caret in the
+    // field (the retry timer, because focus lands before the field is ready).
+    onOpenChanged: {
+        if (open) {
+            search.text = "";
+            AppLauncher.setQuery("");
+            selectedIndex = 0;
+            list.contentY = 0;
+            focusRetry.restart();
+        } else {
+            focusRetry.stop();
         }
     }
 
-    // Reduced motion: no crossfade and no delay, because MotionConfig.fade(0.275)
-    // is already 0 there -- the animation would be instant but the results
-    // would still land 180ms after the keystroke, which is the part that reads
-    // as lag.
-    function queueSearch() {
-        searchDebounce.restart()
-    }
-
-    function applySearchImmediately() {
-        AppLauncher.setQuery(searchBar.text)
-
-        selectedIndex = 0
-        hoverIndex = -1
-
-        resultsArea.opacity = 1
-    }
-
-    // Fade out, swap, fade back in: three steps, in this order, and the swap is
-    // a ScriptAction between the two numbers so the list is never re-populated
-    // while it is half faded.
-    SequentialAnimation {
-        id: searchTransition
-
-        NumberAnimation {
-            target: resultsArea
-            property: "opacity"
-
-            to: 0
-
-            duration: MotionConfig.fade(0.275)
-            easing.type: Easing.OutQuad
-        }
-
-        ScriptAction {
-            script: {
-                AppLauncher.setQuery(searchBar.text)
-
-                selectedIndex = 0
-                hoverIndex = -1
-            }
-        }
-
-        NumberAnimation {
-            target: resultsArea
-            property: "opacity"
-
-            from: 0
-            to: 1
-
-            duration: MotionConfig.fade(0.45)
-            easing.type: Easing.OutCubic
-        }
-    }
-
-    function moveSelection(delta) {
-        if (results.length === 0)
-            return
-
-        hoverIndex = -1
-
-        selectedIndex = Math.max(
-            0,
-            Math.min(
-                results.length - 1,
-                selectedIndex + delta
-            )
-        )
-    }
-
-    function activateSelection() {
-        if (results.length === 0)
-            return
-
-        root.activated(results[selectedIndex])
-    }
-
-    // Focus the field and empty it. Called on completion and every time the
-    // panel opens, so a search left over from last time does not silently
-    // filter a list the user cannot see is being filtered.
-    function searchFieldFocus() {
-        searchBar.text = ""
-
-        selectedIndex = 0
-        hoverIndex = -1
-
-        searchBar.focusInput()
-    }
-
-    // Unused here and by everything else in the tree, and duplicated verbatim
-    // in ClipboardHistory.qml -- which is a file that is not this one to
-    // change. Kept for the same reason it is kept there, and reported rather
-    // than removed: a focus query that nothing asks is one more thing to
-    // keep true.
-    function searchFieldHasFocus(): bool {
-        return searchBar.hasFocus
-    }
-
-    onVisibleChanged: {
-        if (visible)
-            focusRetry.restart()
-    }
-
-    // The panel opens without a key event ever reaching it, so the caret has
-    // to be asked for: the window that hosts this is focused by the
-    // compositor, and on the first frame the search field is not ready to take
-    // focus. 60ms, repeating, until either the panel is hidden again or the
-    // field actually has it.
     Timer {
         id: focusRetry
-
         interval: 60
         repeat: true
-
         onTriggered: {
-            if (!root.visible || searchBar.hasFocus) {
-                stop()
-                return
-            }
-
-            root.searchFieldFocus()
-        }
-    }
-
-    ParallelAnimation {
-        id: appearAnimation
-
-        NumberAnimation {
-            target: root
-            property: "opacity"
-
-            to: 1
-
-            duration: MotionConfig.fadeMs
-            easing.type: Easing.OutCubic
-        }
-
-        SpringAnimation {
-            target: root
-            property: "scale"
-
-            to: 1
-
-            spring: 4
-            damping: MotionConfig.springDamping
-            mass: 0.7
+            if (!root.open || search.inputFocused) { stop(); return; }
+            search.forceInputFocus();
         }
     }
 
@@ -213,92 +77,160 @@ Surface {
         id: column
 
         anchors.fill: parent
-        anchors.leftMargin: 12
-        anchors.rightMargin: 12
-        anchors.topMargin: 21
-        anchors.bottomMargin: 17
-
+        anchors.margins: 16
         spacing: 0
 
-        LauncherSearch {
-            id: searchBar
+        SearchField {
+            id: search
 
             Layout.fillWidth: true
+            placeholderText: "Search…"
 
-            Layout.leftMargin: 8
-            Layout.rightMargin: 8
-
-            onMoved: (delta) => root.moveSelection(delta)
-
+            onNavigateUp: root.moveSelection(-1)
+            onNavigateDown: root.moveSelection(1)
             onAccepted: root.activateSelection()
 
-            // Every keystroke re-filters the list, so the old index points at
-            // a different app, or past the end of the list entirely. The
-            // panel owns that decision because the panel owns the debounce.
-            onQueryEdited: {
-                if (MotionConfig.reduceMotion) {
-                    searchDebounce.stop()
-                    root.applySearchImmediately()
-                } else {
-                    root.queueSearch()
-                }
+            // Every keystroke re-filters, so the selection starts at the top
+            // of the new list.
+            onTextChanged: {
+                AppLauncher.setQuery(text);
+                root.selectedIndex = 0;
+                list.contentY = 0;
             }
         }
 
         Rectangle {
             Layout.fillWidth: true
             Layout.preferredHeight: 1
-
-            Layout.topMargin: 8
-            Layout.bottomMargin: 11
-
-            color: Theme.colors.divider
-
-            visible: root.results.length > 0
+            Layout.topMargin: 10
+            Layout.bottomMargin: 4
+            color: Theme.cc.border
         }
 
-        // Height from the row count, animated so a search that goes from 9
-        // results to 1 does not snap the panel shut under the user's eyes.
-        // LauncherResults owns the count -- it is what draws the rows -- and
-        // this is the only place the two are put together.
-        LauncherResults {
-            id: resultsArea
+        // Height from the row count, animated so the card does not snap
+        // shut under the user's eyes as results come and go.
+        Flickable {
+            id: list
 
             Layout.fillWidth: true
-
-            Layout.preferredHeight: resultsArea.implicitHeight
+            Layout.preferredHeight:
+                Math.min(Math.max(1, root.results.length), root.maxVisibleRows) * root.rowHeight
 
             Behavior on Layout.preferredHeight {
-                enabled: !MotionConfig.reduceMotion
+                enabled: !Config.reduceMotion
+                NumberAnimation { duration: Config.movement(0.35); easing.type: Easing.OutCubic }
+            }
 
-                NumberAnimation {
-                    duration: MotionConfig.movement(0.35)
-                    easing.type: Easing.OutCubic
+            clip: true
+            boundsBehavior: Flickable.StopAtBounds
+            interactive: contentHeight > height
+            contentWidth: width
+            contentHeight: Math.max(1, root.results.length) * root.rowHeight
+
+            Repeater {
+                model: root.results
+
+                delegate: Item {
+                    id: row
+
+                    required property int index
+                    required property var modelData
+
+                    x: 0
+                    y: index * root.rowHeight
+                    width: list.width
+                    height: root.rowHeight
+
+                    // The selected row's card, and the accent marker on its
+                    // left edge; every other row stays unhighlighted.
+                    Rectangle {
+                        anchors.fill: parent
+                        visible: row.index === root.selectedIndex
+                        radius: 12
+                        color: Theme.cc.card
+                    }
+
+                    Rectangle {
+                        anchors.left: parent.left
+                        anchors.leftMargin: 4
+                        anchors.verticalCenter: parent.verticalCenter
+                        visible: row.index === root.selectedIndex
+                        width: 3
+                        height: 24
+                        radius: 2
+                        color: Theme.colors.accent
+                    }
+
+                    RowLayout {
+                        anchors.fill: parent
+                        anchors.leftMargin: 12
+                        anchors.rightMargin: 12
+                        spacing: 12
+
+                        Rectangle {
+                            Layout.preferredWidth: 26
+                            Layout.preferredHeight: 26
+                            radius: 8
+                            clip: true
+                            color: Theme.withAlpha(Theme.colors.text, 0.07)
+
+                            Icon {
+                                anchors.centerIn: parent
+                                icon: row.modelData.glyph
+                                size: 15
+                                iconColor: Theme.withAlpha(Theme.colors.text, 0.85)
+                                visible: iconImage.status !== Image.Ready
+                            }
+
+                            Image {
+                                id: iconImage
+                                anchors.centerIn: parent
+                                width: 18
+                                height: 18
+                                source: row.modelData.iconSource
+                                fillMode: Image.PreserveAspectFit
+                                asynchronous: true
+                                smooth: true
+                                visible: status === Image.Ready
+                            }
+                        }
+
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: 1
+
+                            Label {
+                                Layout.fillWidth: true
+                                text: row.modelData.name
+                                font.pixelSize: Theme.px(14)
+                                font.weight: Font.Medium
+                                color: Theme.withAlpha(Theme.colors.text, 0.95)
+                                elide: Text.ElideRight
+                            }
+
+                            Label {
+                                Layout.fillWidth: true
+                                visible: text.length > 0
+                                text: row.modelData.subtitle
+                                font.pixelSize: Theme.px(11)
+                                color: Theme.withAlpha(Theme.colors.text, 0.45)
+                                elide: Text.ElideRight
+                            }
+                        }
+                    }
+
+                    HoverHandler {
+                        cursorShape: Qt.PointingHandCursor
+                        onHoveredChanged: {
+                            if (hovered) root.selectedIndex = row.index;
+                        }
+                    }
+
+                    TapHandler {
+                        onTapped: root.launchIndex(row.index)
+                    }
                 }
             }
-
-            results: root.results
-            selectedIndex: root.selectedIndex
-            hoverIndex: root.hoverIndex
-
-            onRowHovered: (index) => root.hoverIndex = index
-
-            onRowActivated: (index) => {
-                root.selectedIndex = index
-                root.hoverIndex = -1
-
-                root.activateSelection()
-            }
-        }
-    }
-
-    Component.onCompleted: {
-        if (MotionConfig.reduceMotion) {
-            root.opacity = 1
-            root.scale = 1
-            resultsArea.opacity = 1
-        } else {
-            appearAnimation.start()
         }
     }
 }

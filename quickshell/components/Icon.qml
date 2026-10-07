@@ -1,6 +1,9 @@
 import QtQuick
 import "../services"
 
+// A Material Symbols glyph. The font renders at pixelSize == size, so the
+// whole icon set scales with the font-size setting for free.
+
 Text {
     id: root
 
@@ -11,12 +14,12 @@ Text {
     text: icon
     color: iconColor
     font.family: "Material Symbols Rounded"
-    font.pixelSize: size
+    font.pixelSize: Theme.px(size)
 
     horizontalAlignment: Text.AlignHCenter
     verticalAlignment: Text.AlignVCenter
     renderType: Text.NativeRendering
     antialiasing: true
 
-    Behavior on color { ColorAnimation { duration: MotionConfig.hover() } }
+    Behavior on color { ColorAnimation { duration: Config.hover() } }
 }

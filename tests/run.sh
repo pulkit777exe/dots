@@ -14,12 +14,7 @@
 #   installer dry run     a dry run that writes is worse than no dry run.
 #   IPC contract          an IpcHandler target that does not resolve means a
 #                         keybind that silently does nothing -- the failure
-#                         class this repo has hit most often. Also that
-#                         `clipboard list`'s reply arrives whole: it is the
-#                         only reply big enough to exceed what the IPC socket
-#                         can carry, it used to be truncated with both clients
-#                         reporting a closed socket, and a function that
-#                         dispatches perfectly is what made that invisible.
+#                         class this repo has hit most often.
 #   qs-call parity        qs-call replaces `quickshell ipc call` for the one
 #                         keybind that still spawns a process, so it has to
 #                         agree with the real client on every call shape.
@@ -174,7 +169,7 @@ qs() {
 # the assertion does, so it cannot contradict it.
 qs_why() {
     local probe
-    probe=$(quickshell ipc call uis isLauncherOpen 2>&1 | tr -d '\r\n')
+    probe=$(quickshell ipc call uis isControlCenterOpen 2>&1 | tr -d '\r\n')
     printf 'waited %ss, shell answered "%s" every time; right now it says: %s' \
         "$1" "$QS_BUSY" "${probe:-nothing}"
 }
@@ -345,17 +340,10 @@ else
     read_only() {
         case "$1:$2" in
             uis:isSettingsOpen|uis:isLauncherOpen|uis:isControlCenterOpen|\
-            uis:isPowerMenuOpen|uis:isSettingsOpen|uis:isClipboardOpen|\
-            uis:isMediaOpen|uis:isCalendarOpen|uis:isThemePickerOpen|\
-            uis:isWallpaperPickerOpen|\
-            battery:getStatus|battery:getPercentage|battery:isCharging|\
-            brightness:get|brightness:getFor|\
-            wifi:status|bluetooth:refresh|bluetooth:toggle|\
-            theme:get|theme:list|theme:getWallpaper|\
-            powerprofile:get|power:get|power:list|\
-            nightlight:isEnabled|clipboard:list|clipboard:isAvailable|\
-            mpris:play|mpris:pause|mpris:playPause|\
-            audio:getVolume|shell:isLauncherOpen)
+            uis:isPowerMenuOpen|uis:isThemePickerOpen|uis:isWallpaperPickerOpen|\
+            brightness:get|wifi:status|theme:get|theme:list|theme:getWallpaper|\
+            powerprofile:get|powerprofile:isAvailable|nightlight:isEnabled|\
+            audio:getVolume|notifs:count|notifs:isDndEnabled)
                 return 0 ;;
             *) return 1 ;;
         esac
@@ -365,12 +353,11 @@ else
     stalled=""
     checked=0
     for pair in "uis:isSettingsOpen" "uis:isLauncherOpen" "uis:isControlCenterOpen" \
-                "uis:isPowerMenuOpen" "uis:isSettingsOpen" "uis:isClipboardOpen" \
-                "uis:isMediaOpen" "uis:isCalendarOpen" "uis:isThemePickerOpen" \
-                "uis:isWallpaperPickerOpen" "battery:getStatus" "battery:getPercentage" \
-                "brightness:get" "wifi:status" "theme:get" "theme:list" \
-                "power:get" "powerprofile:get" "nightlight:isEnabled" \
-                "clipboard:isAvailable" "clipboard:list" "audio:getVolume"; do
+                "uis:isPowerMenuOpen" "uis:isThemePickerOpen" \
+                "uis:isWallpaperPickerOpen" "brightness:get" "wifi:status" \
+                "theme:get" "theme:list" "theme:getWallpaper" "powerprofile:get" \
+                "powerprofile:isAvailable" "nightlight:isEnabled" \
+                "audio:getVolume" "notifs:count" "notifs:isDndEnabled"; do
         tgt="${pair%%:*}"; fn="${pair##*:}"
         read_only "$tgt" "$fn" || continue
         qs quickshell ipc call "$tgt" "$fn"
@@ -394,72 +381,6 @@ else
         no "advertised IPC functions are callable" "unreachable:$missing"
     fi
 
-    # `clipboard list` is the only reply in the tree big enough to exceed what
-    # the IPC socket can carry, and it did: at a 750-entry history it declared
-    # 433,018 bytes of UTF-16 against a 212,992-byte send buffer, delivered
-    # between 219,264 and 255,808, and ended mid-string. Both clients reported
-    # a peer-closed socket, nothing was logged shell-side, and the shell stayed
-    # healthy -- so it was recorded as an accessor that returns empty.
-    #
-    # Adding it to the pair loop above cannot catch that, and this comment is
-    # the reason it was there for so long: the loop only looks for "Function
-    # not found", and dispatch never stopped working. The reply's *size* was
-    # the bug, so this checks the reply instead -- that it parses as JSON
-    # (a truncated reply does not) and that it is inside a ceiling stated
-    # here. The ceiling is a canary rather than the bound: Clipboard.qml caps
-    # the reply at 64 KiB, and 128 KiB is the line this suite draws so a
-    # regression is caught before the transport truncates it again.
-    #
-    # Two failure shapes are reported separately because they are different
-    # faults. Unparseable means the reply was cut off in transit. Over the
-    # ceiling means it arrived whole but has grown past what it should be.
-    # Both used to present as the same symptom, and neither is visible from
-    # `ipc show`.
-    CLIP_LIST_CEILING=$((128 * 1024))
-    clip_shape=""
-    if ! have python3; then
-        sk "clipboard list returns a whole, bounded reply" "no python3"
-    elif ! qs quickshell ipc call clipboard list; then
-        # `qs` returns 0 whenever the shell answers with anything at all, so a
-        # reply that is not the reply is caught below rather than here; this
-        # branch is only the shell never answering.
-        no "clipboard list returns a whole, bounded reply" "$(qs_why $QS_WAIT)"
-    elif ! clip_shape=$(printf '%s' "$QS_OUT" | python3 -c '
-import json, sys
-
-# The reply is an object carrying the total and a bounded window of entries.
-# A bare array is the pre-fix shape and is reported rather than accepted, so a
-# revert to it fails here instead of reading as a smaller, tidier payload.
-try:
-    d = json.load(sys.stdin)
-except Exception as e:
-    print("not JSON: %s" % e)
-    sys.exit(1)
-if not isinstance(d, dict):
-    print("top level is %s, not an object" % type(d).__name__)
-    sys.exit(1)
-missing = [k for k in ("total", "returned", "entries") if k not in d]
-if missing:
-    print("no %s in the reply" % ",".join(missing))
-    sys.exit(1)
-if not isinstance(d["entries"], list):
-    print("entries is not a list")
-    sys.exit(1)
-if d["returned"] != len(d["entries"]):
-    print("returned=%d but %d entries arrived" % (d["returned"], len(d["entries"])))
-    sys.exit(1)
-print("total=%d returned=%d" % (d["total"], d["returned"]))
-' 2>&1); then
-        no "clipboard list returns a whole, bounded reply" "$clip_shape"
-    else
-        clip_bytes=$(printf '%s' "$QS_OUT" | wc -c)
-        if [ "$clip_bytes" -gt "$CLIP_LIST_CEILING" ]; then
-            no "clipboard list returns a whole, bounded reply" \
-               "$clip_bytes bytes is past this suite's $CLIP_LIST_CEILING-byte ceiling"
-        else
-            ok "clipboard list returns a whole, bounded reply ($clip_shape, $clip_bytes of $CLIP_LIST_CEILING bytes)"
-        fi
-    fi
 
     # The IPC table in ARCHITECTURE.md claims to be generated from
     # `ipc show`. It was not -- it had drifted in both directions, promising
@@ -533,15 +454,10 @@ elif ! quickshell ipc show >/dev/null 2>&1; then
     sk "qs-call matches the real client" "no quickshell instance"
 else
     # (target, function) pairs covering every reply shape: void, bool,
-    # int-as-string, short JSON, and a longer JSON payload.
-    #
-    # `clipboard:list` is in this list for the length, not the shape: it is
-    # the largest reply in the tree at about 65 KB, an order of magnitude
-    # past every other pair here, and it is the one call that has crossed
-    # `unpack()`'s framing rather than just its type. It compares equal only
-    # if the fast path carries all of it -- a fast path that assembled a
-    # reply a chunk short would fail here with a difference, where the
-    # "Function not found" sweep in the section above would not notice.
+    # int-as-string, short JSON, and a longer JSON payload. `theme:list` and
+    # `wifi:status` are the biggest replies in the tree now; the old suite
+    # carried `clipboard:list` here for length (it crossed `unpack()`'s
+    # framing once), and the clipboard surface is gone with it.
     #
     # This is the check a reload gap broke. Two clients, called back to back:
     # a reload that starts between them hands one of them the "not ready"
@@ -550,10 +466,9 @@ else
     # has an answered reading of each -- and a mismatch after that is real.
     mismatches=0
     checked=0
-    for pair in "uis:isSettingsOpen" "battery:getPercentage" "battery:getStatus" \
-                "wifi:status" "theme:get" "theme:list" "power:get" \
-                "nightlight:isEnabled" "mpris:play" "clipboard:list" \
-                "shell:closeAll"; do
+    for pair in "uis:isSettingsOpen" "audio:getVolume" "brightness:get" \
+                "wifi:status" "theme:get" "theme:list" "powerprofile:get" \
+                "nightlight:isEnabled" "notifs:count" "shell:closeAll"; do
         tgt="${pair%%:*}"; fn="${pair##*:}"
         qs quickshell ipc call "$tgt" "$fn"; real=$QS_OUT
         qs "$QSCALL" "$tgt" "$fn"; mine=$QS_OUT
@@ -592,9 +507,6 @@ else
     for pair in "toggleControlCenter:isControlCenterOpen" \
                 "toggleSettings:isSettingsOpen" \
                 "toggleLauncher:isLauncherOpen" \
-                "toggleClipboard:isClipboardOpen" \
-                "toggleMedia:isMediaOpen" \
-                "toggleCalendar:isCalendarOpen" \
                 "togglePowerMenu:isPowerMenuOpen" \
                 "toggleThemePicker:isThemePickerOpen" \
                 "toggleWallpaperPicker:isWallpaperPickerOpen"; do
@@ -615,9 +527,9 @@ else
     done
     qs "$QSCALL" shell closeAll
     if [ -z "$bad" ]; then
-        ok "all nine surfaces open and close"
+        ok "all six surfaces open and close"
     else
-        no "all nine surfaces open" "failed:$bad"
+        no "all six surfaces open" "failed:$bad"
     fi
 fi
 

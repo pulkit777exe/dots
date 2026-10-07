@@ -3,59 +3,38 @@ import QtQuick.Layouts
 import "../../components"
 import "../../services"
 
+// Wi-Fi drill page: the connected network, then every other AP in range.
 
-// CcWifiPage.qml -- the control centre's Wi-Fi page.
-//
-// Extracted from ControlCenter.qml. The geometry, the slide-in and the
-// fade are CcDrillPage's; what is left is this page's own content.
-// `back()` goes to ControlCenter, which owns `view` -- a page does not
-// know the name of the view it came from.
-
-CcDrillPage {
-    id: root
-
-    property real inset: 10
+Item {
+    id: page
 
     signal back()
 
-    // Both of these used to reach into ControlCenter. The page does
-    // not own the wifi state -- Wifi does -- nor the password flow,
-    // so it asks for it instead.
-    property string activeMeta: ""
-    signal connectRequested(string ssid, bool secured)
-
-
-    CcTokens { id: cc }
-
-
-    contentHeight: wifiFlickContent.implicitHeight
-
+    readonly property real contentHeight: col.implicitHeight + 26   // 12 top, 14 bottom
+    implicitHeight: contentHeight
 
     ColumnLayout {
-        id: wifiFlickContent
-        width: root.width
+        id: col
+        anchors { top: parent.top; left: parent.left; right: parent.right }
+        anchors.topMargin: 12
         spacing: 0
-        Item { Layout.preferredHeight: 12 }
 
-        CcSubPageHeader {
+        CcHeader {
             Layout.fillWidth: true
             title: "Wi-Fi"
             toggleVisible: true
             toggleOn: Wifi.enabled
-            onBack: root.back()
+            onBack: page.back()
             onToggled: Wifi.toggle()
         }
 
-        Item { Layout.preferredHeight: 12 }
+        Item { Layout.preferredHeight: 14; Layout.fillWidth: true }
 
-        Item { Layout.preferredHeight: 14 }
-
-
-        Rectangle {
+        Rectangle {                          // connected card
             Layout.fillWidth: true
             Layout.preferredHeight: 60
             radius: 13
-            color: cc.bgItem
+            color: Theme.cc.item
             border.color: Theme.colors.accent
             border.width: 1
             visible: Wifi.connected
@@ -65,12 +44,14 @@ CcDrillPage {
                 spacing: 12
 
                 Rectangle {
-                    Layout.preferredWidth: 40; Layout.preferredHeight: 40; radius: width / 2
+                    Layout.preferredWidth: 40
+                    Layout.preferredHeight: 40
+                    radius: width / 2
                     color: Theme.colors.accent
 
                     Icon {
                         anchors.centerIn: parent
-                        icon: "wifi"
+                        icon: Wifi.iconName
                         size: 20
                         iconColor: Theme.colors.accentText
                     }
@@ -79,91 +60,128 @@ CcDrillPage {
                 ColumnLayout {
                     Layout.fillWidth: true
                     spacing: 1
-                    StyledText {
+                    Label {
+                        Layout.fillWidth: true
                         text: Wifi.ssid
-                        font.pixelSize: 13; font.weight: Font.DemiBold; color: cc.textPrimary
-                        elide: Text.ElideRight; Layout.fillWidth: true
+                        font.pixelSize: Theme.px(13)
+                        font.weight: Font.DemiBold
+                        color: Theme.colors.text
+                        elide: Text.ElideRight
                     }
-                    StyledText {
-                        text: root.activeMeta
-                        font.pixelSize: 11; color: cc.textDim
-                        elide: Text.ElideRight; Layout.fillWidth: true
+                    Label {
+                        text: "Connected · " + Wifi.strength + "% signal"
+                        font.pixelSize: Theme.px(11)
+                        color: Theme.withAlpha(Theme.colors.text, 0.48)
                     }
                 }
 
-
                 Rectangle {
                     Layout.preferredHeight: 30
-                    Layout.preferredWidth: wifiDisconnectLabel.implicitWidth + 24
+                    Layout.preferredWidth: disconnectLabel.implicitWidth + 24
                     radius: height / 2
                     color: "transparent"
-                    border.color: cc.borderColor
+                    border.color: Theme.cc.border
                     border.width: 1
-                    HoverHandler { cursorShape: Qt.PointingHandCursor }
-                    TapHandler { onTapped: { Wifi.disconnect() } }
 
-                    StyledText {
-                        id: wifiDisconnectLabel
+                    Label {
+                        id: disconnectLabel
                         anchors.centerIn: parent
                         text: "Disconnect"
-                        font.pixelSize: 11
+                        font.pixelSize: Theme.px(11)
                         color: Theme.colors.accent
+                    }
+                    MouseArea {
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: Wifi.disconnect()
                     }
                 }
             }
         }
 
-        Item { Layout.preferredHeight: 14 }
-
+        Item { Layout.preferredHeight: 14; Layout.fillWidth: true; visible: Wifi.connected }
 
         RowLayout {
             Layout.fillWidth: true
             spacing: 8
-
-            StyledText { text: "Networks"; font.pixelSize: 11; color: cc.textDim }
-            Item { Layout.fillWidth: true }
+            Label {
+                text: "Networks"
+                font.pixelSize: Theme.px(11)
+                color: Theme.withAlpha(Theme.colors.text, 0.48)
+                Layout.fillWidth: true
+            }
             RowLayout {
                 spacing: 6
-                visible: Wifi.scanning
-                Rectangle { Layout.preferredWidth: 6; Layout.preferredHeight: 6; radius: 3; color: Theme.colors.accent }
-                StyledText { text: "Scanning"; font.pixelSize: 11; color: cc.textDim }
+                visible: Wifi.busy
+                Rectangle {
+                    Layout.preferredWidth: 6
+                    Layout.preferredHeight: 6
+                    radius: 3
+                    color: Theme.colors.accent
+                }
+                Label { text: "Scanning"; font.pixelSize: Theme.px(11); color: Theme.withAlpha(Theme.colors.text, 0.48) }
             }
         }
 
-        Item { Layout.preferredHeight: 6 }
+        Item { Layout.preferredHeight: 6; Layout.fillWidth: true }
 
         ColumnLayout {
             Layout.fillWidth: true
             spacing: 6
 
             Repeater {
-
-
                 model: Wifi.networks.filter(n => !n.active)
+
                 Rectangle {
                     required property var modelData
                     Layout.fillWidth: true
                     height: 48
                     radius: 12
-                    color: wifiRowHover.hovered ? cc.bgItemHover : cc.bgItem
-                    border.color: cc.bgPill
+                    color: netArea.containsMouse ? Theme.cc.itemHover : Theme.cc.item
+                    border.color: Theme.cc.border
                     border.width: 1
-                    Behavior on color { ColorAnimation { duration: MotionConfig.hover() } }
+                    Behavior on color { ColorAnimation { duration: Config.hover() } }
 
-                    HoverHandler { id: wifiRowHover; cursorShape: Qt.PointingHandCursor }
-                    TapHandler { onTapped: root.connectRequested(modelData.ssid, modelData.secured) }
+                    // Secured networks go through the same call: nmcli uses a
+                    // saved password when it has one.
+                    MouseArea {
+                        id: netArea
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: Wifi.connect(modelData.ssid, "")
+                    }
 
                     RowLayout {
                         anchors { fill: parent; leftMargin: 12; rightMargin: 12 }
                         spacing: 10
-                        Icon { icon: "wifi"; size: 16; iconColor: cc.textStrong }
-                        StyledText { Layout.fillWidth: true; text: modelData.ssid; font.pixelSize: 13; color: cc.textPrimary; elide: Text.ElideRight }
-                        StyledText { text: modelData.strength + "%"; font.pixelSize: 11; color: cc.textSub }
+                        Icon {
+                            icon: modelData.signal >= 75 ? "wifi"
+                                : (modelData.signal >= 40 ? "wifi_2_bar" : "wifi_1_bar")
+                            size: 16
+                            iconColor: Theme.withAlpha(Theme.colors.text, 0.70)
+                        }
+                        Label {
+                            Layout.fillWidth: true
+                            text: modelData.ssid
+                            font.pixelSize: Theme.px(13)
+                            color: Theme.colors.text
+                            elide: Text.ElideRight
+                        }
+                        Icon {
+                            visible: modelData.secured
+                            icon: "lock"
+                            size: 13
+                            iconColor: Theme.withAlpha(Theme.colors.text, 0.42)
+                        }
+                        Label {
+                            text: modelData.signal + "%"
+                            font.pixelSize: Theme.px(11)
+                            color: Theme.withAlpha(Theme.colors.text, 0.55)
+                        }
                     }
                 }
             }
         }
-
-        Item { Layout.preferredHeight: 6 }
     }
 }

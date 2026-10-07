@@ -1,55 +1,46 @@
 pragma Singleton
 
-
-
 import QtQuick
 import Quickshell
 import Quickshell.Io
 
-
+// Night light via hyprsunset, driven by `hyprctl hyprsunset`. Availability
+// is a one-shot probe for the binary; the enabled state is local (hyprctl
+// has no query for it that is cheaper than the command itself).
 
 Singleton {
     id: root
 
     property bool available: false
     property bool enabled: false
-    property int nightTemperature: 4000
+    property int temperature: 4000
 
-    signal toggled(bool enabled)
+    function toggle() { setEnabled(!enabled); }
 
-    function toggle() {
-        setEnabled(!enabled)
+    function setEnabled(value: bool) {
+        if (!available) return;
+        enabled = value;
+        setter.command = value
+            ? ["hyprctl", "hyprsunset", "temperature", String(temperature)]
+            : ["hyprctl", "hyprsunset", "identity"];
+        setter.running = true;
     }
 
-    function setEnabled(value) {
-        if (!available) return
-        enabled = value
-        if (value) {
-            setter.command = ["hyprctl", "hyprsunset", "temperature", String(nightTemperature)]
-        } else {
-            setter.command = ["hyprctl", "hyprsunset", "identity"]
-        }
-        setter.running = true
-        toggled(enabled)
-    }
-
-    function setTemperature(kelvin) {
-        nightTemperature = kelvin
+    function setTemperature(k: int) {
+        temperature = k;
         if (available && enabled) {
-            setter.command = ["hyprctl", "hyprsunset", "temperature", String(kelvin)]
-            setter.running = true
+            setter.command = ["hyprctl", "hyprsunset", "temperature", String(k)];
+            setter.running = true;
         }
     }
 
-    Process { id: setter; onExited: (code) => { if (code !== 0) console.warn("NightLight: redshift set failed (exit", code, ")") } }
+    Process { id: setter; onExited: (code) => { if (code !== 0) console.warn("NightLight: failed, exit", code); } }
 
-    
     Process {
         id: probe
         command: ["bash", "-c", "command -v hyprsunset >/dev/null && echo yes || echo no"]
         stdout: SplitParser {
-            splitMarker: "\n"
-            onRead: (line) => { if (line.trim() === "yes") root.available = true }
+            onRead: (line) => { if (line.trim() === "yes") root.available = true; }
         }
     }
     Component.onCompleted: probe.running = true
@@ -58,9 +49,6 @@ Singleton {
         target: "nightlight"
         function isEnabled(): bool { return root.enabled; }
         function toggle(): void { root.toggle(); }
-        function enable(): void { root.setEnabled(true); }
-        function disable(): void { root.setEnabled(false); }
         function setTemp(k: string): void { root.setTemperature(parseInt(k)); }
     }
-
 }

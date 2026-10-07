@@ -1,9 +1,10 @@
 # dots
 
 A Hyprland + Quickshell desktop environment for Fedora, kept as one
-reproducible repo. The compositor config is Lua; the shell (bar, launcher,
-control centre, clipboard, theme and wallpaper pickers) is Quickshell/QML;
-everything colour-related is generated from a single palette per theme.
+reproducible repo. The compositor config is Lua; the shell (island bar,
+launcher, control centre, settings, theme and wallpaper pickers, power menu,
+notification toasts) is Quickshell/QML; everything colour-related is
+generated from a single palette per theme.
 
 ## Install
 
@@ -106,13 +107,11 @@ Fedora-first. `install.sh --check` reports what's missing.
 | Key | Action |
 | --- | --- |
 | `SUPER` alone (tap L or R) | Toggle launcher |
-| `SUPER + D` or `SUPER + /` | Toggle launcher |
+| `SUPER + D` | Toggle launcher |
 | `SUPER + N` | Control centre |
 | `SUPER + S` | Settings |
-| `SUPER + C` | Clipboard history |
 | `SUPER + T` | Theme picker |
 | `SUPER + W` | Wallpaper picker |
-| `SUPER + SHIFT + C` | Calendar |
 | `SUPER + SHIFT + L` | Power menu |
 | `SUPER + ESCAPE` | Close all overlays |
 
@@ -238,7 +237,7 @@ in the journal** below).
 | --- | --- |
 | `shell.qml` | Entrypoint. Loads surfaces, imports `qs.modules` for the keybind hub. |
 | `services/` | QML singletons, one per concern, declared in `services/qmldir`. `Theme` holds the palette. |
-| `surfaces/` | Windows: launcher, control centre, OSD, pickers. |
+| `surfaces/` | Windows: launcher, control centre, settings, theme and wallpaper pickers, power menu, notification toasts. |
 | `components/` | Reusable UI primitives. Nothing else lives here. |
 | `modules/Keybinds.qml` | Single place mapping shortcut names → actions. |
 | `scripts/` | Python helpers: palette discovery, publishing, wallpaper generation. |
@@ -246,11 +245,12 @@ in the journal** below).
 
 ### Adding a surface
 
-The panel and card chrome is deliberately **not** themed: it stays a near-black
-layering system (`#141414` surface, `#1f1f1f` card, `#2c2c2c` slider track) in
-every theme, and only the accent moves. Central surfaces like `ControlCenter.qml`
-declare that palette inline as `readonly property color` — follow the local
-file's convention rather than inventing a new one.
+Chrome comes from `components/Surface.qml` — shadow, border and radius are
+its defaults — and colours come from `Theme.cc.*` / `Theme.colors` only, so
+every surface re-tints with the theme and no hex literal lives outside the
+palette. Copy the shape of an existing surface (`PowerMenu.qml` is the
+smallest) rather than inventing a new one; popups are `PopupPanel` roots and
+`shell.qml` owns their position.
 
 Use `Theme.colors` only for things that should recolour with the theme: accent
 fills, selected states, and semantic colours.
@@ -285,7 +285,6 @@ quickshell -c ~/.config/quickshell
 |---|---|
 | `README.md` | this file -- installing, verifying, and the traps worth knowing before you change something |
 | `quickshell/ARCHITECTURE.md` | how the shell is put together, plus the complete IPC reference (checked against the running shell by `tests/run.sh`, so it cannot drift) |
-| `quickshell/CHANGELOG.md` | what was fixed and why, in order -- read this before "fixing" something that looks wrong, because it usually is not |
 | `SECURITY.md` | what is and is not sandboxed |
 
 Three checks worth running after any change:

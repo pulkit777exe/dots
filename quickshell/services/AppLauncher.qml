@@ -2,111 +2,90 @@ pragma Singleton
 
 import QtQuick
 import Quickshell
-import Quickshell.Io
 
-
-
+// The application index: freedesktop .desktop entries straight from
+// Quickshell's own scanner, cached alphabetically, filtered by setQuery().
+// The launcher only ever reads `results` and calls launch().
 Singleton {
     id: root
 
     property string query: ""
-    property var allApps: []     
-    property var results: []     
+    property var allApps: []    // { entry, name, subtitle, iconSource, glyph }
+    property var results: []
 
-    function setQuery(text) {
+    readonly property var entries: DesktopEntries.applications.values
+
+    function setQuery(text: string) {
         query = text;
         refilter();
     }
 
     function launch(result) {
-        const app = allApps.find(a => a.name === result.title);
-        if (!app) {
-            return;
-        }
-        
-        const entry = findEntry(result.title);
-        if (entry) {
-            entry.execute();
-        }
+        if (result && result.entry) result.entry.execute();
     }
 
+    // Rebuilt whenever the .desktop set changes; sorting here means the
+    // unfiltered list is already alphabetical.
     function refresh() {
-        buildIndex();
-    }
-
-    Connections {
-        target: ConfigStore
-        function onLauncherMaxResultsChanged() { root.refilter(); }
-    }
-
-    
-    
-    
-    
-    readonly property var entries: DesktopEntries.applications.values
-
-    function findEntry(name) {
-        for (let i = 0; i < entries.length; i++) {
-            const e = entries[i];
-            if (e.name === name) return e;
-        }
-        return null;
-    }
-
-    function buildIndex() {
         const apps = [];
         for (let i = 0; i < entries.length; i++) {
             const e = entries[i];
             if (e.noDisplay) continue;
             apps.push({
+                entry: e,
                 name: e.name,
-                exec: e.execString,
-                icon: e.icon,
-                description: e.comment || e.genericName || "",
-                terminal: e.runInTerminal,
-                categories: e.categories ?? [],
+                subtitle: e.comment || e.genericName || "",
+                iconSource: iconSourceFor(e),
+                glyph: glyphFor(e),
+                keywords: String(e.keywords || "").toLowerCase(),
             });
         }
+        apps.sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
         allApps = apps;
         refilter();
     }
 
     function refilter() {
         const q = query.trim().toLowerCase();
-        let pool = allApps;
-        if (q.length > 0) {
-            pool = pool.filter(a =>
-                a.name.toLowerCase().includes(q) ||
-                a.description.toLowerCase().includes(q) ||
-                a.categories.some(c => c.toLowerCase().includes(q))
-            );
+        if (q.length === 0) {
+            results = allApps;
+            return;
         }
-        results = pool.slice(0, Math.max(1, ConfigStore.launcherMaxResults)).map(a => ({
-            icon: materialIconFor(a),
-            iconSource: a.icon || "",
-            title: a.name,
-            subtitle: a.description
-        }));
+        results = allApps.filter(a =>
+            a.name.toLowerCase().includes(q) ||
+            a.subtitle.toLowerCase().includes(q) ||
+            a.keywords.includes(q)
+        );
     }
 
-    function materialIconFor(app) {
-        const cats = (app.categories || []).map(c => c.toLowerCase());
-        if (app.terminal || cats.includes("terminalemulator")) return "terminal";
-        if (cats.includes("network") || cats.includes("webbrowser")) return "language";
-        if (cats.includes("audiovideo") || cats.includes("audio") || cats.includes("video")) return "movie";
-        if (cats.includes("graphics")) return "image";
-        if (cats.includes("development") || cats.includes("ide")) return "code";
-        if (cats.includes("office")) return "description";
-        if (cats.includes("game")) return "sports_esports";
-        if (cats.includes("settings") || cats.includes("system")) return "settings";
+    // Icon name, absolute path or an already-built url: resolved once here
+    // so the row is just an Image source. Empty means "no icon", and the row
+    // falls back to the glyph.
+    function iconSourceFor(e): string {
+        const icon = e.icon || "";
+        if (icon.length === 0) return "";
+        if (icon.startsWith("file://") || icon.startsWith("image://")) return icon;
+        if (icon.startsWith("/")) return "file://" + icon;
+        return "image://icon/" + icon;
+    }
+
+    // Material glyph for entries with no icon of their own.
+    function glyphFor(e): string {
+        if (e.runInTerminal) return "terminal";
+        const c = String(e.categories || "").toLowerCase();
+        if (c.includes("network") || c.includes("webbrowser")) return "language";
+        if (c.includes("audiovideo") || c.includes("audio") || c.includes("video")) return "movie";
+        if (c.includes("graphics")) return "image";
+        if (c.includes("development")) return "code";
+        if (c.includes("game")) return "sports_esports";
+        if (c.includes("settings") || c.includes("system")) return "settings";
         return "apps";
     }
 
-    
     Connections {
         target: DesktopEntries
-        function onApplicationsChanged() { root.buildIndex() }
+        function onApplicationsChanged() { root.refresh(); }
     }
 
-    Component.onCompleted: buildIndex()
+    Component.onCompleted: refresh()
 }

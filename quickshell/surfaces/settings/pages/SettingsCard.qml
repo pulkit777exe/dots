@@ -3,38 +3,19 @@ import QtQuick.Layouts
 import "../../../components"
 import "../../../services"
 
-
-
-
-
+// Card shell: rows declared straight into the inner column.
 
 Surface {
     id: root
 
-    
-    default property alias content: col.data
+    default property alias rows: col.data
 
-    
-    
-    
-    
-    
-    
-    
-    
-    
     property int paddingH: 14
-    
-    
-    
-    property int paddingV: 2
+    property int paddingV: 6
 
     implicitHeight: col.implicitHeight + paddingV * 2
     Layout.fillWidth: true
-    cornerRadius: 16
-    
-    
-    
+    cornerRadius: 15
     backgroundColor: Theme.colors.surface
     borderWidth: 0
     shadow: false

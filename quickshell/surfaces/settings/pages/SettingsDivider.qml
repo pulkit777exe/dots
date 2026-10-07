@@ -1,20 +1,9 @@
 import QtQuick
 import QtQuick.Layouts
-
 import "../../../services"
 
-
-
-
-
-
-Item {
-    id: root
+Rectangle {
     Layout.fillWidth: true
-    implicitHeight: 1
-
-    Rectangle {
-        anchors.fill: parent
-        color: Theme.colors.divider
-    }
+    Layout.preferredHeight: 1
+    color: Theme.withAlpha(Theme.colors.text, 0.07)
 }

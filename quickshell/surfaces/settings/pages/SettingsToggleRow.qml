@@ -3,9 +3,7 @@ import QtQuick.Layouts
 import "../../../components"
 import "../../../services"
 
-
-
-
+// Label left, switch right; `toggled` reports the new value.
 
 Item {
     id: root
@@ -15,9 +13,6 @@ Item {
 
     signal toggled(bool value)
 
-    
-    
-    
     implicitHeight: 44
     Layout.fillWidth: true
 
@@ -25,18 +20,16 @@ Item {
         anchors.fill: parent
         spacing: 12
 
-        StyledText {
+        Label {
             Layout.fillWidth: true
             text: root.label
-            font.pixelSize: 13
-            
+            font.pixelSize: Theme.px(13)
             color: Theme.withAlpha(Theme.colors.text, 0.9)
             elide: Text.ElideRight
         }
 
         Toggle {
             checked: root.checked
-            accentColor: Theme.colors.accent
             onToggled: (v) => root.toggled(v)
         }
     }

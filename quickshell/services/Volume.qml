@@ -6,138 +6,77 @@ import Quickshell
 import Quickshell.Services.Pipewire
 import Quickshell.Io
 
-
+// Volume and mic, straight off PipeWire. PwObjectTracker must track the
+// nodes you read, or their audio properties never bind.
 
 Singleton {
     id: root
 
-    
     readonly property PwNode sink: Pipewire.defaultAudioSink
     readonly property PwNode source: Pipewire.defaultAudioSource
-
     readonly property bool sinkAvailable: sink !== null
     readonly property bool sourceAvailable: source !== null
+
+    PwObjectTracker { objects: [root.sink, root.source] }
 
     readonly property real volume: sinkAvailable ? sink.audio.volume : 0
     readonly property bool muted: sinkAvailable ? sink.audio.muted : true
     readonly property int volumePercent: Math.round(volume * 100)
-
-    
-    
-    
-    
-    PwObjectTracker {
-        objects: [root.sink, root.source]
-    }
 
     readonly property real micVolume: sourceAvailable ? source.audio.volume : 0
     readonly property bool micMuted: sourceAvailable ? source.audio.muted : true
     readonly property int micVolumePercent: Math.round(micVolume * 100)
 
     readonly property string iconName: {
-        if (!sinkAvailable || muted) return "volume_mute";
-        if (volumePercent >= 66) return "volume_up";
-        if (volumePercent >= 33) return "volume_down";
-        if (volumePercent > 0) return "volume_down";
-        return "volume_off";
+        if (!sinkAvailable || muted || volumePercent === 0) return "volume_off";
+        if (volumePercent >= 50) return "volume_up";
+        return "volume_down";
     }
 
-    signal osdRequested(int percent)
-    onVolumePercentChanged: osdRequested(volumePercent)
-    onMutedChanged: osdRequested(volumePercent)
-
-    
-    function setVolume(pct: real): void {
+    function setVolume(pct: real) {
         if (!sinkAvailable) return;
         sink.audio.muted = false;
-        sink.audio.volume = Math.max(0, Math.min(1, pct / 100.0));
+        sink.audio.volume = Math.max(0, Math.min(1, pct / 100));
     }
 
-    function toggleMute(): void {
-        if (!sinkAvailable) return;
-        sink.audio.muted = !sink.audio.muted;
+    function toggleMute() {
+        if (sinkAvailable) sink.audio.muted = !sink.audio.muted;
     }
 
-    function setMicVolume(pct: real): void {
+    function setMicVolume(pct: real) {
         if (!sourceAvailable) return;
         source.audio.muted = false;
-        source.audio.volume = Math.max(0, Math.min(1, pct / 100.0));
+        source.audio.volume = Math.max(0, Math.min(1, pct / 100));
     }
 
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-
-    readonly property var allNodes: Pipewire.nodes
-
-    function isAudioNode(n) {
-        return n !== null && n !== undefined && n.audio !== null;
-    }
-
-    
-    readonly property var sinks: filterNodes(n => !n.isStream && n.isSink && isAudioNode(n))
-    
-    readonly property var sources: filterNodes(n => !n.isStream && !n.isSink && isAudioNode(n))
-    
-    readonly property var streams: filterNodes(n => n.isStream && isAudioNode(n))
-
-    
-    
+    // Node lists for the sound page: sinks (outputs), sources (inputs),
+    // streams (per-app players).
     function filterNodes(pred) {
         const out = [];
-        const model = allNodes;
+        const model = Pipewire.nodes;
         if (!model || !model.values) return out;
-        for (let i = 0; i < model.values.length; i++) {
-            const n = model.values[i];
-            if (n && pred(n)) out.push(n);
+        for (const n of model.values) {
+            if (n && n.audio !== null && pred(n)) out.push(n);
         }
         return out;
     }
 
-    
-    
-    PwObjectTracker {
-        objects: root.trackedNodes
-    }
-    readonly property var trackedNodes: sinks.concat(sources, streams)
+    readonly property var sinks: filterNodes(n => !n.isStream && n.isSink)
+    readonly property var sources: filterNodes(n => !n.isStream && !n.isSink)
+    readonly property var streams: filterNodes(n => n.isStream)
 
-    
+    PwObjectTracker { objects: root.sinks.concat(root.sources, root.streams) }
+
     function displayName(n) {
         if (!n) return "";
-        const d = n.description || "";
-        const k = n.nickname || "";
-        if (d && k) return d;
-        return d || k || n.name || "";
+        return n.description || n.nickname || n.name || "";
     }
 
-    function setDefaultSink(node) {
-        if (!node) return;
-        Pipewire.preferredDefaultAudioSink = node;
-    }
+    function isDefaultSink(n) { return n !== null && n !== undefined && n === Pipewire.defaultAudioSink; }
+    function isDefaultSource(n) { return n !== null && n !== undefined && n === Pipewire.defaultAudioSource; }
+    function setDefaultSink(n) { if (n) Pipewire.preferredDefaultAudioSink = n; }
+    function setDefaultSource(n) { if (n) Pipewire.preferredDefaultAudioSource = n; }
 
-    function setDefaultSource(node) {
-        if (!node) return;
-        Pipewire.preferredDefaultAudioSource = node;
-    }
-
-    function isDefaultSink(node) {
-        return node !== null && node !== undefined && node === Pipewire.defaultAudioSink;
-    }
-
-    function isDefaultSource(node) {
-        return node !== null && node !== undefined && node === Pipewire.defaultAudioSource;
-    }
-
-    
     IpcHandler {
         target: "audio"
         function getVolume(): int { return root.volumePercent; }

@@ -2,74 +2,68 @@ import QtQuick
 import QtQuick.Layouts
 import "../../../components"
 import "../../../services"
+
 ColumnLayout {
     id: root
     spacing: 12
 
+    property date now: new Date()
+
+    Timer {
+        interval: 1000
+        running: root.visible
+        repeat: true
+        onTriggered: root.now = new Date()
+    }
+
     SettingsHeader {
         icon: "schedule"
         title: "Clock & Date"
-        subtitle: "Time formatting, calendar layout, and display preferences."
+        subtitle: "Time formatting and display preferences."
     }
 
-    
     Surface {
         Layout.fillWidth: true
         implicitHeight: 100
-        cornerRadius: 16
+        cornerRadius: 15
         backgroundColor: Theme.colors.surface
+        borderWidth: 0
+        shadow: false
 
         ColumnLayout {
             anchors.centerIn: parent
             spacing: 6
 
-            StyledText {
+            Label {
                 Layout.alignment: Qt.AlignHCenter
-                font.pixelSize: 30
+                font.pixelSize: Theme.px(30)
                 font.weight: Font.Bold
-                text: Qt.formatTime(new Date(), ConfigStore.time24h ? (ConfigStore.showSeconds ? "hh:mm:ss" : "hh:mm") : (ConfigStore.showSeconds ? "hh:mm:ss AP" : "hh:mm AP"))
+                color: Theme.colors.text
+                text: Qt.formatTime(root.now, Config.time24h
+                    ? (Config.showSeconds ? "hh:mm:ss" : "hh:mm")
+                    : (Config.showSeconds ? "hh:mm:ss AP" : "hh:mm AP"))
             }
 
-            StyledText {
+            Label {
                 Layout.alignment: Qt.AlignHCenter
-                font.pixelSize: 13
-                textColor: Theme.withAlpha(Theme.colors.text, 0.6)
-                text: Qt.formatDate(new Date(), "dddd, MMMM d, yyyy")
+                font.pixelSize: Theme.px(13)
+                color: Theme.withAlpha(Theme.colors.text, 0.6)
+                text: Qt.formatDate(root.now, "dddd, MMMM d, yyyy")
             }
         }
     }
 
-    
-    RowLayout {
-        Layout.fillWidth: true
-        StyledText { variant: "mediaTitle"; font.pixelSize: 13; text: "24-Hour Time Format" }
-        Item { Layout.fillWidth: true }
-        Toggle {
-            checked: ConfigStore.time24h
-            accentColor: Theme.colors.accent
-            onToggled: (v) => ConfigStore.setTime24h(v)
+    SettingsCard {
+        SettingsToggleRow {
+            label: "24-hour time"
+            checked: Config.time24h
+            onToggled: (v) => Config.set("time24h", v)
         }
-    }
-
-    RowLayout {
-        Layout.fillWidth: true
-        StyledText { variant: "mediaTitle"; font.pixelSize: 13; text: "Display Seconds in Clock" }
-        Item { Layout.fillWidth: true }
-        Toggle {
-            checked: ConfigStore.showSeconds
-            accentColor: Theme.colors.accent
-            onToggled: (v) => ConfigStore.setShowSeconds(v)
-        }
-    }
-
-    RowLayout {
-        Layout.fillWidth: true
-        StyledText { variant: "mediaTitle"; font.pixelSize: 13; text: "First Day of the Week: Monday" }
-        Item { Layout.fillWidth: true }
-        Toggle {
-            checked: ConfigStore.firstDayMonday
-            accentColor: Theme.colors.accent
-            onToggled: (v) => ConfigStore.setFirstDayMonday(v)
+        SettingsDivider {}
+        SettingsToggleRow {
+            label: "Show seconds"
+            checked: Config.showSeconds
+            onToggled: (v) => Config.set("showSeconds", v)
         }
     }
 }
