@@ -56,9 +56,6 @@ Singleton {
     
     
     
-    readonly property real stageLiftOnHover: data.stageLiftOnHover
-    
-    
     property real panelSlideIn: 22
 
     function setNotchMode(v) { data.notchMode = v; save(); }
@@ -71,7 +68,6 @@ Singleton {
     function setAlbumArtCircleEnabled(v) { data.albumArtCircleEnabled = v; save(); }
     function setInnerPadding(v) { data.innerPadding = v; save(); }
     function setCollapsedCornerRadius(v) { data.collapsedCornerRadius = v; save(); }
-    function setStageLiftOnHover(v) { data.stageLiftOnHover = v; save(); }
 
     
     
@@ -124,7 +120,6 @@ Singleton {
             property bool albumArtCircleEnabled: true
             property real innerPadding: 3
             property real collapsedCornerRadius: 20
-            property real stageLiftOnHover: 7
         }
     }
 }

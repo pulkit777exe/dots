@@ -40,7 +40,7 @@ services/     42 files. 24 singletons: Theme, Wifi, Bluetooth, Volume,
                files beside Wifi.qml because `services/` carries a
                qmldir, and a type a qmldir-bearing directory does not
                list does not resolve.
-surfaces/     The UI layer. 60 files: panels and popups built from
+surfaces/     The UI layer. 59 files: panels and popups built from
                components, reading services, never polling them.
   cc/          The control centre's five pages, one file each. They
                were the body of a 2,255-line ControlCenter.qml, and
@@ -435,7 +435,10 @@ that looks right.
 Both use `mask: Region { ... }` to make the window click-through except
 where something is actually visible — a `Region` per popup, unioned
 together, each one conditionally included via `item: condition ?
-wrapItem : null`. `Region`'s real, documented properties are `x, y,
+wrapItem : null`. `barWindow`'s mask is a single `Region` over
+`island.surfaceItem`: one island, one rectangle. It was three — centre
+panel plus a dot either side — and the count followed the number of
+floating surfaces, which is the only thing that ever decided it. `Region`'s real, documented properties are `x, y,
 width, height, item, shape, intersection` — no `enabled` property
 exists. `item: null` is what actually does the "exclude this one"
 job, by falling back to the region's zero-default geometry.
@@ -476,7 +479,8 @@ API/module differences across versions, not logic bugs. A fourth assumption is
 version-bound in the same way, and is the one that would fail silently:
 1. `Qt5Compat.GraphicalEffects` — not installed on the target machine.
    No longer used anywhere in this codebase; every mask (`Surface.qml`'s
-   shadow, `Island.qml`'s circular dot, `MediaPlayerSurface.qml`'s
+   shadow, `IslandHomeFace.qml`'s rounded media card and glow bars,
+   `MediaPlayerSurface.qml`'s
    rounded album art) is done with plain `Rectangle { clip: true }` or
    stacked shapes instead of a real effect.
 2. `Region.enabled` — never existed; a fabricated API on my part,

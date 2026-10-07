@@ -19,7 +19,7 @@ import "../services"
 // rather than of the cards, so they stayed here.
 //
 // The model, the theme name and the `wallpaperSelected` signal all come from
-// IslandCenterPanel, which is what actually applies a wallpaper. Nothing here
+// IslandPanel, which is what actually applies a wallpaper. Nothing here
 // touches the filesystem.
 
 Surface {
@@ -32,8 +32,12 @@ Surface {
 
     signal wallpaperSelected(int index)
 
-    width: 1008
-    implicitHeight: 222
+    // Measured off the reference: the panel IS this item (IslandPanel adds no
+    // margin of its own for this mode), so these two numbers are the panel's.
+    // 1000x238, with the 16 of ColumnLayout padding reading as the 15-16 of
+    // inset the reference title and footer actually sit at.
+    width: 1000
+    implicitHeight: 238
     cornerRadius: 20
 
     readonly property real itemW: 170
@@ -168,7 +172,10 @@ Surface {
         anchors.fill: parent
         anchors.margins: 16
 
-        spacing: 12
+        // 16, not 12: the reference leaves 24 and 29 of ink between the three
+        // rows where 12 produced 22 and 23 -- the extra 4 per gap is what puts
+        // the footer where it is rather than crowding the thumbnail strip.
+        spacing: 16
 
 
         RowLayout {
@@ -177,7 +184,10 @@ Surface {
             StyledText {
                 variant: "mediaTitle"
 
-                font.pixelSize: 15
+                // 17, measured off the reference: its "Wallpaper" ink runs 17
+                // rows tall where 15 produced 15, which is also what puts the
+                // thumbnail strip two rows lower than it was.
+                font.pixelSize: 17
                 font.weight: Font.DemiBold
 
                 text: "Wallpaper"

@@ -47,7 +47,7 @@ Singleton {
     
     
     readonly property real springDamping: root.reduceMotion ? 1.0
-        : Math.max(0.25, 0.7 - (root.bouncePercent / 100) * 0.4)
+        : Math.max(0.45, 0.75 - (root.bouncePercent / 100) * 0.35)
 
     function setReduceMotion(v) { data.reduceMotion = v; save(); }
     function setMovementMs(v) { data.movementMs = v; save(); }

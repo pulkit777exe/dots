@@ -53,7 +53,10 @@ Item {
         color: root.thumbColor
         anchors.verticalCenter: parent.verticalCenter
         x: root.checked ? parent.width - width - 4 : 4
-        Behavior on x { NumberAnimation { duration: MotionConfig.hover(); easing.type: Easing.OutCubic } }
+        Behavior on x {
+            enabled: !MotionConfig.reduceMotion
+            SpringAnimation { spring: 5.5; damping: 0.68; mass: 0.4 }
+        }
     }
 
     TapHandler {

@@ -133,7 +133,10 @@ Surface {
 
     ColumnLayout {
         anchors.fill: parent
-        anchors.margins: 16
+        // 4, not 16: IslandPanel centres this surface in a panel 24 wider/taller
+        // than it, so 12 of inset is already applied outside. The visible inset
+        // is 16 in the reference, and 12 + 4 reproduces it.
+        anchors.margins: 4
         spacing: 8
 
         RowLayout {

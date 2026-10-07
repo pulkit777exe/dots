@@ -37,34 +37,38 @@ QtObject {
     // AudioSettings, WifiPasswordDialog) all sit on Theme.panelFill; this one
     // had its own brown, and it is the base every other token here is read
     // against.
-    readonly property color bgSurface: Theme.colors.background
+    // The control centre is a stable, neutral surface over any wallpaper or
+    // palette. Theme colours still drive text and the accent, but allowing a
+    // green or purple theme background through here made the panel compete
+    // with its controls instead of framing them.
+    readonly property color bgSurface: "#000000"
 
     // A card on the panel: one step up from `background`, which is what makes
     // it a card. This and bgSurface were the same hex, so every card in the
     // panel was invisible against it and only its border gave it away.
-    readonly property color bgCard: Theme.colors.surface
+    readonly property color bgCard: "#171514"
 
-    readonly property color bgCardHover: Theme.colors.surfaceAlt
+    readonly property color bgCardHover: "#211e1c"
 
     // An icon button that is on: an accent wash, the same construction
     // ControlCenter already used for the notification avatar.
     readonly property color bgCardActive: Qt.alpha(Theme.colors.accent, 0.22)
 
     // A row inside a card, so one step up again from `surface`.
-    readonly property color bgItem: Theme.colors.surfaceAlt
+    readonly property color bgItem: "#25211f"
 
-    readonly property color bgItemHover: Theme.colors.surfaceElevated
+    readonly property color bgItemHover: "#302b29"
 
     // The unfilled part of a slider. It has to be *darker* than the card it
     // sits in, and no palette key is darker than `background`, so it is
     // `background` knocked back over the card. (`surfaceMuted` is `background`
     // at 70% and composites to within 1.00:1 of `surface` on four of the six
     // themes -- an invisible track -- so it is not the key for this.)
-    readonly property color bgSliderTrack: Qt.alpha(Theme.colors.background, 0.45)
+    readonly property color bgSliderTrack: "#080808"
 
     // The same track, one step deeper, for a slider drawn on a row rather than
     // on a card.
-    readonly property color bgSliderTrackCard: Qt.alpha(Theme.colors.background, 0.60)
+    readonly property color bgSliderTrackCard: "#11100f"
 
     // The neutral disc behind an unselected icon. Kept off `surfaceElevated`
     // on purpose: that is `bgItemHover`, and a hovered row must still show its
@@ -85,7 +89,7 @@ QtObject {
 
     // Every `border.color: "#282828"` and the panel's own border. The palettes
     // already carry a hairline border at 10% of the foreground.
-    readonly property color borderColor: Theme.colors.border
+    readonly property color borderColor: "#2d2927"
 
     // The glyph drawn on top of an accent fill: the volume icon inside a
     // slider's filled part, and the Toggle thumb. All three were #111111 or

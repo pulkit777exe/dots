@@ -108,7 +108,7 @@ Item {
         panel: cc.panel
         property bool on: false
         active: on
-        icon: "toggle_off"
+        icon: "sports_esports"
         label: "Game Mode"
         sublabel: on ? "On" : "Off"
         onClicked: {

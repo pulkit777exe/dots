@@ -43,7 +43,7 @@ ColumnLayout {
         SettingsDivider {}
 
         SettingsSliderRow {
-            label: "Collapsed width"
+            label: "Minimum island width"
             value: BarConfig.collapsedWidth
             from: 60; to: 240; suffix: " px"
             onMoved: (v) => BarConfig.setCollapsedWidth(Math.round(v))
@@ -70,7 +70,7 @@ ColumnLayout {
         SettingsDivider {}
 
         SettingsSliderRow {
-            label: "Inner padding"
+            label: "Now-playing card padding"
             value: BarConfig.innerPadding
             from: 0; to: 12; suffix: " px"
             onMoved: (v) => BarConfig.setInnerPadding(Math.round(v))
@@ -99,7 +99,7 @@ ColumnLayout {
         SettingsDivider {}
 
         SettingsToggleRow {
-            label: "Status circle (battery and Wi-Fi)"
+            label: "Status indicators (signal and battery)"
             checked: BarConfig.statusCircleEnabled
             onToggled: (v) => BarConfig.setStatusCircleEnabled(v)
         }
@@ -107,18 +107,9 @@ ColumnLayout {
         SettingsDivider {}
 
         SettingsToggleRow {
-            label: "Album art circle while a player is open"
+            label: "Now-playing card"
             checked: BarConfig.albumArtCircleEnabled
             onToggled: (v) => BarConfig.setAlbumArtCircleEnabled(v)
-        }
-
-        SettingsDivider {}
-
-        SettingsSliderRow {
-            label: "Stage lift on hover"
-            value: BarConfig.stageLiftOnHover
-            from: 0; to: 20; suffix: " px"
-            onMoved: (v) => BarConfig.setStageLiftOnHover(Math.round(v))
         }
     }
 }

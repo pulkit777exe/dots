@@ -48,12 +48,12 @@ QtObject {
                 cardColor: bg,
                 selected: key === currentName,
                 swatchColors: [
-                    (t.colors && t.colors.accent) ? t.colors.accent : accent,
+                    (t.colors && (t.colors.danger || t.colors.error)) ? (t.colors.danger || t.colors.error) : accent,
                     (t.colors && t.colors.success) ? t.colors.success : accent,
                     (t.colors && t.colors.warning) ? t.colors.warning : accent,
-                    (t.colors && t.colors.danger) ? t.colors.danger : ((t.colors && t.colors.error) ? t.colors.error : accent),
-                    (t.colors && t.colors.textMuted) ? t.colors.textMuted : ((t.colors && t.colors.muted) ? t.colors.muted : accent),
-                    (t.colors && t.colors.surfaceAlt) ? t.colors.surfaceAlt : bg
+                    (t.colors && (t.colors.muted || t.colors.textMuted)) ? (t.colors.muted || t.colors.textMuted) : accent,
+                    (t.colors && t.colors.accentVariant) ? t.colors.accentVariant : ((t.colors && t.colors.error) ? t.colors.error : accent),
+                    (t.colors && t.colors.accent) ? t.colors.accent : accent
                 ],
             });
         }

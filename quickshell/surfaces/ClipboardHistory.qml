@@ -44,9 +44,9 @@ Surface {
     opacity: 0
     scale: 0.96
 
-    // Connected by IslandCenterPanel, and never emitted from here: every path
+    // Connected by IslandPanel, and never emitted from here: every path
     // out of this panel calls UiState.closeAll() directly, so the signal is
-    // dead. It is left in place because IslandCenterPanel.qml has a handler
+    // dead. It is left in place because IslandPanel.qml has a handler
     // on it and that file is not this one to change -- a finding to report,
     // not something to quietly drop.
     signal closeRequested()

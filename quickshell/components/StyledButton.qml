@@ -20,7 +20,12 @@ Item {
     implicitWidth: label.implicitWidth + 32
     implicitHeight: 36
     opacity: enabled ? 1 : 0.4
+    scale: mouseArea.pressed ? 0.96 : 1.0
     Behavior on opacity { OpacityAnimator { duration: MotionConfig.fade(); easing.type: Easing.OutCubic } }
+    Behavior on scale {
+        enabled: !MotionConfig.reduceMotion
+        SpringAnimation { spring: 6; damping: 0.7; mass: 0.4 }
+    }
 
     Rectangle {
         anchors.fill: parent

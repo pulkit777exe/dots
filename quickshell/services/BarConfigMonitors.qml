@@ -16,7 +16,7 @@ import Quickshell.Io
 //
 //   notchMode, statusCircleEnabled, albumArtCircleEnabled  which parts of
 //       the bar exist at all; a half-and-half bar reads as a bug
-//   panelSlideIn, stageLiftOnHover, innerPadding            motion and
+//   panelSlideIn, innerPadding                            motion and
 //       padding, tuned as one set against the global bar height
 //
 // Anything not in `allowed` is ignored, and says so in the log rather than

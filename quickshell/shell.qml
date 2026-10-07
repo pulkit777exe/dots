@@ -248,13 +248,10 @@ ShellRoot {
             readonly property bool isFullscreen: Compositor.activeWindowFullscreen && !UiState.anyOpen
 
             // Same condition as hiddenForFullscreen: when the island is kept
-            // up for an OSD its regions have to stay interactive, or the pill
-            // is drawn but cannot be clicked and the mask silently eats the
-            // input.
+            // up for an OSD it has to stay interactive, or the pill is drawn
+            // but cannot be clicked and the mask silently eats the input.
             mask: Region {
-                Region { item: island.hiddenForFullscreen ? null : island.leftSurfaceItem }
-                Region { item: island.hiddenForFullscreen ? null : island.centerSurfaceItem }
-                Region { item: island.hiddenForFullscreen ? null : island.rightSurfaceItem }
+                Region { item: island.hiddenForFullscreen ? null : island.surfaceItem }
             }
 
             // Hiding the bar also has to give the space back. An exclusive

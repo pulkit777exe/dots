@@ -31,7 +31,7 @@ Surface {
     cornerRadius: 20
     backgroundColor: Theme.panelFill
 
-    // Written by IslandCenterPanel too, which passes AppLauncher.results in
+    // Written by IslandPanel too, which passes AppLauncher.results in
     // from outside rather than letting this file reach for it.
     property var results: AppLauncher.results
 

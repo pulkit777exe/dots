@@ -60,6 +60,7 @@ Surface {
     
     readonly property var navItems: [
         { title: "Bar & Island", icon: "crop_landscape", page: 0 },
+        { title: "Media", icon: "queue_music", page: 10 },
         { title: "Clock & Date", icon: "schedule", page: 2 },
         { title: "Appearance", icon: "palette", page: 3 },
         { title: "Motion", icon: "sensors", page: 4 },

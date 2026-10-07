@@ -18,7 +18,12 @@ Item {
     width: size
     height: size
     opacity: enabled ? 1 : 0.35
+    scale: mouseArea.pressed ? 0.92 : 1.0
     Behavior on opacity { OpacityAnimator { duration: MotionConfig.fade(); easing.type: Easing.OutCubic } }
+    Behavior on scale {
+        enabled: !MotionConfig.reduceMotion
+        SpringAnimation { spring: 6; damping: 0.7; mass: 0.4 }
+    }
 
     Rectangle {
         id: bg

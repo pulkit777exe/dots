@@ -752,3 +752,322 @@ polkit request was faked), D-Bus ingest to a second notification server
 pressed path. `ControlCenterLayout.settle` does not always terminate —
 pre-existing, preserved through the split, still open. `log.qslog` grows
 ~2.6 MiB/day of NetworkManager property spam.
+
+## Round 12 — three floating surfaces become one morphing island
+
+The bar was three separate pills: `IslandCenterPanel` (the notch, and
+every surface that opened in it) with `IslandLeftDot` (album art /
+media player) and `IslandRightDot` (battery + wifi / control centre)
+hanging off its measured edges. That is now **one `Surface`**
+(`surfaces/IslandPanel.qml`), and the two dots are gone.
+
+What made it possible was that the rest state had been *two* things
+already — a resting pill and a wide panel — but they had never been
+the same object. `IslandHomeFace.qml` lays out both from one set of
+declarations: the workspace bars, the clock and the status indicators
+are written once and just sit at a different `y`. Two faces would have
+had to agree on all three by hand, forever.
+
+### The numbers are measured, not invented
+
+Reference screenshots of the same shell at a different scale factor
+(`K = 1.8`, verified three ways against live geometry) were measured
+pixel by pixel and divided through. The result, at logical size:
+
+- rest pill ≈ **195×30** (for five workspaces; `n*6 + (n-1)*4` bars),
+  stadium radius, 16px pad, clock at 14 DemiBold centred;
+- wide panel ≈ **368×76**, clock + date at `y12`, workspace name at
+  `y30`, bars at `y46`, a 156×30 now-playing card centred at `y33`,
+  status vertically centred and pinned to the right pad.
+
+Live check: the pill centres on 959.5 against a screen centre of 960,
+stands 29px for a `barHeight` of 29.55, and grows to 199 when a fifth
+workspace exists. The wide panel measures 357 against 368 predicted —
+the difference is the workspace count, not the layout.
+
+### One `MouseArea`, declared last, and why that is not a style choice
+
+Two overlapping `MouseArea`s do **not** hand a press down to the one
+underneath: a press the top area does not accept walks up the *parent*
+chain and is discarded, it never reaches a sibling. So a hover area on
+top and a click area below it would have produced a pill that widens
+when you point at it and does nothing when you click it.
+
+There is therefore exactly one `MouseArea` in `IslandHomeFace.qml`, and
+it is the last child — which is also what makes the hover work, since
+the scene returns the topmost item under the cursor. It routes the
+click by hit-testing against the zones it covers (status → control
+centre, card → media, bars → `Workspaces.focus`, everything else →
+calendar), which is why `WorkspaceBars` exposes `indexAt(x)` instead of
+carrying a `MouseArea` per bar: one inside it would sit underneath the
+face's area and never see a press.
+
+### The workspace indicator needed compositor data, so it got a service
+
+Nothing in the tree read `Hyprland.workspaces` yet, and the bars need
+it: which workspaces exist, which one is focused, and a way to switch.
+`services/Workspaces.qml` is the singleton that does those three
+things, and it is now the second file importing `Quickshell.Hyprland`
+(`Compositor.qml` was previously the only one — its comment said so,
+and has been corrected rather than left to rot). Its `items` filters
+`special` workspaces out but keeps named ones, and the per-screen
+filter is deliberately permissive: a workspace whose monitor we cannot
+name is shown rather than dropped, because a missing bar reads as a bug
+and a redundant one does not.
+
+### Settings that lost their consumer, and one that found a new one
+
+- **`stageLiftOnHover` is gone.** Its only two readers were the two
+  dots, and the thing it did — lift on hover — is now the island
+  widening on hover, which supersedes it. A slider that moves nothing
+  is worse than no slider.
+- **`innerPadding` is now the now-playing card's inner padding.** It
+  was the album-art dot's padding; the dot is gone. At its default of
+  3 it lands the artwork inset, the text origin and the dots' right
+  margin at 5 / 35 / 7 — within a pixel of the measured reference, so
+  the default did not need to move.
+- **"Collapsed width" is relabelled "Minimum island width"**, because
+  that is what it became: the face now sizes itself from its own
+  content, so the slider is a floor, not the width. It still does real
+  work — it is what heals a persisted `collapsedWidth: 97`.
+- The two toggles were renamed to what they actually gate: "Status
+  indicators (signal and battery)" and "Now-playing card".
+
+### Checked, and deliberately not done
+
+`decoration:glow` in the Hyprland config was considered and skipped:
+it is a *window* decoration and is not rendered on layer-shell
+surfaces, so it would have done nothing to the bar. `Surface.qml`'s
+stacked-rectangle shadow remains the mechanism.
+
+The OSD semantics are unchanged on purpose: `isOsd` still comes first
+in `targetW`/`targetH`, so it keeps its own 275×43 pill and its `z:
+100`. The consequence — media and the control centre now morph through
+that pill instead of sitting beside it — is the single-island rule
+applied consistently rather than an exception for two surfaces.
+
+`scripts/lint.sh` clean, `tests/run.sh` 18/18, and the collapsed,
+wide, control-centre, media and calendar states were each captured and
+measured against the reference.
+
+## Round 13 — three surfaces measured against the screenshots they were drawn from
+
+Round 12 measured the island. Carrying on through the rest of the same
+ten reference screenshots turned up three surfaces whose geometry did
+not survive the same measurement: the control centre, the power menu
+and the wallpaper picker. The numbers below are what a pixel probe
+returns, not what the tokens claim.
+
+Two things about the references change how the comparisons have to be
+read:
+
+- They come in two groups. The `11-42-*` and `11-43-*` shots are the
+  teal theme at `K = 1.8`; `11-44-*`, `11-45-58` and `11-46-17` are a
+  blue-wallpaper session at `K ≈ 1`. A teal reference has to be divided
+  through before it means anything; a blue one compares directly. The
+  power-menu and wallpaper-picker numbers below are the `K = 1` pair.
+- The panels sit on photographic wallpaper, and their shadows bleed
+  into any bounding-box probe. The numbers that held up are the ones
+  measured from *content* — tiles, text ink, thumbnail edges — with the
+  panel edge taken only where the wallpaper behind it is dark enough
+  for the edge to be sharp. Reading the panel edge directly off
+  `11-46-17` gave four different answers in four attempts; overlaying a
+  coordinate grid and measuring the tiles gave one, and the tiles are
+  what the fix is expressed in anyway.
+
+### Control centre: 45px of black below the last row
+
+`panelHeight`'s home branch was a literal `514` — the kind of number
+that is right once and then stays right while everything under it
+moves. Against the reference it produced a band of empty black roughly
+45px deep below the final row, a fifth of the panel.
+
+It is now `Math.ceil(homePage.contentBottom + 28)`, where
+`contentBottom` walks `layoutItems` and takes the maximum of
+`rowTop(it.row) + rowHeightFor(it)`. It cannot be written as "the
+bottom of `rowTops`": `rowTops` pushes `y` *before* it checks whether
+the row has anything in it, so a trailing empty row leaves a phantom
+entry and the height jumps straight back to where it was. That is also
+why `contentBottom` exists as a separate property rather than fixing
+`rowTops` — the map is read elsewhere for exactly the keys it does
+have.
+
+The panel went from 509 tall to **478** (`y6..483`), content bottom
+470, bottom padding **13** against the reference's 14, with all five
+content bands present. Width unchanged at 459, centred on 960.0.
+
+### Power menu: 20px of inset where the reference has 14, tiles 20px too narrow
+
+Reference `11-46-17`: panel **511×108**, five tiles **90×80**, gap 8,
+content span 483, ~14px of panel on every side. Live was **422×121**
+with **70×81** tiles and a content span of 382 — the tiles were 20px
+narrow each and the inset was 20 rather than 14.
+
+The inset was never `containerPadding` alone: `IslandPanel` gives
+every surface `anchors.margins: 12` and adds the matching `+24` to
+`targetW`/`targetH`, so what the eye sees is `containerPadding + 12`.
+Eight plus twelve is twenty, and no amount of adjusting one side alone
+reaches fourteen.
+
+- `tileWidth: 70 → 90`
+- `containerPadding: 8 → 2` (2 + 12 = 14)
+
+The panel is now ≈ **512×110**, tiles 5×90 with gaps of 8, content span
+482 against the reference's 483, inset 15/16 against its 13/15. The
+button height and gap had always matched — `tileHeight: 81` against a
+measured 80 was left alone, it is inside the measurement error.
+
+### Wallpaper picker: a wrapper margin the reference does not have
+
+Reference `11-45-58`: panel **1000×238**, title and footer sitting
+**15** in from the left edge, thumbnail strip 115 tall, gaps of 24 and
+29 between the three rows, title ink 17 rows tall. Live was
+**1032×246** with content **28** in from the edge.
+
+Twenty-eight is not an accident of padding: it is the picker's own
+`anchors.margins: 16` with `IslandPanel`'s `+24`/`topMargin: 12`
+wrapped around it. The reference's 15 *is* the 16 — the panel is the
+picker, with no wrapper at all. The 32px of extra width was exactly the
+wrapper. So the wallpaper picker became the one surface that opts out
+of the `+24`:
+
+- `targetW`/`targetH` drop the `+24`, and `anchors.topMargin: 12` goes
+  with it;
+- `width: 1008 → 1000`, `implicitHeight: 222 → 238` — with the wrapper
+  gone these *are* the panel, which is the point;
+- `spacing: 12 → 16`, because 12 produced row gaps of 22 and 23 where
+  the reference has 24 and 29;
+- title `font.pixelSize: 15 → 17`, because the reference's "Wallpaper"
+  ink runs 17 rows tall and 15 produced 15.
+
+Measured after: panel **999×237** against 1000×238, left inset **15**
+against 15, thumbnail strip 114 against 115, footer ink 11 against 11,
+bottom padding 18 against 20, top padding 21 against 23. The one
+residual is the gap above the thumbnail strip — 30 against 24 — which
+is the title sitting two rows higher than the reference's rather than
+anything wrong with the strip.
+
+### Reported, not applied: the control centre's row heights
+
+The reference's control-centre rows are uniform — 54.0, 54.2, 53.9,
+53.7, pitch ≈63.2. Live runs 57, 57, 52, 52 at pitch 70, 70, 62, 62,
+which is **+11px** of the residual height difference and the last
+piece of it after the fix above. It is not a one-line change: the
+heights live in a table duplicated between `CcHomePage.qml` and
+`CcControl.qml`, and `CcControl` keys a shape off it
+(`isDisc: cellHeight === 60`), so moving the tokens moves which cells
+are drawn as discs. It needs doing as one change across both files
+with the control centre captured before and after; it was measured and
+left rather than half-applied.
+
+`scripts/lint.sh` clean (4973 pre-existing warnings, unchanged),
+`tests/run.sh` 18/18. All three surfaces were captured live with
+`grim` and probed with PIL against their reference images — the probes
+lived in `/tmp` and are not part of the repo.
+
+## Round 14 — the theme picker's inset, Escape's missing last step, and an island that would not collapse
+
+### Theme picker: the same wrapper margin, counted differently
+
+Reference `11-43-43` (teal group, 805×221 crop): panel **804×221**,
+search field and footer sitting **17/15** in from the left and right
+edges, card row 68..166, footer ink 194..204, bottom pad 17.
+
+Live measured **802×218** — the panel was already right, and it had to
+be: `targetW`/`targetH` add the standard `+24` and the picker is
+centred inside it, so 780+24 is the 804 the reference shows. What was
+wrong was the inset: **27/26** against 17/15.
+
+That 11px is not padding gone astray. `IslandPanel` centres the picker
+in a panel 24 wider than it, so 12 of inset is already applied outside
+the surface, and the picker's own `anchors.margins: 16` sat on top of
+it: 12 + 16 = 28. The reference's 16 is the *visible* inset, so the
+picker's share of it is 4. Unlike the wallpaper picker — where removing
+the wrapper was the fix because the reference had no wrapper at all —
+here the wrapper is correct and only the inner number was wrong, so
+this is one line:
+
+- `anchors.margins: 16 → 4`
+
+Measured after: inset **17/16** against 17/15, card row 66..162 against
+68..166, footer ink 191..201 against 194..204, bottom pad **17 against
+17**. The one residual is the search row's ink sitting ~7px lower than
+the reference's while every band below it matches — the reference's
+placeholder text is visibly larger than live's, which points at the
+teal theme's font metrics rather than the layout.
+
+### Escape closed everything except the one surface that most needed it
+
+Testing all nine surfaces with `wtype -k Escape` (the bar window
+already takes `WlrKeyboardFocus.Exclusive` while `UiState.anyOpen`, so
+keys reach it): power menu, settings, launcher, clipboard, calendar,
+media, theme picker and wallpaper picker all closed. The control centre
+did not — Escape from the control centre did nothing, forever.
+
+The cause was one line:
+
+```qml
+Keys.onEscapePressed: root.view = "home"
+```
+
+That handler accepts the event unconditionally, so on a drill page it
+navigated home, and on the home view it assigned `"home"` to a value
+that already was `"home"` and swallowed the key. Either way the event
+never travelled up to `Island`, which owns `UiState.closeAll()` — so
+the control centre was the one surface Escape could not dismiss.
+
+It is now a back stack with a real last step:
+
+- a modal open (the Wi-Fi password dialog) → cancel it;
+- a drill page open → go home;
+- home → `event.accepted = false`, which lets the key keep bubbling to
+  `Island` and close.
+
+Verified with `quickshell log`: the close is attributed to
+`closeAll ← onEscapePressed@Island.qml:74`, and the drill case stays
+open after the first Escape.
+
+Two false leads are worth recording because they cost time. First, an
+earlier run reported the control centre closing *after one* Escape in
+the drill view — a stack trace on `UiState.mode` showed the close came
+from `onClicked@shell.qml:203`, i.e. a real click on the backdrop, not
+from the key. Second, the same trace caught
+`toggleCalendar ← IslandHomeFace.qml:344`, a click routed by the
+island's own MouseArea. Without the stack it was impossible to tell a
+stray click from an Escape that went to the wrong place, which is why
+the trace existed for exactly two runs and is not in the tree now.
+
+### The island would not collapse, and "playing" was not the answer either
+
+Reported as a stuck hover. The pointer was at (1616,561) — nowhere near
+the island — and the panel measured **354** wide against a 186 rest.
+
+Hover was not the problem: disabling only the media branch of `rich`
+collapsed it to the rest pill, which proves `zone.containsMouse` was
+false all along. The media branch was:
+
+```qml
+rich: hovered || (Media.hasPlayer && BarConfig.albumArtCircleEnabled)
+```
+
+`Media.hasPlayer` is "some player is registered", and `Media.pickBest()`
+falls through to `players[players.length - 1]`, so a Firefox tab
+holding a **paused** video (`100xDevs Learner Account`, 6989s, `Paused`)
+counted as an active track and pinned the panel wide for an hour.
+
+Narrowing it to `Media.playing` fixed the paused case and was then
+reported as still wrong — Brave's background music reopened it, which
+is the same panel that will not go away by a different route. So the
+second trigger is removed rather than narrowed a third time:
+
+- `rich: hovered || (…)` → `rich: hovered`
+
+`albumArtCircleEnabled` still gates whether the card is *drawn*
+(`showCard`); what it no longer does is decide the bar is open. The
+card is one hover from reach either way.
+
+Measured after: **176** at rest with Brave `Playing` and the cursor at
+(628, 398).
+
+`scripts/lint.sh` clean (4973 pre-existing warnings, unchanged),
+`tests/run.sh` 18/18.

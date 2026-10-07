@@ -20,10 +20,14 @@ Surface {
     
     
     
-    readonly property real tileWidth: 70
+    // Measured off the reference: five 90x80 tiles, 8 between them, and 14 of
+    // panel around the row. The panel adds 12 of its own (see IslandPanel's
+    // targetW/targetH), so this only has to cover the last 2 -- which is what
+    // makes the visible inset read 14 rather than the 20 it used to.
+    readonly property real tileWidth: 90
     readonly property real tileHeight: 81
     readonly property real tileSpacing: 8
-    readonly property real containerPadding: 8
+    readonly property real containerPadding: 2
 
     
     

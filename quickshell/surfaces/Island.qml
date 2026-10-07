@@ -1,27 +1,18 @@
 import QtQuick
 import "../services"
 
-// The bar window's contents: three panels laid out across the top.
+// The bar window's contents: the island.
 //
 // This file is the layout and nothing else. It resolves nothing, draws
-// nothing, and decides no sizes of its own beyond where each region sits and
-// how tall the window has to be for them. The three regions are:
+// nothing, and decides no sizes of its own beyond how tall the window has to
+// be for the one panel it contains. There used to be three of them -- a
+// centre notch with a dot either side -- and this file's one real job was
+// measuring the centre and handing its x and width to the two dots, because
+// they hung off its edges. With one surface there is nothing left to hand
+// around, so what is left is the panel, its per-monitor geometry from
+// IslandMetrics.qml, and the two pass-throughs shell.qml reads.
 //
-//   IslandLeftDot       album art at rest, media player when expanded
-//   IslandCenterPanel   the notch at rest, every surface that opens in it
-//   IslandRightDot      battery and wifi at rest, control centre when expanded
-//
-// and the geometry they share is resolved once, per monitor, in
-// IslandMetrics.qml.
-//
-// The one piece of knowledge this file owns that the regions cannot: the
-// dots hang off the CENTRE panel's edges, so it measures the centre panel and
-// hands its x and width to the two dots. That is why the centre is declared
-// before them -- it has to exist before anything can read its geometry.
-//
-// Sibling order here is not meaningful to painting. Each region draws one
-// opaque Surface and they never overlap at rest; when one expands it grows
-// toward the centre panel rather than over it.
+// Sibling order here is not meaningful to painting: there is one child.
 Item {
     id: root
 
@@ -53,54 +44,31 @@ Item {
     readonly property real barHeight: islandMetrics.barHeight
     readonly property real gapFromEdge: islandMetrics.gapFromEdge
 
-    // shell.qml's input mask is built from these three Regions, so each has
-    // to be the region root itself -- the Region follows that item's
-    // position and size, and a Region pointed at anything inside it would
-    // mask the wrong rectangle. They are aliases rather than extra Items so
-    // the thing masked is provably the thing drawn.
-    property alias leftSurfaceItem: leftDot
-    property alias centerSurfaceItem: centerPanel
-    property alias rightSurfaceItem: rightDot
+    // shell.qml's input mask is built from this one Region, so it has to be
+    // the region root itself -- the Region follows that item's position and
+    // size, and a Region pointed at anything inside it would mask the wrong
+    // rectangle. An alias rather than an extra Item so the thing masked is
+    // provably the thing drawn.
+    //
+    // This used to be three aliases, one per region, which is exactly the
+    // count you would expect: the mask has to cover every part of the bar
+    // that takes a click, and three floating surfaces need three rectangles.
+    // One island needs one.
+    property alias surfaceItem: panel
 
-    // How tall the bar window has to be for whichever region is tallest,
-    // measured from its y, plus slack. Derived from the regions rather than
-    // kept as a number: the control centre's sound view is far taller than
-    // the resting bar, and a kept height clipped its last rows with nothing
-    // logged. A region that grows taller now takes the window with it.
-    implicitHeight: Math.max(
-        leftDot.height + leftDot.y,
-        Math.max(centerPanel.height + centerPanel.y,
-                 rightDot.height + rightDot.y)) + 20
+    // How tall the bar window has to be, measured from the panel's y plus
+    // slack. Derived from the panel rather than kept as a number: the control
+    // centre's sound view is far taller than the resting bar, and a kept
+    // height clipped its last rows with nothing logged. A panel that grows
+    // taller now takes the window with it.
+    implicitHeight: panel.height + panel.y + 20
 
-    IslandCenterPanel {
-        id: centerPanel
+    IslandPanel {
+        id: panel
         metrics: islandMetrics
-        // Read by the settings page's height clamp, which is per screen
-        // because one panel is built per output.
+        // Read by the settings page's height clamp and by the workspace
+        // indicator, both per screen because one panel is built per output.
         screenName: root.screenName
-    }
-
-    IslandLeftDot {
-        id: leftDot
-        metrics: islandMetrics
-        // The bar window's width, not this region's: the expanded panel
-        // clamps itself against the window, and this region resizes to the
-        // panel, so reading its own width would make the clamp circular.
-        availableWidth: root.width
-        centerX: centerPanel.x
-        centerIsOsd: centerPanel.isOsd
-    }
-
-    IslandRightDot {
-        id: rightDot
-        metrics: islandMetrics
-        availableWidth: root.width
-        // Both, because the centre panel is not a fixed width: an OSD widens
-        // it to 275 in the middle of a keypress, and this dot has to move
-        // with the panel's right edge.
-        centerX: centerPanel.x
-        centerWidth: centerPanel.width
-        centerIsOsd: centerPanel.isOsd
     }
 
     Keys.onEscapePressed: UiState.closeAll()

@@ -12,8 +12,12 @@ import Quickshell.Hyprland
 // decides whether to hide the island -- plus two imports in Island.qml and
 // Keybinds.qml that reference nothing at all.
 //
-// So the isolation this file provides is real but small: it is now the only
-// file that imports Quickshell.Hyprland, and shell.qml no longer does.
+// So the isolation this file provides is real but small: it was the only
+// file that imported Quickshell.Hyprland, and shell.qml still does not.
+// It is now one of two -- services/Workspaces.qml imports it for the
+// workspace indicator -- which is a smaller claim than it used to be, and
+// worth not overstating: what this file isolates is compositor DETECTION
+// and window state, not the import itself.
 //
 // What it does NOT do is make the shell portable. `import Quickshell.Hyprland`
 // fails to resolve on a compositor that does not ship it, and a QML import

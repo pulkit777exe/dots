@@ -1,5 +1,4 @@
 import QtQuick
-import QtQuick.Layouts
 // `Quickshell` is imported by the two files that call `execDetached` -- the lock
 // button's body in components/CcControl.qml and the scale pills in
 // components/CcMonitorCard.qml -- and it has to be `Quickshell`, not
@@ -15,7 +14,27 @@ Surface {
     id: root
 
     focus: UiState.controlCenterOpen
-    Keys.onEscapePressed: root.view = "home"
+    // Escape walks back one level at a time, and the last step is a real
+    // close rather than a no-op.
+    //
+    // Setting `event.accepted = false` at the bottom lets the key keep
+    // travelling up the parent chain to Island, which owns
+    // UiState.closeAll(). Accepting it here instead -- which is what
+    // `root.view = "home"` on its own did -- swallowed Escape at every
+    // level, so Escape closed every other surface in the shell but left
+    // the control centre open no matter how many times it was pressed.
+    Keys.onEscapePressed: (event) => {
+        if (root.pendingWifiSsid.length > 0) {
+            root.pendingWifiSsid = ""
+            root.pendingWifiError = ""
+            return
+        }
+        if (root.drillOpen) {
+            root.view = "home"
+            return
+        }
+        event.accepted = false
+    }
 
     readonly property color accent: Theme.colors.accent
 
@@ -131,12 +150,17 @@ Surface {
     // page. Same bug class Phase 3 of todos.md records for the bar window.
     //
     // activeFlick.contentHeight is the content's own height and does not read
-    // the window back, so this cannot feed its own input. The home view keeps
-    // 514: its rows are absolutely positioned inside a Repeater, so there is no
-    // content height to read, and inventing one would be a guess.
+    // the window back, so this cannot feed its own input. The home view reads
+    // the grid the same way instead of naming a number: homePage.contentBottom
+    // is the last row's bottom in page coordinates, computed from the rowTops
+    // table the cells are laid out with, so it moves when a row or the
+    // notification list changes. `514` -- the height for a *full* notification
+    // list -- is what it replaced: with a short list the card stopped 35px
+    // short of it and the panel drew that much dead black below its last
+    // control. 28 is homePage's margin, 14 top and 14 bottom.
     readonly property int panelHeight: drillOpen && activeFlick
         ? Math.ceil(drillTop + 14 + Math.max(140, activeFlick.contentHeight))
-        : 514
+        : Math.ceil(homePage.contentBottom + 28)
     implicitHeight: panelHeight
 
     readonly property bool drillOpen: view !== "home"
@@ -167,16 +191,23 @@ Surface {
         x: baseX
         y: baseY + (root.drillOpen ? 0 : -BarConfig.panelSlideIn)
         opacity: root.drillOpen ? 1 : 0
+        scale: root.drillOpen ? 1 : 0.985
+        transformOrigin: Item.Top
         Behavior on y {
             enabled: !MotionConfig.reduceMotion
             NumberAnimation { duration: MotionConfig.slideInMs; easing.type: Easing.OutCubic }
         }
         Behavior on opacity { NumberAnimation { duration: MotionConfig.fade(); easing.type: Easing.OutCubic } }
-        radius: 18
+        Behavior on scale {
+            enabled: !MotionConfig.reduceMotion
+            NumberAnimation { duration: MotionConfig.fade(); easing.type: Easing.OutCubic }
+        }
+        radius: 22
         color: ccColors.bgSurface
         border.color: ccColors.borderColor
         border.width: 1
-        visible: root.view !== "home"
+        // Match the page lifecycle: do not cut off the close transition.
+        visible: root.drillOpen || opacity > 0.01
     }
 
 // The four drill pages. Each is a CcDrillPage: it is given the

@@ -1,5 +1,6 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
-import QtQuick.Layouts
 import "../../components"
 import "../../services"
 
@@ -35,34 +36,34 @@ Item {
     function colX(c) { return c * (cellW + 10) }
 
 
-    // Built once per layout change, not once per cell per re-evaluation:
-    // rowTop() used to call this itself, so the whole 64-row table was
-    // rebuilt for every cell, and it depends on Notifications.active, which
-    // moves on every toast.
+    // The control-centre layout is sparse and user-editable, so derive offsets
+    // from the rows that actually exist instead of maintaining a fixed-size
+    // table. This stays correct for both the default grid and rearranged items.
     readonly property var rowTops: {
-        const tops = []
+        const heights = {}
+        for (const item of layoutItems) {
+            const row = item.row
+            heights[row] = Math.max(heights[row] || 0, rowHeightFor(item))
+        }
+
+        const rows = Object.keys(heights).map(Number).sort((a, b) => a - b)
+        const tops = {}
         let y = 0
-        for (let r = 0; r < 64; r++) {
-            tops.push(y)
-            let tallest = 0
-            for (const it of layoutItems) {
-                if (it.row !== r) continue
-                const h = rowHeightFor(it)
-                if (h > tallest) tallest = h
-            }
-            if (tallest === 0) break
-            y += tallest + 10
+        for (const row of rows) {
+            tops[row] = y
+            y += heights[row] + 10
         }
         return tops
     }
 
-    function rowTop(r) {
-        return rowTops[r] !== undefined ? rowTops[r] : 0
+    readonly property var rows: Object.keys(rowTops).map(Number).sort((a, b) => a - b)
+
+    function rowTop(row) { return rowTops[row] ?? 0 }
+
+    readonly property real firstRowBottom: {
+        if (rows.length < 2) return Math.min(height, 70)
+        return rowTop(rows[1]) - 5
     }
-
-
-    readonly property real firstRowBottom:
-        rowTops.length < 2 ? Math.min(height, 70) : rowTops[1] - 5
 
 
     function rowHeightFor(it) {
@@ -79,10 +80,35 @@ Item {
     }
 
 
-    readonly property int notifHomeHeight: Math.max(
-        176, 14 * 2 + 8 * 2 + (Notifications.active.length > 0
-            ? Math.min(64 * Notifications.active.length, ConfigStore.notifHistoryHeight)
-            : 18))
+    // The notification row's reserved height. This is the arithmetic the card
+    // in CcControl actually draws -- 14 margin + the header row + 8 spacing +
+    // the list + 14 margin -- because the row table cannot read the card's own
+    // implicitHeight from here, and writing a second, differently-shaped
+    // formula for it is exactly how the two drifted: this used to reserve
+    // 44 + min(64n, hist), which at two notifications came to 176 while the
+    // card drew 188, so the last row overflowed the height the panel was sized
+    // from. 16 is the header row's line box (StyledText at pixelSize 12) and
+    // 17 the empty-state line's; the 176 floor covers the empty case, where
+    // the arithmetic would ask for only 69.
+    readonly property int notifHomeHeight: {
+        const n = Notifications.active.length
+        const inner = n > 0
+            ? 16 + 8 + Math.min(72 * n - 8, ConfigStore.notifHistoryHeight)
+            : 16 + 8 + 17
+        return Math.max(176, inner + 28)
+    }
+
+    // The grid's own bottom, in page coordinates: the deepest cell's lower
+    // edge. It follows the resolved row offsets, so a rearrangement cannot
+    // leave a hand-maintained panel height behind.
+    readonly property real contentBottom: {
+        let bottom = 0
+        for (const it of layoutItems) {
+            const cellBottom = rowTop(it.row) + rowHeightFor(it)
+            if (cellBottom > bottom) bottom = cellBottom
+        }
+        return bottom
+    }
 
     Repeater {
         model: root.layoutItems

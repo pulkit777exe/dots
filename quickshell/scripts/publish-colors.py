@@ -28,7 +28,7 @@ COLORS_DIR = Path(os.environ.get("XDG_CONFIG_HOME", HOME / ".config")) / "colors
 _NEW_PARSERS: bool | None = None
 INDEX_JSON = COLORS_DIR / "index.json"
 THEME_ENV = "QUICKSHELL_THEME"
-DEFAULT_THEME = "everforest"
+DEFAULT_THEME = "ariadne"
 FALLBACK = {
     "background": "#202020",
     "surface": "#282828",

@@ -3,17 +3,17 @@ import "../services"
 
 // The bar's geometry for ONE monitor, resolved in one place.
 //
-// Every number the three island regions draw with comes from here, and
-// every one of them is the per-monitor value rather than the global one:
-// a BarConfigMonitors instance layers monitors/<name>.json over BarConfig,
-// so a monitor that lowers barHeight gets a proportionally smaller collapsed
-// radius (see effectiveCollapsedRadius) and a dot that still fits inside it.
+// Every number the island draws with comes from here, and every one of them
+// is the per-monitor value rather than the global one: a BarConfigMonitors
+// instance layers monitors/<name>.json over BarConfig, so a monitor that
+// lowers barHeight gets a proportionally smaller collapsed radius (see
+// effectiveCollapsedRadius) that still holds the pill inside the bar.
 //
 // This is a QtObject rather than an Item, so it adds no scene graph node.
-// It exists so the resolution lives in exactly one file. Spread across the
-// three regions as ten separate properties each, adding a per-monitor key
-// would mean editing four files and hoping they stayed in step; here it is
-// one declaration, and a region that needs a new number asks for it.
+// It exists so the resolution lives in exactly one file. Spread through the
+// panel as ten separate properties, adding a per-monitor key would mean
+// editing several files and hoping they stayed in step; here it is one
+// declaration, and the panel that needs a new number asks for it.
 //
 // The override reader is a child of this object, built here, and handed this
 // monitor's name as an argument -- not asked for it afterwards. It used to be
@@ -34,7 +34,7 @@ QtObject {
     // rather than a bare child object because a QtObject has no default
     // property: `BarConfigMonitors { }` written inside one fails to compile
     // with "Cannot assign to non-existent default property". Same reason the
-    // three regions below are handed `metrics` rather than reaching for it.
+    // panel below is handed `metrics` rather than reaching for it.
 
     // The binding is the whole fix. `screenName` is required and is filled
     // once, here, from this object's own name -- so the reader's file path
@@ -56,7 +56,7 @@ QtObject {
     property real collapsedCornerRadius: monitorOverrides.value("collapsedCornerRadius", BarConfig.collapsedCornerRadius)
 
     // The three below are per-monitor-overridable and currently read by no
-    // region: they were resolved on Island.qml before this split and nothing
+    // one: they were resolved on Island.qml before this split and nothing
     // outside it ever read them either. They are kept, and declared rather
     // than dropped, so the set of keys an override can reach stays visible
     // here instead of being quietly narrowed by a refactor. Each is a read,
@@ -67,17 +67,12 @@ QtObject {
 
     // BarConfig computes this from the global values, so it is recomputed
     // here from the resolved ones. A monitor that lowers barHeight must get
-    // a proportionally smaller collapsed radius, or the pill is taller than
-    // the dot it sits in and clips.
+    // a proportionally smaller collapsed radius, or the pill would be taller
+    // than the bar it sits in and hang past its edges.
     readonly property real effectiveCollapsedRadius: Math.min(collapsedCornerRadius, barHeight / 2)
 
     // Where the bar sits down the screen. In notch mode it is flush with the
     // top edge, because the notch itself is the top edge; otherwise it floats
-    // gapFromEdge below it. Read by all three regions.
+    // gapFromEdge below it. Read by the panel.
     readonly property real topOffset: notchMode ? 0 : gapFromEdge
-
-    // The gap between the centre panel and each dot when they are all
-    // collapsed. Also the resting distance between two dots, since both dots
-    // hang off the centre panel's edge by this much.
-    readonly property real dotSpacing: 10
 }

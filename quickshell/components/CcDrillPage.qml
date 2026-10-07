@@ -49,18 +49,27 @@ Flickable {
     clip: true
     boundsBehavior: Flickable.StopAtBounds
 
-    interactive: contentHeight > height
+    // Keep the page alive until its exit fade completes. `visible: open`
+    // discarded the page as soon as Back was pressed, so the intended close
+    // animation could never be seen.
+    interactive: page.open && contentHeight > height
     flickableDirection: Flickable.VerticalFlick
 
-    visible: page.open
+    visible: page.open || opacity > 0.01
 
     x: page.baseX
     y: page.baseY + (page.open ? 0 : -BarConfig.panelSlideIn)
     opacity: page.open ? 1 : 0
+    scale: page.open ? 1 : 0.985
+    transformOrigin: Item.Top
 
     Behavior on y {
         enabled: !MotionConfig.reduceMotion
         NumberAnimation { duration: MotionConfig.slideInMs; easing.type: Easing.OutCubic }
     }
     Behavior on opacity { NumberAnimation { duration: MotionConfig.fade(); easing.type: Easing.OutCubic } }
+    Behavior on scale {
+        enabled: !MotionConfig.reduceMotion
+        NumberAnimation { duration: MotionConfig.fade(); easing.type: Easing.OutCubic }
+    }
 }

@@ -35,7 +35,7 @@ KNOWN_DIRS = {
 }
 
 EXTS = {".jpg", ".jpeg", ".png", ".webp", ".bmp"}
-DEFAULT_THEME = "everforest"
+DEFAULT_THEME = "ariadne"
 
 
 def discover_images(root: pathlib.Path):

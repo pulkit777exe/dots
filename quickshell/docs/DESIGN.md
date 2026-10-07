@@ -34,7 +34,17 @@ A shell is not a destination — it **appears when needed, gets out of the way i
 - **Notch (`notchMode:true`)**: `y=0` flush, `topRadius=0` square top, no shadow when pill — like MacBook cutout (Image 1). For users who want maximal vertical space.
 - **Island (`notchMode:false`)**: `y=gapFromScreenEdge 11px` floating pill, all corners `22-24`, `shadow 7 layers, 28px` — iPhone Dynamic Island (Image 2). Setting in `Bar & Island` page (sliders for `barHeight 34`, `collapsedWidth 190`, `expandedHeight 135`, `minExpandedWidth 619`, live via `BarConfig` singleton).
 
-**Why single Island?** Container-transform: one `Surface` (`mainSurface`) morphs `width/height/radius/y` via `Spring 5.2/0.88`, content crossfades `110ms`. Same physical pill becomes Launcher (550px), Control Center (380px), etc. — shared-element, not new window.
+**Why single Island?** Container-transform — and as of the three-region
+merge it is literally true rather than aspirational: one `Surface`
+(`surfaces/IslandPanel.qml`) morphs `width/height/radius` via
+`Spring 4.8/0.8`, content crossfades `MotionConfig.fade()`. Same
+physical pill becomes the wide hover panel, Launcher (550px), Control
+Center (460px), the media player (406px) — shared-element, not new
+window. The rest state is part of the same transform:
+`surfaces/IslandHomeFace.qml` lays out the resting pill (workspace bars
+· clock · signal/battery) and the wide panel (workspace name + date +
+now-playing card) from one set of declarations, so there is no second
+face to keep in step.
 
 **Wallpaper**: `WlrLayer.Background` per-screen `PanelWindow` + two `Image { opacity: 1-progress / progress }` crossfade 380ms `InOutCubic` + subtle scale `0.015`. Colors come from the active theme's static palette in `colors/themes/<name>/colors.json`, not hardcoded.
 

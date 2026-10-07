@@ -51,7 +51,7 @@ second source of truth for something that is not a property of the monitor:
 - `notchMode`, `statusCircleEnabled`, `albumArtCircleEnabled` — which parts
   of the bar exist at all. Two monitors with different sets of parts reads
   as a bug rather than a preference.
-- `panelSlideIn`, `stageLiftOnHover`, `innerPadding` — motion and padding,
+- `panelSlideIn`, `innerPadding` — motion and padding,
   tuned as one set against the global bar height. Splitting them per monitor
   means a height override silently changes how the animation feels.
 

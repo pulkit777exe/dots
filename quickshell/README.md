@@ -57,7 +57,13 @@ qs -c quickshell
 
 ## What currently works
 
-- Bar/notch/island with media pill, clock, battery ring, Wi-Fi status
+- One morphing island (`Island.qml` → `surfaces/IslandPanel.qml`): at
+  rest a single pill carrying the workspace bars, clock, signal and
+  battery; it springs wider into a now-playing card + workspace name +
+  date panel on hover — hover is the *only* trigger, a playing track
+  does not open it (see CHANGELOG Round 14) — and further into the
+  control centre, calendar, launcher, settings, media player and the
+  rest — all one `Surface`, not a separate overlay.
 - Control Center: Wi-Fi (scan, connect, **password-protected networks
   now actually work** — see CHANGELOG Round 9), Bluetooth, Sound,
   Display (per-monitor brightness/scale/resolution), notifications,
