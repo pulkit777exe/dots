@@ -396,7 +396,7 @@ main() {
     check_bin hyprpaper "sudo dnf install hyprpaper — without it the wallpaper daemon never starts"
     # Referenced by hypr/hyprlock.lua and the SUPER+L bind.
     check_bin hyprlock "sudo dnf install hyprlock — without it SUPER+L does nothing"
-    # Referenced by hypr/hypridle.toml.
+    # Referenced by hypr/hypridle.conf.
     check_bin hypridle "sudo dnf install hypridle — without it idleDPMS/idle actions never fire"
     # Not a bare `polkit` binary: the daemon is polkitd and ships outside PATH.
     check_bin polkitd "sudo dnf install polkit" required /usr/lib/polkit-1/polkitd /usr/libexec/polkitd

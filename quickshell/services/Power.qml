@@ -42,7 +42,10 @@ Singleton {
     }
 
     function logOut() {
-        run(hasHyprshutdown ? ["hyprshutdown"] : ["hyprctl", "dispatch", "exit"]);
+        // 0.56+: hyprctl dispatch takes a lua dispatcher expression, so the
+        // hyprlang-era "dispatch exit" spelling raises a parse error instead
+        // of logging out.
+        run(hasHyprshutdown ? ["hyprshutdown"] : ["hyprctl", "dispatch", "hl.dsp.exit()"]);
     }
 
     function reboot() {

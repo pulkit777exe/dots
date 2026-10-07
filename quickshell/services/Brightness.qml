@@ -169,18 +169,23 @@ Singleton {
         onExited: infoProc.running = true
     }
 
-    function setMonitorScale(name: string, scale: real) {
-        Quickshell.execDetached(["hyprctl", "keyword", "monitor",
-            name + ",preferred,auto," + scale]);
+    // `hyprctl keyword` is dead on the 0.56 lua config ("keyword can't work
+    // with non-legacy parsers"); `eval` takes lua instead, and hl.monitor
+    // applies the rule live, same as the old keyword did.
+    function applyMonitor(name: string, mode: string, scale: real) {
+        Quickshell.execDetached(["hyprctl", "eval",
+            "hl.monitor({ output = \"" + name + "\", mode = \"" + mode
+            + "\", position = \"auto\", scale = " + scale + " })"]);
         infoProc.running = true;
+    }
+
+    function setMonitorScale(name: string, scale: real) {
+        root.applyMonitor(name, "preferred", scale);
     }
 
     function setMonitorMode(name: string, mode: string) {
         const m = monitorList.find(x => x.name === name);
-        const scale = m ? m.scale : 1;
-        Quickshell.execDetached(["hyprctl", "keyword", "monitor",
-            name + "," + mode + ",auto," + scale]);
-        infoProc.running = true;
+        root.applyMonitor(name, mode, m ? m.scale : 1);
     }
 
     IpcHandler {
