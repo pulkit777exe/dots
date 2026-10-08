@@ -21,6 +21,7 @@ Singleton {
         function toggleWallpaperPicker(): void { UiState.toggleWallpaperPicker(); }
         function togglePowerMenu(): void { UiState.togglePowerMenu(); }
         function toggleLauncher(): void { UiState.toggleLauncher(); }
+        function toggleClipboard(): void { UiState.toggleClipboard(); }
         function closeAll(): void { UiState.closeAll(); }
 
         function brightnessUp(): void { Brightness.step(5); }
@@ -42,6 +43,7 @@ Singleton {
         function isThemePickerOpen(): bool { return UiState.themePickerOpen; }
         function isWallpaperPickerOpen(): bool { return UiState.wallpaperPickerOpen; }
         function isPowerMenuOpen(): bool { return UiState.powerMenuOpen; }
+        function isClipboardOpen(): bool { return UiState.clipboardOpen; }
     }
 
     GlobalShortcut { name: "toggleControlCenter"; description: "Toggle control center"; onPressed: UiState.toggleControlCenter() }
@@ -50,6 +52,7 @@ Singleton {
     GlobalShortcut { name: "toggleWallpaperPicker"; description: "Toggle wallpaper picker"; onPressed: UiState.toggleWallpaperPicker() }
     GlobalShortcut { name: "togglePowerMenu"; description: "Toggle power menu"; onPressed: UiState.togglePowerMenu() }
     GlobalShortcut { name: "toggleLauncher"; description: "Toggle launcher"; onPressed: UiState.toggleLauncher() }
+    GlobalShortcut { name: "toggleClipboard"; description: "Toggle clipboard manager"; onPressed: UiState.toggleClipboard() }
     GlobalShortcut { name: "closeAll"; description: "Close all overlays"; onPressed: UiState.closeAll() }
 
     GlobalShortcut { name: "brightnessUp"; description: "Increase brightness"; onPressed: Brightness.step(5) }

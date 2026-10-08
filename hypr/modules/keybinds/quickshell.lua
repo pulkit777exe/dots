@@ -39,9 +39,10 @@ qs_global("N", "toggleControlCenter")   -- control center
 qs_global("S", "toggleSettings")        -- settings app
 qs_global("T", "toggleThemePicker")     -- theme picker (Island morph)
 qs_global("W", "toggleWallpaperPicker") -- wallpaper picker
--- SUPER+C, SUPER+M and SUPER+SHIFT+C used to reach clipboard, media card
--- and calendar; all three surfaces are gone from the shell, so the binds
--- went with them rather than left to fire at names nothing registers.
+qs_global("C", "toggleClipboard")       -- clipboard manager (cliphist)
+-- SUPER+M and SUPER+SHIFT+C used to reach the media card and calendar;
+-- both surfaces are still gone from the shell, so those binds stay
+-- removed rather than left to fire at names nothing registers.
 
 -- Power menu — SHIFT+L (plain L is lock)
 hl.bind(

@@ -112,6 +112,7 @@ Fedora-first. `install.sh --check` reports what's missing.
 | `SUPER + S` | Settings |
 | `SUPER + T` | Theme picker |
 | `SUPER + W` | Wallpaper picker |
+| `SUPER + C` | Clipboard manager |
 | `SUPER + SHIFT + L` | Power menu |
 | `SUPER + ESCAPE` | Close all overlays |
 

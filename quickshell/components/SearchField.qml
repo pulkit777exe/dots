@@ -12,6 +12,9 @@ Rectangle {
 
     property string placeholderText: ""
     property bool externalNavigation: false   // arrows always navigate, not just at line edges
+    // Show the placeholder even while the caret sits in the field (the
+    // clipboard manager keeps it as a label until you actually type).
+    property bool placeholderWhenFocused: false
     property alias text: input.text
     readonly property bool inputFocused: input.activeFocus
 
@@ -78,7 +81,8 @@ Rectangle {
                 text: root.placeholderText
                 font.pixelSize: Theme.px(12)
                 color: Theme.withAlpha(Theme.colors.text, 0.35)
-                visible: input.text.length === 0 && !input.activeFocus
+                visible: input.text.length === 0
+                    && (!input.activeFocus || root.placeholderWhenFocused)
             }
         }
     }

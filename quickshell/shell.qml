@@ -104,7 +104,7 @@ ShellRoot {
             focusable: UiState.popupOpen
             WlrLayershell.keyboardFocus: UiState.popupOpen ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
 
-            readonly property var popups: [cc, themePicker, wallpaperPicker, powerMenu, launcher]
+            readonly property var popups: [cc, themePicker, wallpaperPicker, powerMenu, launcher, clipboardPicker]
             readonly property bool isFullscreen: Compositor.activeWindowFullscreen && !UiState.anyOpen
             readonly property real topY: Config.notchMode ? 0 : Config.gapFromEdge
 
@@ -130,6 +130,7 @@ ShellRoot {
                 Region { item: wallpaperPicker.visible ? wallpaperPicker : null }
                 Region { item: powerMenu.visible ? powerMenu : null }
                 Region { item: launcher.visible ? launcher : null }
+                Region { item: clipboardPicker.visible ? clipboardPicker : null }
             }
 
             HyprlandFocusGrab { active: UiState.popupOpen; windows: [barWindow] }
@@ -166,6 +167,12 @@ ShellRoot {
 
             PowerMenu {
                 id: powerMenu
+                anchors.horizontalCenter: parent.horizontalCenter
+                topY: barWindow.topY
+            }
+
+            ClipboardPicker {
+                id: clipboardPicker
                 anchors.horizontalCenter: parent.horizontalCenter
                 topY: barWindow.topY
             }

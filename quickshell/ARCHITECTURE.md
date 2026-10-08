@@ -37,9 +37,9 @@ against the live shell, so it cannot drift.
 | `nightlight` | `setTemp`, `isEnabled`, `toggle` |
 | `notifs` | `clear`, `count`, `dismiss`, `toggleDnd`, `isDndEnabled` |
 | `powerprofile` | `set`, `isAvailable`, `get` |
-| `shell` | `toggleLauncher`, `mediaPrev`, `mediaNext`, `togglePowerMenu`, `toggleControlCenter`, `mediaStop`, `closeAll`, `mediaToggle`, `brightnessUp`, `toggleThemePicker`, `toggleSettings`, `brightnessDown`, `toggleWallpaperPicker`, `bluetoothToggle`, `nightLightToggle`, `clearNotifs` |
+| `shell` | `toggleLauncher`, `mediaPrev`, `mediaNext`, `togglePowerMenu`, `toggleControlCenter`, `mediaStop`, `closeAll`, `mediaToggle`, `brightnessUp`, `toggleThemePicker`, `toggleSettings`, `brightnessDown`, `toggleWallpaperPicker`, `bluetoothToggle`, `nightLightToggle`, `clearNotifs`, `toggleClipboard` |
 | `theme` | `set`, `publish`, `cycleWallpaper`, `list`, `cycle`, `getWallpaper`, `get` |
-| `uis` | `isPowerMenuOpen`, `isThemePickerOpen`, `isSettingsOpen`, `isLauncherOpen`, `isControlCenterOpen`, `isWallpaperPickerOpen` |
+| `uis` | `isPowerMenuOpen`, `isThemePickerOpen`, `isSettingsOpen`, `isLauncherOpen`, `isControlCenterOpen`, `isWallpaperPickerOpen`, `isClipboardOpen` |
 | `wifi` | `connect`, `status`, `disconnect`, `toggle`, `scan` |
 
 A recurring bug class worth knowing

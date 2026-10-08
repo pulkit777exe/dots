@@ -341,6 +341,7 @@ else
         case "$1:$2" in
             uis:isSettingsOpen|uis:isLauncherOpen|uis:isControlCenterOpen|\
             uis:isPowerMenuOpen|uis:isThemePickerOpen|uis:isWallpaperPickerOpen|\
+            uis:isClipboardOpen|\
             brightness:get|wifi:status|theme:get|theme:list|theme:getWallpaper|\
             powerprofile:get|powerprofile:isAvailable|nightlight:isEnabled|\
             audio:getVolume|notifs:count|notifs:isDndEnabled)
@@ -354,7 +355,8 @@ else
     checked=0
     for pair in "uis:isSettingsOpen" "uis:isLauncherOpen" "uis:isControlCenterOpen" \
                 "uis:isPowerMenuOpen" "uis:isThemePickerOpen" \
-                "uis:isWallpaperPickerOpen" "brightness:get" "wifi:status" \
+                "uis:isWallpaperPickerOpen" "uis:isClipboardOpen" \
+                "brightness:get" "wifi:status" \
                 "theme:get" "theme:list" "theme:getWallpaper" "powerprofile:get" \
                 "powerprofile:isAvailable" "nightlight:isEnabled" \
                 "audio:getVolume" "notifs:count" "notifs:isDndEnabled"; do
@@ -509,7 +511,8 @@ else
                 "toggleLauncher:isLauncherOpen" \
                 "togglePowerMenu:isPowerMenuOpen" \
                 "toggleThemePicker:isThemePickerOpen" \
-                "toggleWallpaperPicker:isWallpaperPickerOpen"; do
+                "toggleWallpaperPicker:isWallpaperPickerOpen" \
+                "toggleClipboard:isClipboardOpen"; do
         t="${pair%%:*}"; p="${pair##*:}"
         qs "$QSCALL" shell closeAll
         sleep 2.5
@@ -527,9 +530,9 @@ else
     done
     qs "$QSCALL" shell closeAll
     if [ -z "$bad" ]; then
-        ok "all six surfaces open and close"
+        ok "all seven surfaces open and close"
     else
-        no "all six surfaces open" "failed:$bad"
+        no "all seven surfaces open" "failed:$bad"
     fi
 fi
 
