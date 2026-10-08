@@ -45,13 +45,15 @@ Singleton {
     function hover(): int { return reduceMotion ? 0 : hoverMs }
     function movement(m = 1): int { return reduceMotion ? 0 : Math.round(movementMs * m) }
 
-    // ---- notifications -----------------------------------------------
+    // ---- notifications & the volume/brightness OSD --------------------------
     readonly property bool dnd: data.dnd   // the Focus pill; persisted because it should survive a reload
     readonly property int notifPopupTimeoutMs: data.notifPopupTimeoutMs
     readonly property int notifUrgentTimeoutMs: data.notifUrgentTimeoutMs
     readonly property real notifWidth: data.notifWidth
     readonly property bool notifShowBodyText: data.notifShowBodyText
     readonly property real notifHistoryHeight: data.notifHistoryHeight
+    readonly property int osdTimeoutMs: data.osdTimeoutMs
+    readonly property real osdBarThickness: data.osdBarThickness
 
     // ---- appearance ---------------------------------------------------
     readonly property string accentOverride: data.accentOverride // "" or "#rrggbb"
@@ -109,6 +111,8 @@ Singleton {
             property real notifWidth: 449
             property bool notifShowBodyText: true
             property real notifHistoryHeight: 200
+            property int osdTimeoutMs: 1500
+            property real osdBarThickness: 6
             property string accentOverride: ""
             property bool colorBurst: false
             property int fontSize: 15

@@ -31,10 +31,10 @@ Item {
 
                 Layout.fillWidth: true
                 visible: live
-                implicitHeight: row.implicitHeight + 24
+                implicitHeight: row.implicitHeight + 16
 
                 cornerRadius: 15
-                backgroundColor: Theme.cc.card
+                backgroundColor: Theme.colors.background
                 borderColor: entry.urgent ? Theme.accentFor("notifications") : Theme.cc.border
 
                 // Slide in from the right, under a fade.
@@ -72,29 +72,49 @@ Item {
                 RowLayout {
                     id: row
                     anchors.fill: parent
-                    anchors.margins: 12
+                    anchors.margins: 8
                     spacing: 12
 
                     Rectangle {
-                        Layout.preferredWidth: 37
-                        Layout.preferredHeight: 37
+                        Layout.preferredWidth: 30
+                        Layout.preferredHeight: 30
                         Layout.alignment: Qt.AlignVCenter
                         radius: width / 2
                         color: Theme.cc.item
 
+                        // The app's icon when it has one, its initial when
+                        // it does not -- notify-send and friends ship none.
                         Icon {
                             anchors.centerIn: parent
-                            icon: card.entry.appIcon || "notifications"
-                            size: 18
+                            visible: card.entry.appIcon !== ""
+                            icon: card.entry.appIcon
+                            size: 16
                             iconColor: Theme.accentFor("notifications")
+                        }
+                        Label {
+                            anchors.centerIn: parent
+                            visible: card.entry.appIcon === ""
+                            text: (card.entry.appName || card.entry.summary || "?").charAt(0).toUpperCase()
+                            font.pixelSize: Theme.px(13)
+                            font.weight: Font.DemiBold
+                            color: Theme.accentFor("notifications")
                         }
                     }
 
                     ColumnLayout {
                         Layout.fillWidth: true
                         Layout.alignment: Qt.AlignVCenter
-                        spacing: 2
+                        spacing: 1
 
+                        Label {
+                            // the sender, small and dim above the summary
+                            Layout.fillWidth: true
+                            visible: card.entry.appName !== "" && card.entry.summary !== ""
+                            text: card.entry.appName
+                            font.pixelSize: Theme.px(10)
+                            color: Theme.withAlpha(Theme.colors.text, 0.45)
+                            elide: Text.ElideRight
+                        }
                         Label {
                             Layout.fillWidth: true
                             text: card.entry.summary || card.entry.appName

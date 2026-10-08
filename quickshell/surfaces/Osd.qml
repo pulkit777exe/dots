@@ -54,7 +54,7 @@ Item {
 
     Timer { id: warmup; interval: 750; onTriggered: root.warmedUp = true }
     Component.onCompleted: warmup.start()
-    Timer { id: hide; interval: 1500; onTriggered: root.shown = false }
+    Timer { id: hide; interval: Config.osdTimeoutMs; onTriggered: root.shown = false }
 
     // ---- panel ----------------------------------------------------------------
     // Opacity keeps the window's mask irrelevant either way: hidden means
@@ -78,13 +78,14 @@ Item {
     Surface {
         id: panel
         anchors.centerIn: parent
-        width: contentRow.implicitWidth + 44
-        height: contentRow.implicitHeight + 26
+        width: contentRow.implicitWidth + 40
+        height: contentRow.implicitHeight + 12
+        cornerRadius: 18
 
         RowLayout {
             id: contentRow
             anchors.centerIn: parent
-            spacing: 16
+            spacing: 24
 
             Icon {
                 icon: root.icon
@@ -93,8 +94,8 @@ Item {
             }
 
             Item {
-                Layout.preferredWidth: 200
-                Layout.preferredHeight: 8
+                Layout.preferredWidth: 216
+                Layout.preferredHeight: Config.osdBarThickness
                 Layout.alignment: Qt.AlignVCenter
 
                 Rectangle {
@@ -120,7 +121,7 @@ Item {
             Label {
                 text: root.value + "%"
                 font.pixelSize: Theme.px(13)
-                Layout.preferredWidth: 40
+                Layout.preferredWidth: 56
                 Layout.alignment: Qt.AlignVCenter | Qt.AlignRight
             }
         }
