@@ -23,7 +23,6 @@ Singleton {
 
     readonly property bool dnd: Config.dnd
 
-    function setDnd(v: bool) { Config.set("dnd", v); }
     function toggleDnd() { Config.set("dnd", !Config.dnd); }
 
     readonly property NotificationServer server: NotificationServer {

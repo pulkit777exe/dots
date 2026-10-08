@@ -14,7 +14,6 @@ Item {
 
     // Set per screen by the island; the slots are the same five everywhere,
     // so occupancy is read globally instead of filtered to this monitor.
-    property string screenName: ""
     property color accent: Theme.colors.accent
 
     readonly property int barWidth: 6

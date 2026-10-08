@@ -13,7 +13,6 @@ import "../services"
 Item {
     id: island
 
-    property string screenName: ""
 
     readonly property bool rich: hover.containsMouse
     readonly property bool showStatus: Config.statusEnabled
@@ -182,7 +181,6 @@ Item {
 
     WorkspaceBars {                      // dots: x16, centred at rest, y46 rich
         id: bars
-        screenName: island.screenName
         accent: Theme.accentFor("island")
         x: island.pad
         y: island.zoneY(46, height)

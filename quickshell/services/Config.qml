@@ -29,9 +29,6 @@ Singleton {
     readonly property bool time24h: data.time24h
     readonly property bool showSeconds: data.showSeconds
 
-    // ---- media --------------------------------------------------------
-    readonly property bool mediaShowCard: data.mediaShowCard
-
     // ---- motion -------------------------------------------------------
     readonly property bool reduceMotion: data.reduceMotion
         || Quickshell.env("QUICKSHELL_REDUCE_MOTION") === "1"
@@ -99,7 +96,6 @@ Singleton {
             property bool cardEnabled: true
             property bool time24h: true
             property bool showSeconds: false
-            property bool mediaShowCard: true
             property bool reduceMotion: false
             property int movementMs: 400
             property int fadeMs: 200

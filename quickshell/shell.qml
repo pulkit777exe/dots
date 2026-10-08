@@ -138,7 +138,6 @@ ShellRoot {
                 id: island
                 anchors.horizontalCenter: parent.horizontalCenter
                 y: barWindow.topY
-                screenName: barWindow.screen ? barWindow.screen.name : ""
             }
 
             ControlCenter {

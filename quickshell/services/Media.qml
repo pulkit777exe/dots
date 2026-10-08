@@ -21,7 +21,6 @@ Singleton {
 
     readonly property string title: active ? (active.trackTitle || "") : ""
     readonly property string artist: active ? (active.trackArtist || "") : ""
-    readonly property string album: active ? (active.trackAlbum || "") : ""
     readonly property bool playing: active ? active.isPlaying : false
     readonly property bool canTogglePlaying: active ? active.canTogglePlaying : false
 

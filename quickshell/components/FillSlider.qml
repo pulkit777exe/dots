@@ -13,7 +13,6 @@ Item {
     property color trackColor: Theme.cc.track
     property color accent: Theme.colors.accent
     property bool wheelSteps: true
-    property real wheelDelta: 0.05
 
     signal moved(real fraction)
     signal scrolled(int direction)

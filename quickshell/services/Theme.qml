@@ -162,11 +162,6 @@ Singleton {
         themeChanged(name);
     }
 
-    function selectByPickerIndex(index) {
-        const rows = pickerRows();
-        if (index >= 0 && index < rows.length) setTheme(rows[index].key);
-    }
-
     function cycleTheme() {
         const keys = Object.keys(presets).sort();
         if (keys.length === 0) return;
