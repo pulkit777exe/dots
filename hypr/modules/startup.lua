@@ -29,8 +29,10 @@ hl.on("hyprland.start", function()
     -- to do is make sure the daemon is up before that happens.
     hl.exec_cmd("hyprpaper")
 
-    -- Clipboard history daemon
-    hl.exec_cmd("wl-paste --type text --watch cliphist store")
+    -- Clipboard history daemon. Deliberately unfiltered: images belong in
+    -- the history too, and the shell's clipboard manager previews them
+    -- (cliphist labels them `[[ binary data … png WxH ]]` in `list`).
+    hl.exec_cmd("wl-paste --watch cliphist store")
 
     -- Night Light / blue-light filter daemon. Optional, so it is started only
     -- when the binary is actually installed. This daemon has to be running
