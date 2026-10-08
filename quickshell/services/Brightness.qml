@@ -41,22 +41,57 @@ Singleton {
         }
     }
 
-    function read() { if (available) readProc.running = true; }
+    // Reads coalesce: a repeating fn key changes the backlight faster than
+    // brightnessctl answers, and a read requested while one is in flight
+    // would be dropped, leaving the last step of a burst unread. The burst
+    // becomes one debounced read; pendingRead replays it when the running
+    // one drains.
+    property bool pendingRead: false
+    property bool floorNudged: false   // one hardware nudge per dip below 1
+
+    function read() {
+        if (!available) return;
+        if (readProc.running) pendingRead = true;
+        else readProc.running = true;
+    }
 
     Process {
         id: readProc
         command: ["brightnessctl", "-d", root.device, "-m"]
         stdout: StdioCollector {
             onStreamFinished: {
+                // brightnessctl -m: device,class,current,percent,max -- the
+                // percent field is what we want; dividing current by it used
+                // to pin level to a constant 96000 (max/100*100), which froze
+                // every UI bound to it.
                 const p = text.trim().split(",");
-                if (p.length >= 4) {
-                    const cur = parseInt(p[2]);
-                    const mx = parseInt(p[3]);
-                    if (!isNaN(cur) && !isNaN(mx) && mx > 0) {
+                if (p.length >= 5) {
+                    const pct = parseInt(p[3]);
+                    const mx = parseInt(p[4]);
+                    if (!isNaN(pct) && !isNaN(mx) && mx > 0) {
                         root.max = mx;
-                        root.level = Math.round(cur / mx * 100);
+                        // Floor of 1: an external writer can still land on
+                        // 0, which leaves the panel black. Show the floor at
+                        // once and nudge the hardware back up; the lock
+                        // clears as soon as a read sees a legal value, so a
+                        // failed nudge cannot loop.
+                        root.level = Math.max(1, Math.min(100, pct));
+                        if (pct < 1) {
+                            if (!root.floorNudged) {
+                                root.floorNudged = true;
+                                root.setBrightness(1);
+                            }
+                        } else {
+                            root.floorNudged = false;
+                        }
                     }
                 }
+            }
+        }
+        onExited: {
+            if (root.pendingRead) {
+                root.pendingRead = false;
+                root.read();
             }
         }
     }
@@ -64,26 +99,51 @@ Singleton {
     // External changes (fn keys, other tools) arrive as one path line each.
     Process {
         id: watcher
-        stdout: SplitParser { onRead: root.read() }
+        // `readDebounce` can resolve undefined if a queued line lands while
+        // an old engine generation is being torn down -- guard instead of
+        // throwing.
+        stdout: SplitParser { onRead: { if (readDebounce) readDebounce.restart(); } }
         onExited: if (root.available) retry.restart()
     }
     Timer { id: retry; interval: 3000; onTriggered: watcher.running = true }
+    Timer { id: readDebounce; interval: 40; onTriggered: root.read() }
 
     Component.onCompleted: listProc.running = true
 
     // ---- write ---------------------------------------------------------------
 
+    // A drag or a held key fires faster than brightnessctl writes, and
+    // setting Process.running while it is already running is a no-op -- the
+    // command would be swapped out from under the live process and the
+    // write lost, which reads back as a slider that snaps back. Keep only
+    // the newest target; an in-flight write drains into it on exit.
+    property int pendingWrite: -1
+
     function setBrightness(pct: int) {
         if (!available) return;
         const v = Math.max(1, Math.min(100, Math.round(pct)));
-        writeProc.command = ["brightnessctl", "-d", root.device, "set", String(Number(v.toFixed(6))) + "%"];
-        writeProc.running = true;
-        level = v;   // optimistic; the watcher corrects if the write was refused
+        level = v;   // optimistic; read() corrects if the write was refused
+        pendingWrite = v;
+        writeDebounce.restart();
+    }
+
+    Timer {
+        id: writeDebounce
+        interval: 60
+        onTriggered: {
+            if (root.pendingWrite < 0 || writeProc.running) return;
+            writeProc.command = ["brightnessctl", "-d", root.device, "set", String(root.pendingWrite) + "%"];
+            root.pendingWrite = -1;
+            writeProc.running = true;
+        }
     }
 
     Process {
         id: writeProc
-        onExited: root.read()
+        onExited: {
+            root.read();
+            if (root.pendingWrite >= 0) writeDebounce.restart();
+        }
     }
 
     function step(delta: int) { setBrightness(level + delta); }
@@ -109,7 +169,7 @@ Singleton {
                 }
             }
         }
-        onExited: if (code !== 0) console.warn("Brightness: monitors.py info failed", code)
+        onExited: (exitCode) => { if (exitCode !== 0) console.warn("Brightness: monitors.py info failed", exitCode) }
     }
 
     function monitorBrightness(name: string): real {

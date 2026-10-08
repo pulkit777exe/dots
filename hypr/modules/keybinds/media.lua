@@ -47,11 +47,13 @@ hl.bind(
     }
 )
 
--- Brightness
+-- Brightness: via the shell, not raw brightnessctl -- the service clamps
+-- at 1% (a bare `set 5%-` can bottom out at a black panel), keeps the OSD
+-- feedback instant, and coalesces held-key repeats into one write.
 hl.bind(
     "XF86MonBrightnessUp",
     hl.dsp.exec_cmd(
-        "brightnessctl set 5%+"
+        "quickshell ipc call shell brightnessUp"
     ),
     {
         repeating = true,
@@ -62,7 +64,7 @@ hl.bind(
 hl.bind(
     "XF86MonBrightnessDown",
     hl.dsp.exec_cmd(
-        "brightnessctl set 5%-"
+        "quickshell ipc call shell brightnessDown"
     ),
     {
         repeating = true,
