@@ -197,28 +197,11 @@ Item {
                                     size: 18
                                     Layout.alignment: Qt.AlignVCenter
                                 }
-                                ColumnLayout {
+                                NotificationText {
                                     Layout.fillWidth: true
                                     Layout.alignment: Qt.AlignVCenter
-                                    spacing: 1
-                                    Label {
-                                        Layout.fillWidth: true
-                                        text: modelData.summary
-                                        font.pixelSize: Theme.px(13)
-                                        font.weight: Font.DemiBold
-                                        color: Theme.colors.text
-                                        elide: Text.ElideRight
-                                    }
-                                    Label {
-                                        Layout.fillWidth: true
-                                        visible: Config.notifShowBodyText
-                                        text: modelData.body
-                                        font.pixelSize: Theme.px(11)
-                                        color: Theme.withAlpha(Theme.colors.text, 0.55)
-                                        elide: Text.ElideRight
-                                        maximumLineCount: 2
-                                        wrapMode: Text.WrapAtWordBoundaryOrAnywhere
-                                    }
+                                    summary: modelData.summary
+                                    body: modelData.body
                                 }
                                 Icon {
                                     icon: "close"

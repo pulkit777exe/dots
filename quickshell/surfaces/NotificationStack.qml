@@ -101,38 +101,12 @@ Item {
                         }
                     }
 
-                    ColumnLayout {
+                    NotificationText {
                         Layout.fillWidth: true
                         Layout.alignment: Qt.AlignVCenter
-                        spacing: 1
-
-                        Label {
-                            // the sender, small and dim above the summary
-                            Layout.fillWidth: true
-                            visible: card.entry.appName !== "" && card.entry.summary !== ""
-                            text: card.entry.appName
-                            font.pixelSize: Theme.px(10)
-                            color: Theme.withAlpha(Theme.colors.text, 0.45)
-                            elide: Text.ElideRight
-                        }
-                        Label {
-                            Layout.fillWidth: true
-                            text: card.entry.summary || card.entry.appName
-                            font.pixelSize: Theme.px(13)
-                            font.weight: Font.DemiBold
-                            color: Theme.colors.text
-                            elide: Text.ElideRight
-                        }
-                        Label {
-                            Layout.fillWidth: true
-                            visible: Config.notifShowBodyText && card.entry.body !== ""
-                            text: card.entry.body
-                            font.pixelSize: Theme.px(11)
-                            color: Theme.withAlpha(Theme.colors.text, 0.55)
-                            elide: Text.ElideRight
-                            maximumLineCount: 2
-                            wrapMode: Text.WrapAtWordBoundaryOrAnywhere
-                        }
+                        sender: card.entry.appName
+                        summary: card.entry.summary || card.entry.appName
+                        body: card.entry.body
                     }
 
                     Item {
