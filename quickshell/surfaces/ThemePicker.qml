@@ -146,14 +146,8 @@ PopupPanel {
                         ? card.modelData.accent
                         : Theme.withAlpha(Theme.colors.text, 0.06)
 
-                    Rectangle {
-                        visible: card.selected
-                        width: 7
-                        height: 7
-                        radius: 3.5
-                        anchors.top: parent.top
-                        anchors.right: parent.right
-                        anchors.margins: 8
+                    SelectionDot {
+                        selected: card.selected
                         color: card.modelData.accent
                     }
                 }
