@@ -11,7 +11,7 @@ import qs.modules
 //   backdrop    top layer, dims and click-closes whatever popup is open
 //   bar         overlay layer, holds the island and every bar popup
 //   settings    top layer, the settings app as its own desktop window
-//   overlay     overlay layer, holds notification toasts
+//   overlay     overlay layer, notification toasts + the volume/brightness OSD
 //
 // The bar window sizes itself from what is actually on screen -- the
 // island's own box, plus any visible popup -- so a panel can be any height
@@ -233,6 +233,15 @@ ShellRoot {
                 visible: stack.implicitHeight > 0
 
                 NotificationStack { id: stack }
+            }
+
+            // Bottom-centre, deliberately outside the mask above: the OSD
+            // is feedback only and must never intercept input.
+            Osd {
+                id: osd
+                anchors.horizontalCenter: parent.horizontalCenter
+                anchors.bottom: parent.bottom
+                anchors.bottomMargin: 56
             }
         }
     }
