@@ -24,10 +24,11 @@ hl.bind(
     hl.dsp.exec_cmd("~/.config/hypr/scripts/qs-call shell toggleLauncher")
 )
 
--- Lock
+-- Lock -- lock.sh runs hyprlock, then clears Hyprland's crashed-lockscreen
+-- fallback, which otherwise stays up after a successful unlock.
 hl.bind(
     mod .. " + L",
-    hl.dsp.exec_cmd("hyprlock")
+    hl.dsp.exec_cmd("~/.config/hypr/hyprlock/scripts/lock.sh")
 )
 
 -- Close focused window

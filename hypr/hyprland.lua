@@ -17,6 +17,11 @@ require("modules.startup")
 -- cannot take the rest of the config down with it.
 pcall(require, (os.getenv("XDG_CONFIG_HOME") or (os.getenv("HOME") .. "/.config")) .. "/hypr/hypridle.lua")
 
+-- Lock screen: regenerate ~/.config/hypr/hyprlock.conf from its generator at
+-- every startup, which is what .gitignore promises for that gitignored file.
+-- Same defensive absolute-path require as hypridle above.
+pcall(require, (os.getenv("XDG_CONFIG_HOME") or (os.getenv("HOME") .. "/.config")) .. "/hypr/hyprlock.lua")
+
 -- Hardware
 require("modules.monitors")
 require("modules.input")

@@ -1,32 +1,49 @@
 -- hyprlock.lua
 -- Generates ~/.config/hypr/hyprlock.conf, which is what hyprlock actually
 -- reads (v0.9.6 uses the .conf format; QML configs are legacy and go away in
--- 0.10). Run from hyprland.lua's startup.
+-- 0.10). hyprland.lua requires this file at startup, so every login rebuilds
+-- the conf; after editing, run it by hand for an immediate rebuild:
 --
--- Geometry is matched to the reference capture 2026-09-20_22-27-37, a 1:1
--- 1920x1080 frame. hyprlock's `position` is a *percentage of the monitor*
--- applied from the alignment anchor, so for a 1080px screen and valign=center
--- an offset of P percent lands the element's centre at 540 + P*10.8 px.
+--     lua ~/.config/hypr/hyprlock.lua
 --
--- The previous values here were `0, 350` for the date and `0, 40` for the
--- avatar, which put the date three and a half screens below the centre and
--- the avatar ~972px down -- nothing like the reference, and on a 1080 screen
--- the date would have been off-screen entirely.
+-- Layout, macOS-style: the live desktop blurred behind everything, date and
+-- clock in the upper third, battery + wifi top right, avatar / username /
+-- password hint in the lower third, and Shut Down / Restart pills along the
+-- bottom. Nothing else -- no song strip, no stray prompts.
 --
--- NOT VERIFIED BY RUNNING. hyprlock has no --verify or dry-run (only --help,
--- --version, --verbose, --quiet, --config, --grace, --immediate-render,
--- --no-fade-in, --display), and launching it would lock the session with no
--- way to unlock it from here. This is written against the 0.9.6 config
--- reference and checked by reading, not by execution.
+-- Geometry, PROVEN against live runs on the 1920x1080 panel (not derived
+-- from theory like the previous revision): `position` is in PIXELS from the
+-- widget's alignment anchor, and with valign = center positive y moves UP.
+-- So a target screen coordinate (x, y) becomes position (x - 960, 540 - y):
+--
+--     element       target centre      position
+--     date             0, 141            0, 399
+--     clock            0, 232.5          0, 307.5
+--     battery      1830, 47           870, 493
+--     wifi         1884, 47           924, 493
+--     avatar           0, 865            0, -325
+--     username         0, 926            0, -386
+--     hint + field     0, 972            0, -432
+--     power pills  y 1032              0, -492   (x 873 -> -87, 1047 -> 87)
+--
+-- The old revision treated `position` as a percent of the monitor, which
+-- was never run: every element piled up in a heap at the centre of the
+-- screen instead.
+--
+-- Background is `screenshot`: hyprlock snapshots the desktop when it starts
+-- and blurs it, so the lock always carries what the user was actually
+-- looking at (wallpaper, windows, anything) and never depends on a wallpaper
+-- path -- the previous hardcoded ~/Downloads path had died and rendered a
+-- black screen.
+--
+-- Shut Down / Restart use hyprlock's `onclick` on both the pill shape and
+-- its label, so a click anywhere on the pill lands.
+
 local config = [[
-# BACKGROUND
-# The reference is a heavily blurred, high-contrast wash of the wallpaper --
-# the scene is unrecognisable, only its colour and light direction survive.
-# blur_passes 3 plus a contrast/brightness push is what gets there; a plain
-# blur reads as "blurred wallpaper" rather than "this".
 background {
     monitor =
-    path = ~/Downloads/everforest/wallhaven-9o8k9w_1920x1080.png
+    path = screenshot
+    color = rgba(34, 32, 32, 1.0)
     blur_passes = 3
     contrast = 0.8916
     brightness = 0.8172
@@ -35,56 +52,78 @@ background {
 }
 
 general {
-    no_fade_in = false
-    grace = 0
-    disable_loading_bar = false
+    immediate_render = true
 }
 
-# ── Clock ────────────────────────────────────────────────────────────────
-# Date above, time below it, both centred, sitting in the upper third.
+# ── Status row, top right ─────────────────────────────────────────────────
+# hyprlock has no battery or network widget; both are labels polling tiny
+# scripts (hypr/hyprlock/scripts/). The pill behind the percent is a shape,
+# drawn first so the label sits on top.
 
-# Day-Month-Date  --  centre at y ~140, i.e. 400px above centre = -37%
+shape {
+    monitor =
+    size = 82, 34
+    color = rgba(0, 0, 0, 0.38)
+    rounding = 10
+    border_size = 1
+    border_color = rgba(255, 255, 255, 0.14)
+    position = 870, 493
+    halign = center
+    valign = center
+}
+
 label {
     monitor =
-    text = cmd[update:1000] echo -e "$(date +\"%A, %B %d\")"
+    text = cmd[update:10000] ~/.config/hypr/hyprlock/scripts/battery.sh
+    color = rgba(238, 240, 235, 0.92)
+    font_size = 15
+    font_family = SF Pro Display
+    position = 870, 493
+    halign = center
+    valign = center
+}
+
+label {
+    monitor =
+    text = cmd[update:5000] ~/.config/hypr/hyprlock/scripts/wifi.sh
+    color = rgba(238, 240, 235, 0.92)
+    font_size = 17
+    font_family = JetBrainsMonoNL Nerd Font Mono
+    position = 924, 493
+    halign = center
+    valign = center
+}
+
+# ── Clock, upper third ────────────────────────────────────────────────────
+# Single quotes around the date formats: hyprlock runs the command through a
+# shell, and the old backslash-escaped double quotes arrived at date(1) as
+# literal quote characters -- "extra operand" every second, date never
+# rendered, and the time wore quote marks.
+
+label {
+    monitor =
+    text = cmd[update:1000] date '+%A, %B %d'
     color = rgba(238, 240, 235, 0.92)
     font_size = 26
     font_family = SF Pro Display
-    position = 0, -37
+    position = 0, 399
     halign = center
     valign = center
 }
 
-# Time
-# %I is the reference's own format: it renders 0:47, not 00:47.
-#
-# -28.5, not -28. Measured off 2026-09-20_22-27-37 rather than eyeballed:
-# the white glyphs in the central band give the time's vertical centre as
-# y 232.5, and at 1080px with valign=center a position of P% lands it at
-# 540 + P*10.8, so P = -28.5. At -28 it rendered 5.1px low.
-#
-# The same measurement for the other four elements, against what this file
-# generates (all within ~3px):
-#   date    reference 141.0   generated 140.4
-#   time    reference 232.5   generated 237.6  <- fixed here
-#   avatar  reference 865.5   generated 864.0
-#   user    reference 926.0   generated 924.5
-#   hint    reference 972.5   generated 969.8
 label {
     monitor =
-    text = cmd[update:1000] echo "<span>$(date +\"%I:%M\")</span>"
+    text = cmd[update:1000] date '+%I:%M'
     color = rgba(238, 240, 235, 0.92)
     font_size = 120
     font_family = SF Pro Display
-    position = 0, -28.5
+    position = 0, 307.5
     halign = center
     valign = center
 }
 
-# ── User block, lower third ──────────────────────────────────────────────
+# ── User block, lower third ───────────────────────────────────────────────
 
-# Avatar  --  centre at y ~863, i.e. +30%. 52px in the reference, a
-# circle, with a hairline ring.
 image {
     monitor =
     path = ~/.config/hypr/hyprlock/assets/avatar.jpeg
@@ -95,30 +134,28 @@ image {
     rotate = 0
     reload_time = -1
     reload_cmd =
-    position = 0, 30
+    position = 0, -325
     halign = center
     valign = center
 }
 
-# Username  --  y ~925, i.e. +35.6%
 label {
     monitor =
     text = $USER
     color = rgba(238, 240, 235, 0.90)
     font_size = 15
     font_family = SF Pro Display
-    position = 0, 35.6
+    position = 0, -386
     halign = center
     valign = center
 }
 
-# ── Prompt ───────────────────────────────────────────────────────────────
-# The reference shows "Press any Key to Enter Password" and no visible input.
-# hyprlock has no "press any key" widget, so the field is always present but
-# its *dots* are suppressed (hide_input = true): the field is invisible and
-# unfocusable-looking at rest, and the moment a key is pressed the dots appear
-# in its place. The label sits behind the field, so it is covered exactly when
-# the dots show.
+# The hint sits at the same spot as the field: the field is transparent at
+# rest (the hint shows), and typing draws the dots over the hint -- the
+# reference's mid-typing state. placeholder_text must be set explicitly
+# empty: absent means hyprlock's default "Input Password...", and 0.9.6
+# keeps rendering the placeholder while you type instead of clearing it,
+# which garbles the dots.
 
 label {
     monitor =
@@ -126,7 +163,7 @@ label {
     color = rgba(238, 240, 235, 0.55)
     font_size = 13
     font_family = SF Pro Display
-    position = 0, 39.8
+    position = 0, -432
     halign = center
     valign = center
 }
@@ -134,7 +171,6 @@ label {
 input-field {
     monitor =
     size = 260, 34
-    center_color = rgba(238, 240, 235, 0.9)
     outline_thickness = 0
     dots_size = 0.22
     dots_spacing = 0.28
@@ -143,32 +179,66 @@ input-field {
     inner_color = rgba(255, 255, 255, 0)
     font_color = rgba(238, 240, 235, 0.9)
     fade_on_empty = false
-    hide_input = true
     font_family = SF Pro Display
-    placeholder_text = <i><span foreground="##ffffff99">Password</span></i>
-    position = 0, 39.8
+    placeholder_text =
+    position = 0, -432
     halign = center
     valign = center
 }
 
-# ── Not in the reference, kept for the music case ────────────────────────
-# Left at the very bottom edge so it cannot collide with the user block.
+# ── Power buttons, bottom ─────────────────────────────────────────────────
+# Glass pills like the macOS lock screen. Shape and label both carry onclick
+# so the whole pill is a hit target.
+
+shape {
+    monitor =
+    size = 150, 40
+    color = rgba(18, 18, 18, 0.55)
+    rounding = 20
+    border_size = 1
+    border_color = rgba(255, 255, 255, 0.16)
+    position = -87, -492
+    halign = center
+    valign = center
+    onclick = systemctl poweroff
+}
+
 label {
     monitor =
-    text = cmd[update:2000] echo "$(~/.config/hypr/hyprlock/scripts/songdetail.sh)"
-    color = rgba(255, 255, 255, 0.45)
+    text = Shut Down
+    color = rgba(238, 240, 235, 0.95)
     font_size = 14
-    font_family = JetBrains Mono Nerd, SF Pro Display
-    position = 0, 46
+    font_family = SF Pro Display
+    position = -87, -492
     halign = center
     valign = center
+    onclick = systemctl poweroff
 }
 
-# NOTE: the reference also shows a battery pill and a wifi glyph in the top
-# right corner. hyprlock 0.9.6 has no battery or network widget -- the only
-# widgets are shape, image, label, input-field, textarea, color and
-# background -- so those cannot be reproduced here. They would need either a
-# newer hyprlock or a label polling a script like songdetail.sh does.
+shape {
+    monitor =
+    size = 150, 40
+    color = rgba(18, 18, 18, 0.55)
+    rounding = 20
+    border_size = 1
+    border_color = rgba(255, 255, 255, 0.16)
+    position = 87, -492
+    halign = center
+    valign = center
+    onclick = systemctl reboot
+}
+
+label {
+    monitor =
+    text = Restart
+    color = rgba(238, 240, 235, 0.95)
+    font_size = 14
+    font_family = SF Pro Display
+    position = 87, -492
+    halign = center
+    valign = center
+    onclick = systemctl reboot
+}
 ]]
 
 local path = os.getenv("HOME") .. "/.config/hypr/hyprlock.conf"

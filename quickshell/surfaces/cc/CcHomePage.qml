@@ -56,7 +56,7 @@ Item {
         }
         CcIconButton {
             icon: "lock"
-            onClicked: { Quickshell.execDetached(["hyprlock"]); UiState.closeAll(); }
+            onClicked: { Quickshell.execDetached(["sh", "-c", "~/.config/hypr/hyprlock/scripts/lock.sh"]); UiState.closeAll(); }
         }
     }
 

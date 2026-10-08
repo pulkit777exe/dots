@@ -38,8 +38,9 @@ hl.on("hyprland.start", function()
 -- The on-resume dpms listeners keep the daemon from leaving the display off
 -- when activity comes back.
 local conf = [[
+
 general {
-    lock_cmd = pidof hyprlock || hyprlock          # don't spawn a second lock
+    lock_cmd = pidof hyprlock || ~/.config/hypr/hyprlock/scripts/lock.sh   # don't spawn a second lock; lock.sh scrubs the fallback on exit
     before_sleep_cmd = loginctl lock-session
     after_sleep_cmd = hyprctl dispatch 'hl.dsp.dpms({ action = "enable" })'
 }
