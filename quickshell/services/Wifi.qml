@@ -4,23 +4,15 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 
-// Wi-Fi through nmcli.
-//
-// One long-lived `nmcli monitor` push source, respawned 2s after it dies,
-// with a debounced one-shot refresh behind every line it prints. The
-// refresh is a single bash invocation so a monitor burst costs one fork,
-// not three. The only backstop is a 60s poll, for the case where monitor
-// never says anything.
-
 Singleton {
     id: root
 
     property bool enabled: false
     property bool connected: false
     property string ssid: ""
-    property int strength: 0            // 0..100
-    property bool busy: false           // a rescan or connect is in flight
-    property var networks: []           // [{ssid, active, secured, signal}], best first
+    property int strength: 0
+    property bool busy: false
+    property var networks: []
 
     readonly property string iconName: {
         if (!enabled) return "wifi_off";
@@ -36,14 +28,6 @@ Singleton {
         return ssid;
     }
 
-    // ---- refresh ---------------------------------------------------------
-    //
-    // One bash invocation per refresh (a monitor burst would otherwise be
-    // three forks), three kinds of line parsed below:
-    //   enabled | disabled          radio state
-    //   wifi:<state>:<connection>   first wifi device (colons in the
-    //                               connection are nmcli-escaped as \:)
-    //   active:ssid:security:signal  one row per AP; "yes" on the active one
     Process {
         id: refresh
         command: ["bash", "-c",
@@ -85,7 +69,6 @@ Singleton {
                 }
                 if (!sawDevice) { root.connected = false; root.ssid = ""; }
                 if (!sawActive) root.strength = 0;
-                // Radio off means no connection, whatever device status said.
                 if (!root.enabled) { root.connected = false; root.ssid = ""; root.strength = 0; }
                 nets.sort((a, b) => (b.active - a.active) || (b.signal - a.signal));
                 root.networks = nets;
@@ -93,7 +76,6 @@ Singleton {
         }
     }
 
-    // nmcli terse mode escapes ':' inside a value as '\:' and '\' as '\\'.
     function splitEscaped(line): var {
         const out = [];
         let cur = "";
@@ -107,7 +89,6 @@ Singleton {
         return out;
     }
 
-    // Debounce: `nmcli monitor` can print several lines in one burst.
     Timer {
         id: refreshDebounce
         interval: 300
@@ -115,7 +96,6 @@ Singleton {
     }
     function requestRefresh() { refreshDebounce.restart(); }
 
-    // ---- push source ------------------------------------------------------
     Process {
         id: monitor
         command: ["nmcli", "monitor"]
@@ -125,15 +105,12 @@ Singleton {
     }
     Timer { id: monitorRetry; interval: 2000; onTriggered: monitor.running = true }
 
-    // ---- backstop ---------------------------------------------------------
     Timer { interval: 60000; repeat: true; running: true; onTriggered: refresh.running = true }
 
     Component.onCompleted: {
         monitor.running = true;
         refresh.running = true;
     }
-
-    // ---- actions -----------------------------------------------------------
 
     function toggle() {
         enabledCmd.command = ["nmcli", "radio", "wifi", enabled ? "off" : "on"];

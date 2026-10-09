@@ -4,18 +4,12 @@ import Quickshell
 import "../../components"
 import "../../services"
 
-// The control centre's home grid: two rows of pills + discs, the Sound and
-// Display slider cards, and the notification card. During a drill only row 0
-// keeps taking clicks -- the drill card covers the rest.
-
 Item {
     id: page
 
     signal drill(string page)
     property bool drillOpen: false
 
-    // Row geometry, shared with ControlCenter: row 0 is 60 tall (the discs),
-    // the gap is 10, and the drill card starts 5 px into that gap.
     readonly property real rowH: 60
     readonly property real firstRowBottom: rowH + 5
     readonly property real notifH: {
@@ -23,13 +17,12 @@ Item {
         const list = n > 0 ? Math.min(72 * n - 8, Config.notifHistoryHeight) : 17;
         return Math.max(176, 16 + 8 + list + 28);
     }
-    readonly property real contentBottom: 264 + notifH     // 4 rows above the card
+    readonly property real contentBottom: 264 + notifH
     implicitHeight: contentBottom
 
-    // Cells under row 0 stop taking input while the drill card covers them.
     function liveAt(bottom): bool { return !drillOpen || bottom <= firstRowBottom; }
 
-    RowLayout {                                // row 0: wifi, focus, lock
+    RowLayout {
         width: parent.width
         height: rowH
         spacing: 10
@@ -60,7 +53,7 @@ Item {
         }
     }
 
-    RowLayout {                                // row 1: bluetooth, game mode, night light
+    RowLayout {
         y: 70
         width: parent.width
         height: rowH
@@ -95,7 +88,7 @@ Item {
         }
     }
 
-    CcSliderCard {                             // sound
+    CcSliderCard {
         y: 140
         width: parent.width
         label: "Sound"
@@ -107,7 +100,7 @@ Item {
         onChevronClicked: page.drill("sound")
     }
 
-    CcSliderCard {                             // display
+    CcSliderCard {
         y: 202
         width: parent.width
         label: "Display"
@@ -118,7 +111,7 @@ Item {
         onChevronClicked: page.drill("display")
     }
 
-    Rectangle {                                // notifications
+    Rectangle {
         y: 264
         width: parent.width
         height: notifH
@@ -157,7 +150,7 @@ Item {
                 color: Theme.withAlpha(Theme.colors.text, 0.35)
             }
 
-            Item {                              // the list, capped
+            Item {
                 Layout.fillWidth: true
                 Layout.preferredHeight: Math.min(notifList.implicitHeight,
                                                  Config.notifHistoryHeight)
@@ -184,7 +177,7 @@ Item {
                                 height: 64
                                 spacing: 10
 
-                                Rectangle {                      // urgency dot
+                                Rectangle {
                                     Layout.preferredWidth: 4
                                     Layout.preferredHeight: 32
                                     Layout.alignment: Qt.AlignVCenter

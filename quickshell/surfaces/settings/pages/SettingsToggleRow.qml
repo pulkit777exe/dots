@@ -3,8 +3,6 @@ import QtQuick.Layouts
 import "../../../components"
 import "../../../services"
 
-// Label left, switch right; `toggled` reports the new value.
-
 Item {
     id: root
 

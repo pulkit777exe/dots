@@ -1,7 +1,3 @@
--- modules/keybinds/screenshots.lua
---
--- Screenshot bindings using grimblast.
-
 local home = os.getenv("HOME")
 local screenshot_dir = home .. "/Pictures/Screenshots"
 

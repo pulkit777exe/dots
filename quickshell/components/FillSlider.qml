@@ -1,14 +1,10 @@
 import QtQuick
 import "../services"
 
-// The control centre's slider: near-black track, accent fill with the
-// glyph sitting inside it, drag anywhere on the row to set, wheel to step.
-// The percentage label belongs to the caller -- it sits outside the track.
-
 Item {
     id: root
 
-    property real value: 0            // 0..1
+    property real value: 0
     property string icon: ""
     property color trackColor: Theme.cc.track
     property color accent: Theme.colors.accent
@@ -19,7 +15,6 @@ Item {
 
     function clamp(v) { return Math.max(0, Math.min(1, v)); }
 
-    // One track-height of fill even at 0, so the glyph always has a chip.
     readonly property real fillWidth: Math.max(height, width * clamp(value))
 
     Rectangle {

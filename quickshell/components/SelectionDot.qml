@@ -1,8 +1,5 @@
 import QtQuick
 
-// The dot in a picker card's corner: visible while the card is the
-// current selection, painted with whatever colour the card passes.
-
 Rectangle {
     property bool selected: false
 

@@ -5,21 +5,11 @@ import Quickshell
 import Quickshell.Io
 import Quickshell.Services.Notifications
 
-// The notification server: everything that arrives goes to `history` (which
-// the control centre lists), and unless Focus/DND is on it also becomes a
-// toast until its timeout. Toast expiry only ends the popup -- the entry
-// stays in history until dismissed or cleared.
-//
-// Two facts about Quickshell 0.3.1 that are not in its docs: expireTimeout
-// is milliseconds despite the docs saying seconds (dividing makes toasts
-// live 1000x too long), and a handle must be both `tracked = true` and
-// `.dismiss()`ed or it strands in the server's map.
-
 Singleton {
     id: root
 
-    property var history: []   // newest first, [{key, appName, appIcon, summary, body, urgent, handle}]
-    property var toasts: []    // [{key, deadline}] -- a subset of history
+    property var history: []
+    property var toasts: []
 
     readonly property bool dnd: Config.dnd
 
@@ -50,7 +40,6 @@ Singleton {
         history = [entry].concat(history).slice(0, 100);
 
         if (!Config.dnd) {
-            // Client-set lifetime wins; otherwise urgent gets the long one.
             const timeout = n.expireTimeout > 0
                 ? n.expireTimeout
                 : (entry.urgent ? Config.notifUrgentTimeoutMs : Config.notifPopupTimeoutMs);
@@ -61,7 +50,6 @@ Singleton {
         sweep.restart();
     }
 
-    // Drops expired toasts; runs only while something is on screen.
     Timer {
         id: sweep
         interval: 500

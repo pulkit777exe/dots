@@ -1,7 +1,3 @@
--- modules/animations.lua
---
--- Hyprland compositor animations.
-
 local bezier = "default"
 local speed = 1.0
 

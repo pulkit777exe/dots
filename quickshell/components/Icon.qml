@@ -1,9 +1,6 @@
 import QtQuick
 import "../services"
 
-// A Material Symbols glyph. The font renders at pixelSize == size, so the
-// whole icon set scales with the font-size setting for free.
-
 Text {
     id: root
 

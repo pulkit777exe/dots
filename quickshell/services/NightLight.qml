@@ -4,10 +4,6 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 
-// Night light via hyprsunset, driven by `hyprctl hyprsunset`. Availability
-// is a one-shot probe for the binary; the enabled state is local (hyprctl
-// has no query for it that is cheaper than the command itself).
-
 Singleton {
     id: root
 

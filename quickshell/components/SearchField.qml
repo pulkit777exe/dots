@@ -2,18 +2,11 @@ import QtQuick
 import QtQuick.Layouts
 import "../services"
 
-// The transparent search input used by the theme picker (and, at a smaller
-// height, the settings sidebar): magnifier, text, placeholder, and the
-// keyboard contract every picker shares -- arrows navigate, Enter accepts,
-// Escape closes.
-
 Rectangle {
     id: root
 
     property string placeholderText: ""
-    property bool externalNavigation: false   // arrows always navigate, not just at line edges
-    // Show the placeholder even while the caret sits in the field (the
-    // clipboard manager keeps it as a label until you actually type).
+    property bool externalNavigation: false
     property bool placeholderWhenFocused: false
     property alias text: input.text
     readonly property bool inputFocused: input.activeFocus

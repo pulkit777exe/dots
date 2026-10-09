@@ -2,10 +2,6 @@ import QtQuick
 import QtQuick.Layouts
 import "../services"
 
-// A notification's text lines: sender, summary, body. The toast card
-// and the control-center history list both render exactly this;
-// `sender` empty (the list's case) hides the top line.
-
 ColumnLayout {
     id: root
 
@@ -16,7 +12,6 @@ ColumnLayout {
     spacing: 1
 
     Label {
-        // the sender, small and dim above the summary
         Layout.fillWidth: true
         visible: root.sender !== "" && root.summary !== ""
         text: root.sender

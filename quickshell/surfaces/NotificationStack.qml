@@ -3,8 +3,6 @@ import QtQuick.Layouts
 import "../components"
 import "../services"
 
-// Live toasts: one card each, expired by the service, dismissed on the cross.
-
 Item {
     id: root
 
@@ -37,7 +35,6 @@ Item {
                 backgroundColor: Theme.colors.background
                 borderColor: entry.urgent ? Theme.accentFor("notifications") : Theme.cc.border
 
-                // Slide in from the right, under a fade.
                 opacity: 0
                 transform: Translate { id: slide; x: 28 }
 
@@ -82,8 +79,6 @@ Item {
                         radius: width / 2
                         color: Theme.cc.item
 
-                        // The app's icon when it has one, its initial when
-                        // it does not -- notify-send and friends ship none.
                         Icon {
                             anchors.centerIn: parent
                             visible: card.entry.appIcon !== ""

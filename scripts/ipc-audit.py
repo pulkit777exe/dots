@@ -1,19 +1,5 @@
 #!/usr/bin/env python3
-"""Audit Service.member references against what each singleton exposes.
 
-qmllint already proves every `Foo.bar` in the tree resolves to something, so
-a plain missing member cannot survive a clean lint. What qmllint cannot see is
-the Round 7 bug class: a function declared inside an IpcHandler is reachable
-over `qs ipc call` but is not a method on the singleton, so `Foo.bar()` from
-QML does nothing and logs nothing. Notifications.toggleDnd was lost that way
-for long enough that it looked like a wiring mistake rather than a scope one.
-
-So this only asks one question: does any reference from QML land on a name
-that exists solely at IpcHandler depth?
-
-Exits 0 clean, 1 on a hit, 2 if the parser's self-test fails -- 2 meaning
-"do not trust this run", which is deliberately distinct from "found a bug".
-"""
 import pathlib
 import re
 import sys
@@ -21,23 +7,8 @@ import collections
 
 ROOT = pathlib.Path(sys.argv[1] if len(sys.argv) > 1 else ".").resolve()
 
-
 def blank(s):
-    """Blank comments, string contents and regex literals, preserving
-    newlines and offsets so a reported line number is the real one.
 
-    The order of the tests is load-bearing and each one is a trap this
-    scanner has already fallen into:
-
-      comments before quotes -- an apostrophe in a line comment
-        (`// the adapter's var arrays`) otherwise opens a string that never
-        closes, and every brace count after it is wrong.
-
-      regex literals -- `path.replace(/"/g, '\\"')` reads as division
-        followed by an unterminated string, blanking the rest of the file.
-        A '/' only starts a regex when the previous non-space character
-        cannot end an operand, which is what _regex_allowed decides.
-    """
     out = list(s)
     i, n = 0, len(s)
     while i < n:
@@ -83,16 +54,13 @@ def blank(s):
         i += 1
     return "".join(out)
 
-
 _REGEX_PREV = set("(,=:[!&|?{};+-*%~^<>\n")
-
 
 def _regex_allowed(s, i):
     k = i - 1
     while k >= 0 and s[k] in " \t":
         k -= 1
     return k < 0 or s[k] in _REGEX_PREV
-
 
 def _skip_regex(s, i):
     n = len(s)
@@ -117,7 +85,6 @@ def _skip_regex(s, i):
         j += 1
     return i + 1
 
-
 DECL = [
     re.compile(r"\s*(?:required\s+)?(?:readonly\s+)?property\s+[\w<>., ]*?\b(\w+)\s*[:=]"),
     re.compile(r"\s*function\s+(\w+)\s*\("),
@@ -126,16 +93,8 @@ DECL = [
 ]
 ENUM = re.compile(r"\s*enum\s+(\w+)\s*\{")
 
-
 def parse(path):
-    """(singleton-scope names, IpcHandler-only names, enum names).
 
-    Depth is counted per line rather than by walking characters, so a line
-    that both opens and closes a brace is attributed to the depth it lives
-    at and not the one it leaves behind. Getting that backwards makes every
-    singleton member look nested, which is the failure that produced 69
-    phantom problems on the first run of this script.
-    """
     src = blank(path.read_text())
     lines = src.split("\n")
 
@@ -171,7 +130,6 @@ def parse(path):
     enums = {m.group(1) for ln in lines if (m := ENUM.match(ln))}
     return exposed, ipc_only, enums
 
-
 def main():
     svc_dir = ROOT / "services"
     qml_dir = svc_dir / "qmldir"
@@ -193,10 +151,6 @@ def main():
             print(f"  PARSER FAILED: {e}")
             return 2
 
-    # Self-test. These members are known to sit on their singletons, and
-    # several are referenced from surfaces that demonstrably work. If the
-    # parser cannot see them, it is the parser that is wrong and this run
-    # reports nothing -- better a loud non-answer than a confident wrong one.
     probe = [
         ("Volume", "setVolume"), ("Brightness", "setBrightness"),
         ("Notifications", "dismiss"),
@@ -245,7 +199,6 @@ def main():
     print(f"  {len(services)} singletons, {len(files)} files, {total} references, "
           f"{len(problems)} problem(s)")
     return 1 if problems else 0
-
 
 if __name__ == "__main__":
     sys.exit(main())

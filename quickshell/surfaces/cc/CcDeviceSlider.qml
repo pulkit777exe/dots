@@ -3,9 +3,6 @@ import QtQuick.Layouts
 import "../../components"
 import "../../services"
 
-// One slider row for a drill page: near-black track with the glyph inside
-// the accent fill, percentage on the right. `value` is 0..1.
-
 Item {
     id: slider
 

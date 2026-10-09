@@ -3,9 +3,6 @@ import QtQuick.Layouts
 import "../../components"
 import "../../services"
 
-// Sound drill page: output devices + volume, input devices + mic level,
-// then per-app streams.
-
 CcPage {
     id: page
     sideMargin: 15

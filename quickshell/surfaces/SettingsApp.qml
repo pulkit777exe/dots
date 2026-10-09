@@ -4,8 +4,6 @@ import "../components"
 import "../services"
 import "settings/pages"
 
-// 1320px settings window: searchable sidebar left, scrolling page right.
-
 PopupPanel {
     id: root
 
@@ -16,11 +14,6 @@ PopupPanel {
 
     readonly property int sidebarWidth: 220
     readonly property int bottomInset: 16
-    // Height = fixed chrome above the page (top margin, nav row, spacing)
-    // + the page itself. Stated explicitly rather than read back off the
-    // layout: once the host caps the height, the layout compresses and a
-    // y-based binding would feed that back in (binding loop). Past the cap
-    // the Flickable below does the scrolling, like any app window.
     readonly property real chromeHeight: 16 + 30 + 6 + bottomInset
     property real maxHeight: 0
     implicitHeight: Math.min(chromeHeight + contentFlick.contentHeight,
@@ -35,7 +28,6 @@ PopupPanel {
         { title: "System", icon: "settings", page: 5 }
     ]
 
-    // A stored index from an older build falls back to the first page.
     readonly property int current: (Config.currentPage >= 0 && Config.currentPage < navItems.length)
         ? Config.currentPage : 0
     readonly property string query: search.text
@@ -230,7 +222,6 @@ PopupPanel {
                         width: contentFlick.width
                         spacing: 12
 
-                        // One page laid out at a time; the rest take no height.
                         BarIslandPage   { Layout.fillWidth: true; visible: root.current === 0 }
                         ClockDatePage   { Layout.fillWidth: true; visible: root.current === 1 }
                         AppearancePage  { Layout.fillWidth: true; visible: root.current === 2 }

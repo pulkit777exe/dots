@@ -3,15 +3,12 @@ import QtQuick.Layouts
 import "../../components"
 import "../../services"
 
-// Sound and Display: a titled card whose body is one FillSlider. The
-// chevron drills into the matching page.
-
 Rectangle {
     id: card
 
     property string label: ""
     property string icon: ""
-    property real value: 0             // 0..1
+    property real value: 0
     property color accent: Theme.accentFor("control-center")
 
     signal moved(real fraction)

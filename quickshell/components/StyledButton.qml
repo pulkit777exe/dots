@@ -1,8 +1,6 @@
 import QtQuick
 import "../services"
 
-// The pill button used by the settings app (power modes, lock).
-
 Rectangle {
     id: root
 

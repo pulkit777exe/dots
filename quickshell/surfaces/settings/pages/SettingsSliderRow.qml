@@ -3,8 +3,6 @@ import QtQuick.Layouts
 import "../../../components"
 import "../../../services"
 
-// Label and value over a fill slider; `moved` reports a value in range.
-
 Item {
     id: root
 

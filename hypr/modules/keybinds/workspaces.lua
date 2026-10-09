@@ -1,12 +1,7 @@
--- modules/keybinds/workspaces.lua
---
--- Workspace navigation and window movement.
-
 local mod = "SUPER"
 
 for i = 1, 9 do
 
-    -- Focus workspace
     hl.bind(
         mod .. " + " .. i,
         hl.dsp.focus({
@@ -14,7 +9,6 @@ for i = 1, 9 do
         })
     )
 
-    -- Move window
     hl.bind(
         mod .. " + SHIFT + " .. i,
         hl.dsp.window.move({
@@ -23,7 +17,6 @@ for i = 1, 9 do
     )
 end
 
--- Workspace 10
 hl.bind(
     mod .. " + 0",
     hl.dsp.focus({

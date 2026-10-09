@@ -1,16 +1,5 @@
 #!/usr/bin/env python3
-"""Check the IPC table in ARCHITECTURE.md against the running shell.
 
-The table claims to be generated from `quickshell ipc show`. It was not, and
-had drifted in both directions: ten documented functions that do not exist
-(`wifi forget`, `wifi getEthernet`, `audio getSinks`/`getSources`/
-`listStreams`/`cycleOutput`, `mpris getActive`/`list`, `bluetooth list`/
-`isEnabled`, `shell nextTheme`/`nextWallpaper`) and twenty real ones it never
-mentioned.
-
-Prints "N functions across M targets" on success and the differing targets on
-stderr on failure. Exit 0 clean, 1 drifted, 2 could not run (no shell).
-"""
 import pathlib
 import re
 import subprocess
@@ -19,7 +8,6 @@ import sys
 DOC = pathlib.Path(__file__).resolve().parent.parent / "ARCHITECTURE.md"
 HEADING = "## Complete IPC reference"
 TRAILER = "A recurring bug class worth knowing"
-
 
 def parse_table():
     doc = DOC.read_text()
@@ -39,7 +27,6 @@ def parse_table():
             claimed.setdefault(target, set()).update(fns)
     return claimed
 
-
 def parse_shell():
     out = subprocess.run(["quickshell", "ipc", "show"],
                          capture_output=True, text=True)
@@ -56,7 +43,6 @@ def parse_shell():
         if m and cur:
             real[cur].add(m.group(1))
     return real
-
 
 def main():
     try:
@@ -92,7 +78,6 @@ def main():
     total = sum(len(v) for v in real.values())
     print(f"{total} functions across {len(real)} targets")
     return 0
-
 
 if __name__ == "__main__":
     sys.exit(main())

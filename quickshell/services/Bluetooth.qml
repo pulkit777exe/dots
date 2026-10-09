@@ -4,10 +4,6 @@ import QtQuick
 import Quickshell
 import Quickshell.Bluetooth as Bt
 
-// Bluetooth, straight off BlueZ -- no processes, no polling. The adapter is
-// genuinely null for the first second while BlueZ enumerates; everything
-// here no-ops until it arrives.
-
 Singleton {
     id: root
 
@@ -16,8 +12,6 @@ Singleton {
     readonly property bool scanning: adapter ? adapter.discovering : false
     readonly property string name: adapter ? (adapter.alias || adapter.deviceName || "") : ""
 
-    // BlueZ returns D-Bus object order, which means nothing: connected
-    // devices first, then paired, then alphabetical.
     readonly property var devices: (adapter?.devices?.values ?? [])
         .map(d => ({
             mac: d.address,
@@ -51,7 +45,6 @@ Singleton {
         scanWindow.restart();
     }
 
-    // Discovery runs until told to stop, so it gets a window of its own.
     Timer {
         id: scanWindow
         interval: 15000

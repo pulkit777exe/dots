@@ -3,8 +3,6 @@ import QtQuick.Layouts
 import "../../components"
 import "../../services"
 
-// Display drill page: one card per monitor, then the night light card.
-
 CcPage {
     id: page
     sideMargin: 15
@@ -28,7 +26,7 @@ CcPage {
         }
     }
 
-    Rectangle {                          // night light
+    Rectangle {
         Layout.fillWidth: true
         Layout.topMargin: 12
         Layout.preferredHeight: nlCol.implicitHeight + 20

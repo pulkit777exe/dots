@@ -1,53 +1,3 @@
--- hyprlock.lua
--- Generates ~/.config/hypr/hyprlock.conf, which is what hyprlock actually
--- reads (v0.9.6 uses the .conf format; QML configs are legacy and go away in
--- 0.10). hyprland.lua requires this file at startup, so every login rebuilds
--- the conf; after editing, run it by hand for an immediate rebuild:
---
---     lua ~/.config/hypr/hyprlock.lua
---
--- Layout, macOS-style: the live desktop blurred behind everything, date and
--- clock in the upper third, battery + wifi top right, avatar / username /
--- password hint in the lower third, and Shut Down / Restart pills along the
--- bottom. Nothing else -- no song strip, no stray prompts.
---
--- Colours: every colour below is interpolated from the generated palette at
--- ~/.config/colors/current.json (publish-colors.py rewrites it on every
--- palette push), so the lock screen follows the desktop instead of freezing
--- on whatever palette it was authored against. Only alpha levels are
--- literal; if no palette exists the conf is left untouched.
---
--- Geometry, PROVEN against live runs on the 1920x1080 panel (not derived
--- from theory like the previous revision): `position` is in PIXELS from the
--- widget's alignment anchor, and with valign = center positive y moves UP.
--- So a target screen coordinate (x, y) becomes position (x - 960, 540 - y):
---
---     element       target centre      position
---     date             0, 141            0, 399
---     clock            0, 232.5          0, 307.5
---     battery      1830, 47           870, 493
---     wifi         1884, 47           924, 493
---     avatar           0, 865            0, -325
---     username         0, 926            0, -386
---     hint + field     0, 972            0, -432
---     power pills  y 1032              0, -492   (x 873 -> -87, 1047 -> 87)
---
--- The old revision treated `position` as a percent of the monitor, which
--- was never run: every element piled up in a heap at the centre of the
--- screen instead.
---
--- Background is `screenshot`: hyprlock snapshots the desktop when it starts
--- and blurs it, so the lock always carries what the user was actually
--- looking at (wallpaper, windows, anything) and never depends on a wallpaper
--- path -- the previous hardcoded ~/Downloads path had died and rendered a
--- black screen.
---
--- Shut Down / Restart use hyprlock's `onclick` on both the pill shape and
--- its label, so a click anywhere on the pill lands.
-
--- The palette behind every colour in the conf. Keys used: background,
--- surface (glass pills), text, border (hairlines; its own alpha is
--- stripped and the per-element alphas below re-applied).
 local function read_palette()
     local f = io.open(os.getenv("HOME") .. "/.config/colors/current.json", "r")
     if not f then
@@ -81,24 +31,22 @@ local function rgba(hex, alpha)
     return "rgba(" .. hex .. alpha .. ")"
 end
 
--- The border token carries its own alpha; per-element hairline strengths
--- re-apply it below, so keep only its RGB.
 local ring = palette.border:gsub("#", "")
 if #ring == 8 then
     ring = ring:sub(3)
 end
 
 local colours = {
-    ["{{bg}}"] = rgba(palette.background, "ff"),     -- lock fallback fill
-    ["{{veil}}"] = rgba(palette.background, "61"),   -- 0.38, status pill
-    ["{{glass}}"] = rgba(palette.surface, "8c"),     -- 0.55, power pills
-    ["{{text92}}"] = rgba(palette.text, "eb"),       -- 0.92, labels
-    ["{{text90}}"] = rgba(palette.text, "e6"),       -- 0.90, username/dots
-    ["{{text55}}"] = rgba(palette.text, "8c"),       -- 0.55, hint
-    ["{{clear}}"] = rgba(palette.background, "00"),  -- alpha 0: invisible
-    ["{{hair14}}"] = rgba(ring, "24"),               -- 0.14, status pill
-    ["{{hair16}}"] = rgba(ring, "29"),               -- 0.16, power pills
-    ["{{ring25}}"] = rgba(ring, "40"),               -- 0.25, avatar ring
+    ["{{bg}}"] = rgba(palette.background, "ff"),
+    ["{{veil}}"] = rgba(palette.background, "61"),
+    ["{{glass}}"] = rgba(palette.surface, "8c"),
+    ["{{text92}}"] = rgba(palette.text, "eb"),
+    ["{{text90}}"] = rgba(palette.text, "e6"),
+    ["{{text55}}"] = rgba(palette.text, "8c"),
+    ["{{clear}}"] = rgba(palette.background, "00"),
+    ["{{hair14}}"] = rgba(ring, "24"),
+    ["{{hair16}}"] = rgba(ring, "29"),
+    ["{{ring25}}"] = rgba(ring, "40"),
 }
 
 local config = [[

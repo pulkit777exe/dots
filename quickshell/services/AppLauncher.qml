@@ -3,14 +3,11 @@ pragma Singleton
 import QtQuick
 import Quickshell
 
-// The application index: freedesktop .desktop entries straight from
-// Quickshell's own scanner, cached alphabetically, filtered by setQuery().
-// The launcher only ever reads `results` and calls launch().
 Singleton {
     id: root
 
     property string query: ""
-    property var allApps: []    // { entry, name, subtitle, iconSource, glyph }
+    property var allApps: []
     property var results: []
 
     readonly property var entries: DesktopEntries.applications.values
@@ -24,8 +21,6 @@ Singleton {
         if (result && result.entry) result.entry.execute();
     }
 
-    // Rebuilt whenever the .desktop set changes; sorting here means the
-    // unfiltered list is already alphabetical.
     function refresh() {
         const apps = [];
         for (let i = 0; i < entries.length; i++) {
@@ -58,9 +53,6 @@ Singleton {
         );
     }
 
-    // Icon name, absolute path or an already-built url: resolved once here
-    // so the row is just an Image source. Empty means "no icon", and the row
-    // falls back to the glyph.
     function iconSourceFor(e): string {
         const icon = e.icon || "";
         if (icon.length === 0) return "";
@@ -69,7 +61,6 @@ Singleton {
         return "image://icon/" + icon;
     }
 
-    // Material glyph for entries with no icon of their own.
     function glyphFor(e): string {
         if (e.runInTerminal) return "terminal";
         const c = String(e.categories || "").toLowerCase();

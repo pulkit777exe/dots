@@ -1,7 +1,3 @@
--- modules/input.lua
---
--- Keyboard, pointer, and touchpad behavior.
-
 hl.config({
     input = {
         kb_layout = "us",

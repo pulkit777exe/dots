@@ -1,9 +1,4 @@
 #!/usr/bin/env python3
-"""Event-driven file/dir watcher using kernel inotify (no external deps).
-
-Prints one line per inotify event to stdout. Intended to feed a SplitParser.
-Usage: inotify-watch.py [-r] PATH [PATH ...]
-"""
 
 import ctypes
 import ctypes.util
@@ -38,7 +33,6 @@ libc = ctypes.CDLL(ctypes.util.find_library("c"), use_errno=True)
 libc.inotify_init1.restype = ctypes.c_int
 libc.inotify_add_watch.restype = ctypes.c_int
 
-
 class InotifyEvent(ctypes.Structure):
     _fields_ = [
         ("wd", ctypes.c_int),
@@ -47,7 +41,6 @@ class InotifyEvent(ctypes.Structure):
         ("len", ctypes.c_uint32),
         ("name", ctypes.c_char * 0),
     ]
-
 
 def main() -> int:
     args = sys.argv[1:]
@@ -122,7 +115,6 @@ def main() -> int:
                 new_dir = os.path.join(path, name)
                 add_watch(new_dir)
             offset += ctypes.sizeof(InotifyEvent) + event.len
-
 
 if __name__ == "__main__":
     try:

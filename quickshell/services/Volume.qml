@@ -6,9 +6,6 @@ import Quickshell
 import Quickshell.Services.Pipewire
 import Quickshell.Io
 
-// Volume and mic, straight off PipeWire. PwObjectTracker must track the
-// nodes you read, or their audio properties never bind.
-
 Singleton {
     id: root
 
@@ -49,8 +46,6 @@ Singleton {
         source.audio.volume = Math.max(0, Math.min(1, pct / 100));
     }
 
-    // Node lists for the sound page: sinks (outputs), sources (inputs),
-    // streams (per-app players).
     function filterNodes(pred) {
         const out = [];
         const model = Pipewire.nodes;

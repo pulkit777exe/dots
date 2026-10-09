@@ -1,9 +1,6 @@
 import QtQuick
 import "../services"
 
-// The shell's text style: one family, native rendering, sizes always via
-// Theme.px() at the call site so the font-size setting reaches them.
-
 Text {
     id: root
 

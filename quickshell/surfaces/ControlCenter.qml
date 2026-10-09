@@ -3,11 +3,6 @@ import "../components"
 import "../services"
 import "cc"
 
-// The control centre: a 460px card under the bar. The home grid is always
-// laid out; a drill page draws over it from the second row down, so the
-// first row stays visible as the page switcher. The panel's height follows
-// whichever view is showing -- the bar window sizes itself from it.
-
 PopupPanel {
     id: cc
 
@@ -20,7 +15,6 @@ PopupPanel {
 
     readonly property bool drillOpen: UiState.ccView !== "home"
 
-    // The line the drill card covers from: five px into the gap under row 0.
     readonly property real drillTop: 14 + homePage.firstRowBottom
     readonly property int homeBottom: Math.ceil(homePage.contentBottom + 28)
 
@@ -35,7 +29,6 @@ PopupPanel {
     }
     readonly property int drillBottom: Math.ceil(drillTop + Math.max(140, activeContent) + 14)
 
-    // Never shorter than the home grid, so nothing peeks out below the card.
     readonly property int panelHeight: drillOpen ? Math.max(homeBottom, drillBottom) : homeBottom
     readonly property real drillHeight: Math.max(140, panelHeight - 14 - drillTop)
 
@@ -48,8 +41,6 @@ PopupPanel {
         drillOpen: cc.drillOpen
         onDrill: page => UiState.ccView = page
     }
-
-    // ---- drill card -------------------------------------------------------
 
     Rectangle {
         id: drillCard

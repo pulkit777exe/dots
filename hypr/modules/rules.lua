@@ -1,8 +1,3 @@
--- modules/rules.lua
---
--- Application-specific window behavior.
-
--- Audio controls
 hl.window_rule({
     name = "pavucontrol-floating",
     match = {
@@ -12,7 +7,6 @@ hl.window_rule({
     center = true,
 })
 
--- Bluetooth manager
 hl.window_rule({
     name = "blueman-floating",
     match = {
@@ -22,7 +16,6 @@ hl.window_rule({
     center = true,
 })
 
--- Network connection editor
 hl.window_rule({
     name = "network-manager-floating",
     match = {
@@ -32,7 +25,6 @@ hl.window_rule({
     center = true,
 })
 
--- Picture-in-picture
 hl.window_rule({
     name = "picture-in-picture",
     match = {

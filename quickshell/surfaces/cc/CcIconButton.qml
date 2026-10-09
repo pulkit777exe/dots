@@ -2,9 +2,6 @@ import QtQuick
 import "../../components"
 import "../../services"
 
-// The round control: lock, night light. 60x60 disc, tints with its
-// accent when active.
-
 Rectangle {
     id: disc
 

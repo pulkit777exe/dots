@@ -1,7 +1,3 @@
--- modules/keybinds/resize.lua
---
--- Keyboard-driven window resizing.
-
 local mod = "SUPER"
 local step = 20
 

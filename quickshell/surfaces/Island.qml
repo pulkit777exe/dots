@@ -2,27 +2,13 @@ import QtQuick
 import "../components"
 import "../services"
 
-// The bar: a pill that grows into the "rich" face on hover.
-//
-// One face at two sizes rather than two panels -- rest is a 33px stadium
-// with the workspace dots, clock and status; rich is 76px tall and adds
-// the date, the workspace name and the now-playing card. Everything is
-// positioned against the root and animated with springs, so the pill
-// always grows from its own centre.
-
 Item {
     id: island
-
 
     readonly property bool rich: hover.containsMouse
     readonly property bool showStatus: Config.statusEnabled
     readonly property bool showCard: Config.cardEnabled
 
-    // A popup or an exclusive fullscreen window both take the bar away.
-    // Toasts keep it: they are transient shell feedback, and hiding the bar
-    // over a fullscreen window while one is on screen is the known case.
-    // The settings app is a window on the desktop, not a bar popup: the
-    // island stays put behind it.
     readonly property bool hidden: UiState.popupOpen
         || (Compositor.activeWindowFullscreen && Notifications.toasts.length === 0)
 
@@ -31,8 +17,6 @@ Item {
     Behavior on opacity {
         NumberAnimation { duration: Config.fade(); easing.type: Easing.OutCubic }
     }
-
-    // ---- geometry ------------------------------------------------------
 
     readonly property int richHeight: 76
     readonly property int cardW: 156
@@ -54,14 +38,6 @@ Item {
     width: rich ? richWidth : Math.max(restWidth, Config.collapsedWidth)
     height: rich ? richHeight : Config.barHeight
 
-    // ---- zone motion ---------------------------------------------------
-    // A zone sits centred at rest and takes its rich position when open.
-    // It gets there by interpolating on the pill's own animated height, not
-    // with a second spring: a two-state `y` plus its own spring launched the
-    // dots toward y=46 while the pill was still 33px tall, so they overshot
-    // outside the panel and wobbled after every hover. Bound this way the
-    // zones track the width/height springs exactly, in both directions.
-
     readonly property real expand:
         (height - Config.barHeight) / (richHeight - Config.barHeight)
 
@@ -79,8 +55,6 @@ Item {
         SpringAnimation { spring: 5.8; damping: 0.68; mass: 0.55 }
     }
 
-    // ---- clock ---------------------------------------------------------
-
     readonly property string timeFormat: Config.time24h
         ? (Config.showSeconds ? "hh:mm:ss" : "hh:mm")
         : (Config.showSeconds ? "h:mm:ss AP" : "h:mm AP")
@@ -97,8 +71,6 @@ Item {
         }
     }
 
-    // ---- frame -----------------------------------------------------------
-
     Surface {
         anchors.fill: parent
         readonly property real effRadius: Math.min(Config.collapsedRadius, Config.barHeight / 2)
@@ -114,9 +86,7 @@ Item {
         }
     }
 
-    // ---- zones (rest -> rich; opacity fades, y springs) -------------------
-
-    Label {                              // rest clock, centred
+    Label {
         id: clock
         text: island.clockText
         font.pixelSize: Theme.px(14)
@@ -128,7 +98,7 @@ Item {
         Behavior on opacity { NumberAnimation { duration: Config.fade(); easing.type: Easing.OutCubic } }
     }
 
-    Row {                                // rich header: time + date
+    Row {
         id: header
         spacing: 8
         x: (island.width - width) / 2
@@ -151,7 +121,7 @@ Item {
         }
     }
 
-    Item {                               // rich workspace name
+    Item {
         id: nameZone
         x: island.pad
         y: island.zoneY(30, height)
@@ -179,14 +149,14 @@ Item {
         }
     }
 
-    WorkspaceBars {                      // dots: x16, centred at rest, y46 rich
+    WorkspaceBars {
         id: bars
         accent: Theme.accentFor("island")
         x: island.pad
         y: island.zoneY(46, height)
     }
 
-    Item {                               // now-playing card
+    Item {
         id: card
         visible: island.showCard && (island.rich || opacity > 0.01)
         width: island.cardW
@@ -203,7 +173,7 @@ Item {
             color: Theme.withAlpha(Theme.colors.text, 0.09)
         }
 
-        Item {                           // album art
+        Item {
             x: Config.cardPad + 2
             y: (card.height - height) / 2
             width: 22
@@ -233,7 +203,7 @@ Item {
             }
         }
 
-        Column {                          // title / artist
+        Column {
             x: Config.cardPad + 32
             width: card.width - x - 50
             spacing: 1
@@ -259,7 +229,7 @@ Item {
             }
         }
 
-        Row {                             // 12-dot progress
+        Row {
             x: card.width - (Config.cardPad + 4) - width
             spacing: 1.5
             anchors.verticalCenter: parent.verticalCenter
@@ -280,7 +250,7 @@ Item {
         }
     }
 
-    Row {                                // signal + battery, right edge
+    Row {
         id: statusRow
         spacing: 6
         visible: island.showStatus
@@ -297,8 +267,6 @@ Item {
             charging: Battery.charging
         }
     }
-
-    // ---- input: one area, topmost, routed in paint order -------------------
 
     function inside(z, px, py): bool {
         return px >= z.x && px < z.x + z.width && py >= z.y && py < z.y + z.height;

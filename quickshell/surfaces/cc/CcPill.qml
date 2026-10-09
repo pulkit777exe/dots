@@ -3,9 +3,6 @@ import QtQuick.Layouts
 import "../../components"
 import "../../services"
 
-// The wide control pill: badge, title, subtitle. Active state is the
-// badge going solid accent.
-
 Rectangle {
     id: pill
 
@@ -37,7 +34,7 @@ Rectangle {
         anchors.rightMargin: 11
         spacing: 9
 
-        Rectangle {                              // icon badge
+        Rectangle {
             width: 41
             height: 41
             radius: width / 2
@@ -53,7 +50,7 @@ Rectangle {
             }
         }
 
-        ColumnLayout {                           // title / subtitle
+        ColumnLayout {
             spacing: 1
             Layout.fillWidth: true
             Layout.alignment: Qt.AlignVCenter

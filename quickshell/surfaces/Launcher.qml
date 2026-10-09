@@ -3,11 +3,6 @@ import QtQuick.Layouts
 import "../components"
 import "../services"
 
-// The app launcher: a centred card under the bar. Search field on top,
-// filtered list below, first row selected so Enter always has a target.
-// AppLauncher owns discovery and the query; this file owns the selection
-// and the keyboard.
-
 PopupPanel {
     id: root
 
@@ -31,7 +26,6 @@ PopupPanel {
         ensureVisible(selectedIndex);
     }
 
-    // Keep the selected row inside the scroller when the arrows walk off it.
     function ensureVisible(index: int) {
         const top = index * rowHeight;
         if (top < list.contentY)
@@ -49,8 +43,6 @@ PopupPanel {
 
     function activateSelection() { launchIndex(selectedIndex); }
 
-    // Reopening starts clean: empty search, first row, and a caret in the
-    // field (the retry timer, because focus lands before the field is ready).
     onOpenChanged: {
         if (open) {
             search.text = "";
@@ -90,8 +82,6 @@ PopupPanel {
             onNavigateDown: root.moveSelection(1)
             onAccepted: root.activateSelection()
 
-            // Every keystroke re-filters, so the selection starts at the top
-            // of the new list.
             onTextChanged: {
                 AppLauncher.setQuery(text);
                 root.selectedIndex = 0;
@@ -107,8 +97,6 @@ PopupPanel {
             color: Theme.cc.border
         }
 
-        // Height from the row count, animated so the card does not snap
-        // shut under the user's eyes as results come and go.
         Flickable {
             id: list
 
@@ -141,8 +129,6 @@ PopupPanel {
                     width: list.width
                     height: root.rowHeight
 
-                    // The selected row's card, and the accent marker on its
-                    // left edge; every other row stays unhighlighted.
                     Rectangle {
                         anchors.fill: parent
                         visible: row.index === root.selectedIndex

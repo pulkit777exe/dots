@@ -6,36 +6,17 @@ import qs.services
 import qs.surfaces
 import qs.modules
 
-// Five window kinds, one per screen:
-//   wallpaper   background layer, draws the active wallpaper
-//   backdrop    top layer, dims and click-closes whatever popup is open
-//   bar         overlay layer, holds the island and every bar popup
-//   settings    top layer, the settings app as its own desktop window
-//   overlay     overlay layer, notification toasts + the volume/brightness OSD
-//
-// The bar window sizes itself from what is actually on screen -- the
-// island's own box, plus any visible popup -- so a panel can be any height
-// and never gets clipped by the window it lives in. Settings does not take
-// part: it lives in its own window, centred over the desktop.
-
 ShellRoot {
     id: shellRoot
 
-    // Only reference to Keybinds in the tree: it is a singleton, and this
-    // line is what constructs it, which is what registers the IPC handlers
-    // and global shortcuts. Delete it and every overlay is unreachable.
     property var keybinds: Keybinds
 
-    // ---- wallpaper --------------------------------------------------------
     Variants {
         model: Quickshell.screens
         PanelWindow {
             required property var modelData
             screen: modelData
             anchors { top: true; bottom: true; left: true; right: true }
-            // -1: don't get pushed down by the bar's reserved strip -- a
-            // full-screen surface must cover the full screen (otherwise the
-            // top 40px fall through to hyprpaper and the wallpaper seams).
             exclusiveZone: -1
             color: "black"
             WlrLayershell.layer: WlrLayer.Background
@@ -52,7 +33,6 @@ ShellRoot {
         }
     }
 
-    // ---- backdrop ---------------------------------------------------------
     Variants {
         model: Quickshell.screens
         PanelWindow {
@@ -89,7 +69,6 @@ ShellRoot {
         }
     }
 
-    // ---- bar + popups ------------------------------------------------------
     Variants {
         model: Quickshell.screens
         PanelWindow {
@@ -115,14 +94,10 @@ ShellRoot {
                 return bottom + 16;
             }
 
-            // Reserve the bar's strip normally; give it back over plain
-            // fullscreen so maximised windows reach the screen edge.
             exclusiveZone: (barWindow.isFullscreen && island.hidden)
                 ? 0
                 : (Config.barHeight + (Config.notchMode ? 0 : Config.gapFromEdge));
 
-            // Only the panels take pointer input; the rest of this tall
-            // window is click-through.
             mask: Region {
                 Region { item: island.visible ? island : null }
                 Region { item: cc.visible ? cc : null }
@@ -179,11 +154,6 @@ ShellRoot {
         }
     }
 
-    // ---- settings window ---------------------------------------------------
-    // The settings app gets a window of its own instead of hanging off the
-    // bar: centred over the desktop, no backdrop dim, the island left alone
-    // behind it. It is still plain UiState state, so Super+S, the IPC toggle
-    // and Escape behave exactly as they did when it was a popup.
     Variants {
         model: Quickshell.screens
         PanelWindow {
@@ -200,22 +170,17 @@ ShellRoot {
             WlrLayershell.keyboardFocus: UiState.settingsOpen ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
             HyprlandFocusGrab { active: UiState.settingsOpen; windows: [settingsWindow] }
 
-            // Only the panel takes pointer input; the desktop around a
-            // window should stay clickable, like any other app.
             mask: Region { item: settings.visible ? settings : null }
 
             SettingsApp {
                 id: settings
                 anchors.horizontalCenter: parent.horizontalCenter
-                // Vertically centred like a desktop window, but never
-                // above the island strip so the bar stays visible.
                 topY: Math.max(76, (settingsWindow.height - settings.height) / 2)
                 maxHeight: settingsWindow.height - 92
             }
         }
     }
 
-    // ---- notification toasts ------------------------------------------------
     Variants {
         model: Quickshell.screens
         PanelWindow {
@@ -241,8 +206,6 @@ ShellRoot {
                 NotificationStack { id: stack }
             }
 
-            // Bottom-centre, deliberately outside the mask above: the OSD
-            // is feedback only and must never intercept input.
             Osd {
                 id: osd
                 anchors.horizontalCenter: parent.horizontalCenter

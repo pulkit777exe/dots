@@ -4,10 +4,6 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 
-// Power actions. The lock/logout/reboot paths probe for hyprlock and
-// hyprshutdown once and fall back to loginctl/systemctl, because on this
-// machine the pretty shutdown is optional and the boring one always works.
-
 Singleton {
     id: root
 
@@ -42,9 +38,6 @@ Singleton {
     }
 
     function logOut() {
-        // 0.56+: hyprctl dispatch takes a lua dispatcher expression, so the
-        // hyprlang-era "dispatch exit" spelling raises a parse error instead
-        // of logging out.
         run(hasHyprshutdown ? ["hyprshutdown"] : ["hyprctl", "dispatch", "hl.dsp.exit()"]);
     }
 

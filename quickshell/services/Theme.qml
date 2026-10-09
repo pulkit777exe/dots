@@ -4,13 +4,6 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 
-// The theme layer: discover the palettes in ~/.config/colors, hold the one
-// in use, publish a change, and say which wallpaper is showing.
-//
-// Discovery and publishing are scripts -- walking wallpaper directories and
-// knowing the generated-file list are not QML jobs. Everything else here is
-// state: presets, the active name, the per-theme wallpaper index.
-
 Singleton {
     id: root
 
@@ -29,9 +22,6 @@ Singleton {
     readonly property var current: presets[currentName] ? presets[currentName] : null
     readonly property string displayName: current && current.name ? current.name : currentName
 
-    // What the shell draws with before list-themes.py answers, and the
-    // fallback for a theme missing a key. The literals belong here: this is
-    // the theme layer, and it is the only place colours are written down.
     readonly property var fallbackColors: ({
         background: "#202020", surface: "#282828", surfaceAlt: "#303030",
         surfaceElevated: "#383838", surfaceMuted: "#b0282828",
@@ -42,9 +32,6 @@ Singleton {
         error: "#e06060", danger: "#e06060", warning: "#e0c060", success: "#60c080"
     })
 
-    // The active palette, with the Appearance-page accent override folded
-    // in: one merge at the top means every `Theme.colors.accent` in the
-    // tree follows the override without knowing it exists.
     readonly property var colors: {
         const base = current && current.colors ? current.colors : fallbackColors;
         const ovr = Config.accentOverride;
@@ -54,13 +41,6 @@ Singleton {
         return merged;
     }
 
-    // Panel chrome, derived from the active palette so every surface
-    // re-tints with the theme: panels take the palette background, cards
-    // the surface ladder (surface -> surfaceAlt -> surfaceElevated), and
-    // hairlines the palette's alpha border. Tracks are that background
-    // pushed darker -- the one derivation, since no palette has a
-    // "recessed" key. The drop-shadow tint is the single neutral left: a
-    // shadow is occlusion over an arbitrary wallpaper, not chrome.
     readonly property color panelFill: colors.background
     readonly property color shadowTint: "#000000"
     readonly property QtObject cc: QtObject {
@@ -76,9 +56,6 @@ Singleton {
 
     signal themeChanged(string name)
 
-    // ---- colour helpers -------------------------------------------------
-
-    // Alpha first, "#aarrggbb", the form Qt parses back as a colour.
     function withAlpha(c, alpha01): string {
         let h = String(c).replace("#", "");
         if (h.length === 8) h = h.slice(2);
@@ -86,15 +63,10 @@ Singleton {
         return "#" + a.toString(16).padStart(2, "0") + h;
     }
 
-    // Every font size passes through here, so the font-size setting is one
-    // expression away from everywhere: px(13) at the default 15px is 13.
     function px(v): int {
         return Math.max(1, Math.round(v * Config.fontSize / 15));
     }
 
-    // Colour burst: with it on, each top-level surface gets its own palette
-    // colour as its accent. Stable per name, so the island is always the
-    // same colour and the control centre always another.
     function accentFor(surface): color {
         if (!Config.colorBurst) return colors.accent;
         const pool = [colors.accent, colors.success, colors.accentVariant || colors.accent, colors.warning];
@@ -102,8 +74,6 @@ Singleton {
         for (let i = 0; i < surface.length; i++) h = (h * 31 + surface.charCodeAt(i)) >>> 0;
         return pool[h % pool.length];
     }
-
-    // ---- wallpapers -----------------------------------------------------
 
     readonly property var wallpapers: (current && current.wallpapers) ? current.wallpapers : []
     readonly property int wallpaperIndexCurrent: {
@@ -121,10 +91,6 @@ Singleton {
     readonly property string currentWallpaper:
         wallpapers.length > 0 ? fileUrl(wallpapers[wallpaperIndexCurrent]) : ""
 
-    // ---- picker models ---------------------------------------------------
-
-    // One row per theme for the theme picker, alphabetically so the strip
-    // and the "n/total" counter agree with each other across reloads.
     function pickerRows() {
         const keys = Object.keys(presets).sort();
         const out = [];
@@ -151,8 +117,6 @@ Singleton {
         return out;
     }
 
-    // ---- changing theme / wallpaper --------------------------------------
-
     function setTheme(name) {
         if (!presets[name] || name === currentName) return;
         currentName = name;
@@ -173,7 +137,7 @@ Singleton {
         if (index < 0 || index >= wallpapers.length) return;
         const updated = Object.assign({}, wallpaperIndex);
         updated[currentName] = index;
-        wallpaperIndex = updated;   // fresh object: `var` handlers only fire on reassignment
+        wallpaperIndex = updated;
         saveState();
     }
 
@@ -182,11 +146,6 @@ Singleton {
         setWallpaper((wallpaperIndexCurrent + 1) % wallpapers.length);
     }
 
-    // ---- discovery --------------------------------------------------------
-    //
-    // A script, not FileView + JsonAdapter: discovery walks wallpaper
-    // directories and merges defaults. That logic lives in list-themes.py;
-    // a second copy here would be a second answer to the same question.
     readonly property string discoveryScript: Quickshell.shellDir + "/scripts/list-themes.py"
     readonly property string publishScript: Quickshell.shellDir + "/scripts/publish-colors.py"
     readonly property string stateFile: Quickshell.statePath("theme-state.json")
@@ -227,10 +186,6 @@ Singleton {
         }
     }
 
-    // ---- saved state ------------------------------------------------------
-    //
-    // Presets and state arrive independently (there may be no state file on
-    // a first run); resolveTheme() picks only once both are in.
     FileView {
         id: stateLoader
         path: root.stateFile

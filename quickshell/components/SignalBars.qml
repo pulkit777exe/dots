@@ -1,9 +1,6 @@
 import QtQuick
 import "../services"
 
-// Wi-Fi strength as four ascending bars. `strength` is 0..100; a bar is
-// lit when the strength clears its own quarter of the range.
-
 Item {
     id: root
 

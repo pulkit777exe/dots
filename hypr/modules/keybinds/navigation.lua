@@ -1,7 +1,3 @@
--- modules/keybinds/navigation.lua
---
--- Focus, move, swap, and Alt-Tab.
-
 local mod = "SUPER"
 
 local directions = {
@@ -13,7 +9,6 @@ local directions = {
 
 for key, direction in pairs(directions) do
 
-    -- Focus
     hl.bind(
         mod .. " + " .. key,
         hl.dsp.focus({
@@ -21,7 +16,6 @@ for key, direction in pairs(directions) do
         })
     )
 
-    -- Move
     hl.bind(
         mod .. " + SHIFT + " .. key,
         hl.dsp.window.move({
@@ -29,7 +23,6 @@ for key, direction in pairs(directions) do
         })
     )
 
-    -- Swap
     hl.bind(
         mod .. " + ALT + " .. key,
         hl.dsp.window.swap({
@@ -38,7 +31,6 @@ for key, direction in pairs(directions) do
     )
 end
 
--- Next window
 hl.bind(
     "ALT + TAB",
     hl.dsp.window.cycle_next({
@@ -46,7 +38,6 @@ hl.bind(
     })
 )
 
--- Previous window
 hl.bind(
     "ALT + SHIFT + TAB",
     hl.dsp.window.cycle_next({

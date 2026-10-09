@@ -5,11 +5,6 @@ import Quickshell
 import Quickshell.Io
 import Quickshell.Services.UPower as QsUPower
 
-// Power profiles: write through powerprofilesctl, read the daemon's own
-// ActiveProfile through Quickshell's UPower binding, which is event-driven
-// and forks nothing. (There used to be a `powerprofilesctl monitor` loop
-// here -- a subcommand that does not exist, respawned every 3s forever.)
-
 Singleton {
     id: root
 
@@ -21,13 +16,11 @@ Singleton {
         if (!available || profile === active) return;
         setter.command = ["powerprofilesctl", "set", profile];
         setter.running = true;
-        active = profile;   // optimistic; the daemon signal confirms
+        active = profile;
     }
 
     Process { id: setter; onExited: (code) => { if (code !== 0) console.warn("PowerProfile: set failed", code); } }
 
-    // The daemon answers as an enum; map it to the wire name explicitly,
-    // because Qt's default enum-to-string says "Balanced".
     function daemonProfileName() {
         switch (QsUPower.PowerProfiles.profile) {
             case QsUPower.PowerProfile.PowerSaver: return "power-saver";

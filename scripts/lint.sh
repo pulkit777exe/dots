@@ -1,50 +1,4 @@
 #!/usr/bin/env bash
-#
-# lint.sh — the checks from quickshell/docs/DESIGN.md, made executable.
-#
-# Every rule here corresponds to something that has actually gone wrong in
-# this codebase, not to a style preference:
-#
-#   Qt5Compat          DESIGN.md forbids it; the shadows are 7 stacked
-#                      Rectangles instead. Also catches a doc comment that
-#                      has drifted back into being a real import.
-#   Region.enabled     A fabricated API. It never existed, and the CHANGELOG
-#                      records a whole debugging session lost to it.
-#   signal/property    QML auto-generates <property>Changed. Declaring the
-#   collision          signal by hand as well makes the second binding win
-#                      over the first, silently.
-#   parent.parent      Works by accident of nesting depth. Every use has
-#                      been a real fragility even where it was correct.
-#   implicitHeight     A column or layout with no height of its own is how
-#                      the settings page once collapsed to 72px.
-#
-# and one check that needs to parse whole files rather than match lines:
-#
-#   IpcHandler scope   A function declared inside an IpcHandler is reachable
-#                      over `qs ipc call` but is not a method on the
-#                      singleton, so `Foo.bar()` from QML does nothing and
-#                      logs nothing. scripts/ipc-audit.py.
-#
-# and two rules that need the tree's own qmldir files as a table:
-#
-#   service-missing-   A file that names Theme or ConfigStore without importing
-#   import             the module that declares them loads, passes qmllint
-#                      ("Unqualified access"), and renders the wrong thing:
-#                      five files once came in without `import "../services"`
-#                      and drew black text on a dark fill. The quickshell
-#                      imports check below cannot see it -- its table is
-#                      `Quickshell.*` module URIs only.
-#
-# Comments and Markdown are stripped before matching, so that the very
-# documentation recording these traps does not trip the linter.
-#
-# A deliberate exception is annotated in place:
-#
-#   // lint:allow parent.parent -- only nesting here, see comment above
-#
-# so an allowlist is visible in the code rather than buried in this script.
-# `service-missing-import` is the one rule that is exempted per file rather
-# than per line, since what it is about is a file's import block.
 
 set -uo pipefail
 
@@ -65,10 +19,6 @@ fi
 echo "${DIM}linting ${#QML_FILES[@]} QML files${RST}"
 echo
 
-# ---------------------------------------------------------------- grep rules
-# Runs the rules with python3 rather than a sed pipeline: stripping QML
-# comments correctly means not eating the "//" inside "file://", and a
-# regex for <property>Changed colliding with property <X> is not a grep.
 if have python3; then
     python3 - "$QML_DIR" <<'PY' || fail=1
 import re, sys, pathlib
@@ -196,50 +146,17 @@ else
     echo "${YEL}  python3 not found — skipping the grep rules${RST}"
 fi
 
-# ------------------------------------------------------------------ ipc audit
-# A separate script, not another rule above, because it needs to parse
-# brace depth across whole files rather than match lines. It is the only
-# check that can see the Round 7 bug class: qmllint proves every
-# Service.member resolves, so a missing member cannot survive a clean
-# lint, but nothing else knows that a function declared inside an
-# IpcHandler is not a method on the singleton.
 if have python3 && [ -x "$REPO/scripts/ipc-audit.py" ]; then
     echo
     echo "${DIM}ipc scope${RST}"
     "$REPO/scripts/ipc-audit.py" "$QML_DIR" | sed 's/^/ /'
     case "${PIPESTATUS[0]}" in
         0) ;;
-        # 2 is the parser saying it does not trust itself. Not a pass.
         2) echo "${RED}  ipc scope: parser could not verify the tree${RST}"; fail=1 ;;
         *) echo "${RED}  ipc scope: IpcHandler-only members referenced from QML${RST}"; fail=1 ;;
     esac
 fi
 
-# --------------------------------------------------------- quickshell imports
-# Three questions about every `import Quickshell.X`, all from one table.
-#
-#   1 present      the module URI exists in the installed binary. An
-#                  unresolvable `import Quickshell.X` is a load-time crash,
-#                  not a lint error -- that is what Round 1's Qt5Compat
-#                  import did, and what qmllint exits 0 with an empty log on.
-#   2 used         the file names a Quickshell type without importing the
-#                  module that provides it.
-#   3 unused       the file imports a module whose types it never names.
-#
-# (2) and (3) are the same mistake from opposite ends, and the failure is
-# already on record: services/Bluetooth.qml lost `import Quickshell.Io` as a
-# dead import -- nothing else in the file used Io -- while still declaring an
-# `IpcHandler`, which Quickshell.Io provides and Quickshell does not. The
-# file stopped compiling, and because every service imports Bluetooth the
-# whole configuration failed to load: Battery, BarConfig, BarConfigMonitors,
-# Auth, AppLauncher, Surface, Island. Two reloads of a running desktop, and
-# the shell's log was the only place it appeared.
-#
-# qmllint is structurally blind to this. It cannot resolve Quickshell.* types
-# in this setup at all -- 2378 of its 2992 warnings here are `[import]` and
-# `[unresolved-type]`, and `IpcHandler was not found` appears 15 times whether
-# or not the file imports Quickshell.Io, so the warning carries no signal
-# about which import is missing. Hence a table.
 QS_BIN="$(command -v quickshell 2>/dev/null || true)"
 if have python3; then
     echo
@@ -387,51 +304,6 @@ else
     echo "${YEL}  python3 not found - skipped the Quickshell import checks${RST}"
 fi
 
-# ------------------------------------------------------------ service imports
-# The same question again, for this tree's own types instead of Quickshell's.
-# A .qml that names a service singleton without importing the module that
-# declares it loads, passes qmllint -- which says only "Unqualified access",
-# a warning about 500 of which this tree already carries -- and renders the
-# wrong thing. Five new files were missing `import "../services"` and drew black
-# text on a dark fill, with nothing wrong anywhere to find. The table above
-# covers `Quickshell.*` module URIs only, so none of this was in scope for it.
-#
-# Unlike the Quickshell table, this one is read out of the tree rather than
-# written by hand: services/qmldir and modules/qmldir are the source of truth
-# for what exists and for which directory declares it, so adding a singleton
-# to a qmldir cannot leave the linter behind.
-#
-# Resolution has three shapes and the difference between them is the whole
-# subtlety, so it is spelled out:
-#
-#   own directory     A file always sees its own directory with no import at
-#                     all. That is how services/Theme.qml reads ConfigStore,
-#                     and ten of the forty services files rely on it.
-#   relative `"dir"`  A plain directory of files: every sibling .qml resolves
-#                     through it, listed in the qmldir or not.
-#   `qs.<path>`       A module import, relative to shell.qml's folder, and it
-#   `import <uri>`    goes through the qmldir. It sees the qmldir's types and
-#                     nothing else -- an unlisted file under services/ simply
-#                     does not resolve through `import qs.services`.
-#
-# Verified with qmllint on a scratch tree, all four cases in one go, which is
-# where the last two clauses come from: a relative import of a qmldir-bearing
-# directory resolves both a listed and an unlisted sibling, while a bare
-# `import m` of the same directory resolves only the listed one and reports
-# "Unlisted was not found. Did you mean "Listed"?"
-#
-# Two inverses are checked as well, both load-fatal:
-#
-#   qmldir -> no file   A declaration pointing at a file that is not there.
-#                       Nothing legitimate produces one.
-#   file -> no qmldir   A file under a qmldir directory that no line declares,
-#                       reached through a module import. Gated on the module
-#                       import, because via a relative import it resolves
-#                       anyway and reporting it would be wrong.
-#
-# `// lint:allow service-missing-import` exempts a file rather than a line --
-# this is about a file's import block, not about a line -- and the exemption
-# is printed rather than applied silently.
 if have python3; then
     echo
     echo "${DIM}service imports${RST}"
@@ -536,15 +408,6 @@ print("\033[32m  qmldir entry points at a file that exists\033[0m")
 PY
 fi
 
-# ------------------------------------------------------------------- qmllint
-# `qmllint` on PATH is not necessarily a Qt6 linter. On a machine with both
-# the Qt5 and Qt6 devel packages installed, Fedora's alternatives point the
-# unversioned name at the Qt5 binary, which reports "qmllint 1.0" and then
-# analyses nothing at all: exit 0, zero-byte log, on the entire tree. That
-# is the version this script was silently getting, so the "qmllint: clean"
-# line below meant far less than it read. Resolve a real Qt6 linter first,
-# and treat an empty log as a failure rather than as a pass -- an empty log
-# is indistinguishable from never having run the analysis.
 QMLLINT=""
 for c in qmllint-qt6 /usr/lib64/qt6/bin/qmllint /usr/lib/qt6/bin/qmllint; do
     p="$(command -v "$c" 2>/dev/null || true)"
@@ -552,8 +415,6 @@ for c in qmllint-qt6 /usr/lib64/qt6/bin/qmllint /usr/lib/qt6/bin/qmllint; do
 done
 if [ -z "$QMLLINT" ]; then
     c="$(command -v qmllint 2>/dev/null || true)"
-    # `qmllint --version` prints "qmllint 6.11.2", so the major has to be
-    # pulled out rather than matched at the start of the line.
     v="$("$c" --version 2>&1 | grep -oE '[0-9]+\.[0-9]+' | head -1)"
     case "$v" in
         6.*) QMLLINT="$c" ;;
@@ -563,30 +424,16 @@ fi
 if [ -n "$QMLLINT" ]; then
     echo
     echo "${DIM}qmllint${RST}  ${DIM}($("$QMLLINT" --version 2>&1))${RST}"
-    # shellcheck disable=SC2046
     if ( cd "$QML_DIR" && "$QMLLINT" -I . -I services -I components -I surfaces $(find . -name '*.qml' | sort) ) > /tmp/lint-qmllint.log 2>&1; then
         rc=0
     else
         rc=1
     fi
     if [ ! -s /tmp/lint-qmllint.log ]; then
-        # Every real finding in this tree is a warning, so a log with nothing
-        # in it means the linter bailed out early -- most often on an import
-        # it could not resolve, which is precisely the case that crashes the
-        # shell at load and is invisible to the exit code.
         echo "${RED}  qmllint: produced an empty log -- it did not analyse the tree${RST}"
         echo "${YEL}  an unresolvable import makes qmllint exit 0 silently; check imports by hand${RST}"
         fail=1
     elif grep -qE "^Error" /tmp/lint-qmllint.log; then
-        # Warnings are not failures here: this tree is not qmllint clean and
-        # making it so is a separate job. Errors are.
-        #
-        # The severity has to be anchored to the start of the line. qmllint
-        # echoes the offending source under each diagnostic, so an unanchored
-        # "Error" also matches a *warning* whose source merely mentions an
-        # error-shaped name -- `FileViewError.FileNotFound` in
-        # Notifications.qml:402 is one, and it made this whole tree look like
-        # it had a lint error.
         echo "${RED}  qmllint: errors${RST}"
         grep -E "^Error" /tmp/lint-qmllint.log | head -20 | sed 's/^/    /'
         fail=1
@@ -599,7 +446,7 @@ if [ -n "$QMLLINT" ]; then
             echo "${GRN}  qmllint: clean${RST}"
         fi
     fi
-    [ "$rc" -ne 0 ] && : # exit status is covered by the branch above
+    [ "$rc" -ne 0 ] && :
 elif have qmllint; then
     echo
     echo "${RED}  qmllint is on PATH but is not a Qt6 linter${RST}"

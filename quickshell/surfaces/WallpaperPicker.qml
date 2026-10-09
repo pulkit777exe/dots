@@ -3,8 +3,6 @@ import QtQuick.Layouts
 import "../components"
 import "../services"
 
-// Wallpaper strip: title + palette name, a centred run of thumbnails kept
-// centred by the highlight range, and a caption + n/total footer.
 PopupPanel {
     id: root
 
@@ -97,8 +95,6 @@ PopupPanel {
             clip: true
             model: root.walls
 
-            // The current card stays centred and the strip never scrolls past
-            // either end, so there is empty panel either side of the ends.
             currentIndex: root.currentIndex
             highlightRangeMode: ListView.StrictlyEnforceRange
             preferredHighlightBegin: (width - root.itemW) / 2
@@ -139,7 +135,6 @@ PopupPanel {
                         sourceSize: Qt.size(392, 236)
                     }
 
-                    // Neutral dim: a wallpaper is arbitrary unknown pixels.
                     Rectangle {
                         anchors.fill: parent
                         color: Qt.rgba(0, 0, 0, 0.08)

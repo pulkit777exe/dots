@@ -3,8 +3,6 @@ import QtQuick.Layouts
 import "../../components"
 import "../../services"
 
-// Wi-Fi drill page: the connected network, then every other AP in range.
-
 CcPage {
     id: page
 
@@ -19,7 +17,7 @@ CcPage {
 
     Item { Layout.preferredHeight: 14; Layout.fillWidth: true }
 
-    Rectangle {                          // connected card
+    Rectangle {
         Layout.fillWidth: true
         Layout.preferredHeight: 60
         radius: 13
@@ -131,8 +129,6 @@ CcPage {
                 border.width: 1
                 Behavior on color { ColorAnimation { duration: Config.hover() } }
 
-                // Secured networks go through the same call: nmcli uses a
-                // saved password when it has one.
                 MouseArea {
                     id: netArea
                     anchors.fill: parent

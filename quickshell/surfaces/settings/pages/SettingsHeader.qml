@@ -3,8 +3,6 @@ import QtQuick.Layouts
 import "../../../components"
 import "../../../services"
 
-// Hero header: accent disc, title, one-line description.
-
 Surface {
     id: root
 

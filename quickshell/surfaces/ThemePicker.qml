@@ -3,8 +3,6 @@ import QtQuick.Layouts
 import "../components"
 import "../services"
 
-// Theme strip: search + n/total, a horizontal run of swatch cards, and the
-// "Enter to apply" hint. Arrows move the cursor, Enter/click applies.
 PopupPanel {
     id: root
 
@@ -59,7 +57,6 @@ PopupPanel {
         Qt.callLater(() => search.forceInputFocus())
     }
 
-    // Retry if the window had not taken keyboard focus when open flipped.
     onActiveFocusChanged: if (activeFocus && open)
         Qt.callLater(() => search.forceInputFocus())
 

@@ -1,36 +1,4 @@
 #!/usr/bin/env bash
-#
-# tests/run.sh — contract tests.
-#
-# These check promises the repo makes in its documentation, not style. Each
-# one exists because the thing it checks has actually been wrong:
-#
-#   theme round trip      publish-colors.py writes generated files that are
-#                         gitignored, so nothing else would notice if a
-#                         change to the palettes stopped reproducing them.
-#   list-themes live      list-themes.py reported a stale `current` for a
-#                         while, pointing the wallpaper picker at the wrong
-#                         theme with no error anywhere.
-#   installer dry run     a dry run that writes is worse than no dry run.
-#   IPC contract          an IpcHandler target that does not resolve means a
-#                         keybind that silently does nothing -- the failure
-#                         class this repo has hit most often.
-#   qs-call parity        qs-call replaces `quickshell ipc call` for the one
-#                         keybind that still spawns a process, so it has to
-#                         agree with the real client on every call shape.
-#   theme tokens          AuthDialog.qml asked for Theme.colors.accentAlt, a
-#                         key that exists in no palette, so a live polkit
-#                         dialog rendered `undefined` and said nothing. Six
-#                         separate JSON files, and nothing ever read them
-#                         against the source that indexes them.
-#   palette keys          a palette gaining a key the other five lack is the
-#                         same drift, one theme and one release later.
-#   monitor overrides     per-monitor overrides can be present and silently
-#                         not applied; a wrong path is exactly that.
-#
-# Tests needing a live shell are skipped, not failed, when there is no
-# instance running -- so this is usable on a fresh clone. When one *is*
-# running, its IPC calls go through `qs`, which retries across a reload.
 
 set -uo pipefail
 
@@ -52,23 +20,6 @@ section() { printf "\n${DIM}-- %s${RST}\n" "$1"; }
 
 have() { command -v "$1" >/dev/null 2>&1; }
 
-# Some checks need the live shell but make their own `quickshell ipc show`
-# call, so `qs` cannot wrap them: install.sh --dry-run and --check both check
-# that the keybinds' targets are registered, and check-ipc-table.py reads the
-# whole table. Each was called without a retry and each failed when a reload
-# landed inside it -- one said "no target for shell uis", another "no running
-# quickshell instance", both of which are the reload talking.
-#
-# So give them the same deadline and let a failure be retried until it is spent.
-# That is not a skip: all three are read-only (`--dry-run` writes nothing,
-# `--check` only reads, check-ipc-table.py only reads the IPC), so running one
-# twice changes nothing, and a genuine failure is deterministic -- it fails
-# again immediately and is reported once QS_WAIT is up. The price of a real
-# failure is the deadline, not the verdict.
-#
-# The one case that fails fast is a shell that is not coming back at all: if a
-# probe cannot get an answer inside the deadline, waiting longer will not help,
-# so say so now instead of spending the rest of it finding out.
 QS_CMD_OUT=""
 QS_CMD_STALLED=0
 qs_cmd() {
@@ -76,8 +27,6 @@ qs_cmd() {
     started=$SECONDS
     QS_CMD_STALLED=0
     while :; do
-        # Ask first, so the command does not begin inside a gap it would then
-        # be blamed for.
         qs quickshell ipc show
         if [ "$QS_STALLED" -eq 1 ]; then
             QS_CMD_STALLED=1
@@ -89,8 +38,6 @@ qs_cmd() {
     done
 }
 
-# Why a `qs_cmd` failed, in one line: either the shell never came back, or the
-# command failed for its own reasons and its own output is the evidence.
 qs_cmd_why() {
     if [ "$QS_CMD_STALLED" -eq 1 ]; then
         printf 'the shell never answered, so this could not be checked: %s' "$(qs_why $QS_WAIT)"
@@ -99,45 +46,13 @@ qs_cmd_why() {
     fi
 }
 
-# ------------------------------------------------------------------- token audit
-# Both palette checks below are python, read-only, and share one reporting
-# contract: the script prints a one-line count on stdout and the offending
-# references on stderr, and its exit status decides pass or fail. Each is run
-# once, with stderr redirected to a file rather than merged into the summary --
-# a merged stream would put "Theme.colors.accentAlt" into the ok() line.
-#
-# They are heredocs rather than a checked-in script because they exist only to
-# be read next to the assertion they justify, and the whole check is ~40 lines.
-
-# --------------------------------------------------------------- live-shell IPC
-# Every assertion here that touches the running shell goes through `qs`.
-#
-# Why: an edit anywhere under quickshell/ makes Quickshell's watcher reload the
-# config in place, and for the length of that gap the IPC socket answers every
-# request -- at exit status *0* -- with this string instead of the reply:
 QS_BUSY="Not ready to accept queries yet."
-#
-# This suite failed once for exactly that reason: `qs-call wifi status`
-# answered with it, `quickshell ipc call wifi status` answered with the real
-# JSON, and the parity check reported a broken IPC handler when the desktop was
-# fine and the editor was mid-save. Measured here, the gap is 0.5-1.2s wide
-# and is announced in the shell's own log (`INFO: Reloading configuration...`,
-# then `INFO: Configuration Loaded`) at
-# /run/user/$UID/quickshell/by-pid/<pid>/log.log -- which is also the file whose
-# parsing belongs to whoever owns the log-reading helper, so nothing here reads
-# it.
-#
-# The retry keys on that one string and on nothing else. Any other reply, and
-# any nonzero exit, fails on the spot -- "Function not found" included, because
-# the IPC contract test needs to see that. And because the gap also reports
-# exit status 0, "is there a shell at all" (a skip) and "is it mid-reload" (a
-# retry) stay separate questions: the skip gates below are unchanged.
-QS_WAIT="${QS_WAIT:-10}"     # seconds one assertion may keep retrying
-QS_EVERY="${QS_EVERY:-0.25}" # seconds between attempts
-qs_retries=0                 # suite-wide, reported in the summary
-QS_OUT=""                     # reply from the last attempt
-QS_RC=0                       # exit status of the last attempt
-QS_STALLED=0                  # 1 = the deadline expired while the shell was busy
+QS_WAIT="${QS_WAIT:-10}"
+QS_EVERY="${QS_EVERY:-0.25}"
+qs_retries=0
+QS_OUT=""
+QS_RC=0
+QS_STALLED=0
 
 qs() {
     local out started n=0
@@ -164,9 +79,6 @@ qs() {
     done
 }
 
-# The diagnosis for a call that never came back: how long we waited, and
-# whether the shell answers *anything* now. The probe uses the same channel
-# the assertion does, so it cannot contradict it.
 qs_why() {
     local probe
     probe=$(quickshell ipc call uis isControlCenterOpen 2>&1 | tr -d '\r\n')
@@ -174,19 +86,8 @@ qs_why() {
         "$1" "$QS_BUSY" "${probe:-nothing}"
 }
 
-# ---------------------------------------------------------------- theme round trip
 section "theme round trip"
 
-# These run against a scratch XDG_CONFIG_HOME rather than the real one.
-#
-# The first version published into the live config to check determinism, and
-# that changed the running desktop: Theme.qml watches colors/index.json and
-# re-runs discovery when it moves, so writing it re-applied a theme. A
-# contract test that edits the thing it is testing is not a test.
-#
-# publish-colors.py resolves its output from XDG_CONFIG_HOME, so pointing it
-# at a scratch directory exercises the real code path and leaves the live
-# config alone. The themes have to be copied in, since that is the input.
 THEME_DIR="$REPO/colors/themes"
 SCRATCH=""
 
@@ -216,8 +117,6 @@ else
     done
     [ "$all_ok" -eq 1 ] && ok "publish-colors is deterministic ($count themes)"
 
-    # Every theme must produce output that actually parses as JSON, or the
-    # shell reads nothing on startup.
     bad=""
     for t in $(ls "$THEME_DIR" 2>/dev/null); do
         [ -f "$THEME_DIR/$t/colors.json" ] || continue
@@ -230,16 +129,9 @@ else
     rm -rf "$SCRATCH"
 fi
 
-# The live theme must be the one the shell is actually running, and must not
-# drift when the discovery script is invoked. `quickshell ipc call theme get`
-# is the authority here -- Theme.qml's resolveTheme prefers savedTheme from
-# theme-state.json over index.json's `current`, so those two are allowed to
-# disagree and only the first tells you what is on screen.
 if ! have python3; then
     sk "the live theme matches what the shell reports" "no python3"
 else
-    # `ipc show` reports a mid-reload gap at exit status 0, so this gate still
-    # means "a shell exists" and never turns a reload into a skip.
     if ! quickshell ipc show >/dev/null 2>&1; then
         sk "the live theme matches what the shell reports" "no quickshell instance"
     elif ! qs quickshell ipc call theme get; then
@@ -257,14 +149,12 @@ else
                 ok "running discovery does not change the live theme ($after)"
             else
                 no "running discovery does not change the live theme" "was '$before', became '$after'"
-                # Put it back: the test must not leave the desktop altered.
                 quickshell ipc call theme set "$before" >/dev/null 2>&1
             fi
         fi
     fi
 fi
 
-# ------------------------------------------------------------- installer dry run
 section "installer"
 
 if [ ! -x "$REPO/install.sh" ]; then
@@ -278,8 +168,6 @@ else
     if [ "$QS_CMD_STALLED" -eq 1 ]; then
         no "install.sh --dry-run exits 0" "$(qs_cmd_why)"
     elif [ "$rc" -ne 0 ]; then
-        # Show what it said, not just the status: rc=1 alone cannot tell a
-        # reload from a broken installer, and install.sh's own error line does.
         no "install.sh --dry-run exits 0" "rc=$rc $(qs_cmd_why)"
     elif ! printf '%s' "$out" | grep -q "dry run"; then
         no "install.sh --dry-run says it is a dry run" "no 'dry run' in output"
@@ -303,15 +191,10 @@ else
     if [ "$rc" -eq 0 ]; then
         ok "install.sh --check passes"
     else
-        # `no ... | tail -3` looks like it reports the failure, but a pipeline
-        # puts `no` in a subshell: the FAIL line is swallowed and the counter
-        # never moves, so the suite printed 16 passed / 0 failed and exited 0
-        # while `--check` was returning 1. Trim the detail first, then report.
         no "install.sh --check passes" "$(qs_cmd_why)"
     fi
 fi
 
-# ------------------------------------------------------------------ IPC contract
 section "IPC contract"
 
 if [ ! -x "$REPO/hypr/scripts/qs-call" ]; then
@@ -319,24 +202,6 @@ if [ ! -x "$REPO/hypr/scripts/qs-call" ]; then
 elif ! quickshell ipc show >/dev/null 2>&1; then
     sk "every advertised IPC function is callable" "no quickshell instance"
 else
-    # Every function `ipc show` advertises must actually be callable.
-    #
-    # Two earlier versions of this check were wrong:
-    #
-    #  1. It called a deliberately nonexistent function and treated "Function
-    #     not found" as a failure, which flagged all fifteen targets. That is
-    #     the correct reply to a missing function, so it measured nothing.
-    #
-    #  2. It then called every zero-argument function it could find, which
-    #     invoked theme:cycle() -- and the live theme walked the entire theme
-    #     list, one step per run. It took three runs to notice, because
-    #     "the tests pass" says nothing about what they touched.
-    #
-    # So: call the functions named explicitly below, chosen because they are
-    # read-only, and verify dispatch on the rest by name alone. The bug class
-    # worth catching is a target advertising a name it cannot dispatch, and
-    # `ipc show` already proves the name is there; what it cannot prove is
-    # that dispatch works, which is what the read-only calls below check.
     read_only() {
         case "$1:$2" in
             uis:isSettingsOpen|uis:isLauncherOpen|uis:isControlCenterOpen|\
@@ -365,8 +230,6 @@ else
         qs quickshell ipc call "$tgt" "$fn"
         out=$QS_OUT
         checked=$((checked+1))
-        # A stalled call never produced a reply, so it is neither proof that
-        # the target dispatches nor proof that it does not.
         [ "$QS_STALLED" -eq 1 ] && stalled="$stalled $tgt.$fn"
         case "$out" in
             *"Function not found"*) missing="$missing $tgt.$fn" ;;
@@ -383,24 +246,10 @@ else
         no "advertised IPC functions are callable" "unreachable:$missing"
     fi
 
-
-    # The IPC table in ARCHITECTURE.md claims to be generated from
-    # `ipc show`. It was not -- it had drifted in both directions, promising
-    # 10 functions that do not exist (wifi forget, wifi getEthernet,
-    # audio getSinks/getSources/listStreams/cycleOutput, mpris getActive/list,
-    # bluetooth list/isEnabled, shell nextTheme/nextWallpaper) and omitting
-    # 20 that do. So check it.
     doc="$QS_DIR/ARCHITECTURE.md"
     if [ ! -f "$doc" ]; then
         sk "the IPC table in ARCHITECTURE.md matches the shell" "no ARCHITECTURE.md"
     else
-        # Writes a one-line summary to stdout on success, the differing
-        # targets to stderr on failure. Its exit status is the only thing
-        # consulted, so the ok/fail branch must read *that* status and not
-        # the status of a `||` chain -- an earlier version did, and printed
-        # both a FAIL and an ok line for the same check.
-        # Through `qs_cmd` because it reads `ipc show` itself, and a reload
-        # landing inside it reads as "no running quickshell instance".
         qs_cmd python3 "$QS_DIR/scripts/check-ipc-table.py"
         rc=$?
         if [ "$QS_CMD_STALLED" -eq 1 ]; then
@@ -412,12 +261,6 @@ else
         fi
     fi
 
-    # Every advertised name must appear in `ipc show` under its target. This
-    # catches a target that was renamed without updating its callers.
-    #
-    # `ipc show` is read once: it cannot change while the suite runs, and the
-    # original asked for a fresh copy per function -- 93 process launches for
-    # one constant string, each of which could land in a reload gap.
     unlisted=""
     if ! qs quickshell ipc show; then
         no "advertised targets list their functions" "$(qs_why $QS_WAIT)"
@@ -435,7 +278,6 @@ else
         [ -z "$unlisted" ] && ok "every advertised target lists its own functions" \
                             || no "advertised targets list their functions" "missing:$unlisted"
 
-        # The two targets a keybind depends on.
         for t in shell uis; do
             if printf '%s\n' "$show" | grep -qx "target $t"; then
                 ok "target '$t' is registered"
@@ -446,7 +288,6 @@ else
     fi
 fi
 
-# ------------------------------------------------------------------ qs-call parity
 section "qs-call parity"
 
 QSCALL="$REPO/hypr/scripts/qs-call"
@@ -455,17 +296,6 @@ if [ ! -x "$QSCALL" ]; then
 elif ! quickshell ipc show >/dev/null 2>&1; then
     sk "qs-call matches the real client" "no quickshell instance"
 else
-    # (target, function) pairs covering every reply shape: void, bool,
-    # int-as-string, short JSON, and a longer JSON payload. `theme:list` and
-    # `wifi:status` are the biggest replies in the tree now; the old suite
-    # carried `clipboard:list` here for length (it crossed `unpack()`'s
-    # framing once), and the clipboard surface is gone with it.
-    #
-    # This is the check a reload gap broke. Two clients, called back to back:
-    # a reload that starts between them hands one of them the "not ready"
-    # reply and the other the real one, which is a mismatch with nothing wrong
-    # anywhere. So both are called through `qs`, which does not return until it
-    # has an answered reading of each -- and a mismatch after that is real.
     mismatches=0
     checked=0
     for pair in "uis:isSettingsOpen" "audio:getVolume" "brightness:get" \
@@ -486,7 +316,6 @@ else
     [ "$mismatches" -eq 0 ] && ok "qs-call matches the real client on $checked call shapes"
 fi
 
-# --------------------------------------------------------------- lint and audit
 section "static checks"
 
 if [ -x "$REPO/scripts/lint.sh" ]; then
@@ -499,7 +328,6 @@ else
     sk "scripts/lint.sh is clean" "not found"
 fi
 
-# ------------------------------------------------------------------- surfaces
 section "surfaces (needs a live shell)"
 
 if [ ! -x "$QSCALL" ] || ! quickshell ipc show >/dev/null 2>&1; then
@@ -517,9 +345,6 @@ else
         qs "$QSCALL" shell closeAll
         sleep 2.5
         qs "$QSCALL" shell "$t"
-        # Retry: the first toggle after closeAll occasionally races. The inner
-        # probe is also wrapped, so a reload inside those five seconds is not
-        # read as "this surface does not open".
         opened=""
         for _ in 1 2 3 4 5; do
             sleep 1
@@ -536,7 +361,6 @@ else
     fi
 fi
 
-# ------------------------------------------------------------------ monitor files
 section "per-monitor overrides"
 
 MON="$QS_DIR/monitors"
@@ -557,34 +381,13 @@ else
     fi
 fi
 
-# ------------------------------------------------------------------ theme tokens
 section "theme tokens"
 
-# AuthDialog.qml asked for Theme.colors.accentAlt. No palette has an accentAlt
-# -- not one of the six -- so on a live polkit dialog the pressed state bound to
-# `undefined` and rendered as nothing, and nothing anywhere reported it. It
-# shipped because the palettes are six independent JSON files and nothing ever
-# read them against the QML that indexes them.
-#
-# So: collect every `Theme.colors.<key>` in the tree and require every key to
-# exist in every palette. Read-only -- no shell, no network, no writes.
-#
-# Comments are stripped first, for the same reason scripts/lint.sh strips them:
-# a token documented in a comment is an example, not a reference. The index
-# forms are handled explicitly rather than ignored -- a quoted key is checked
-# like any other, and a computed key cannot be checked, so it is reported as
-# unsupported and fails, which is the point: a form this cannot see is a hole
-# in the check, and it should be loud rather than green.
 if [ -z "$(ls "$THEME_DIR"/*/colors.json 2>/dev/null)" ]; then
     sk "every Theme.colors key exists in every palette" "no colors/themes/*/colors.json"
 elif ! have python3; then
     sk "every Theme.colors key exists in every palette" "no python3"
 else
-    # Two things are collected: every `Theme.colors.<key>` in the tree, and
-    # every palette's key set. The verdict is the intersection -- a key used by
-    # QML but missing from a palette is the bug that shipped. The counts are
-    # printed either way, so a run that stops finding references is visible
-    # rather than silently vacuous.
     err=$(mktemp)
     if summary=$(python3 - "$QS_DIR" "$THEME_DIR" 2>"$err" <<'PY'
 import json, pathlib, re, sys
@@ -676,10 +479,6 @@ PY
     rm -f "$err"
 fi
 
-# The other half of the same class: a key that exists in one palette and not in
-# the others. Nothing renders wrong the day it is added -- the shell reads
-# whichever palette is current -- so it is invisible until a theme switch, on
-# a palette that was not the one edited.
 if [ -z "$(ls "$THEME_DIR"/*/colors.json 2>/dev/null)" ]; then
     sk "every palette defines the same keys" "no colors/themes/*/colors.json"
 elif ! have python3; then
@@ -724,7 +523,6 @@ PY
     rm -f "$err"
 fi
 
-# ---------------------------------------------------------------------- summary
 printf "\n"
 if [ "$fail" -eq 0 ]; then
     printf "${GRN}tests: %d passed, %d skipped, 0 failed${RST}\n" "$pass" "$skip"

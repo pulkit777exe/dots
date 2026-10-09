@@ -3,8 +3,6 @@ import QtQuick.Layouts
 import "../../components"
 import "../../services"
 
-// The header every drill page opens with: back disc, title, optional switch.
-
 RowLayout {
     id: header
 

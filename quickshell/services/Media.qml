@@ -6,13 +6,6 @@ import Quickshell
 import Quickshell.Services.Mpris
 import Quickshell.Io
 
-// The now-playing card's data: one active player, picked as "anything
-// playing, else the last one seen".
-//
-// Position: MPRIS players report position sporadically, so the ticker
-// self-increments while playing and re-syncs from playerctl every 2.5s --
-// trusting the native value only when it disagrees by more than 2s.
-
 Singleton {
     id: root
 
@@ -42,7 +35,6 @@ Singleton {
     property real position: 0
     readonly property real progress: length > 0 ? Math.max(0, Math.min(1, position / length)) : 0
 
-    // Repick the active player whenever the set changes or something starts.
     function repick() {
         const players = Mpris.players.values;
         if (players.length === 0) { active = null; position = 0; return; }

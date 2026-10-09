@@ -1,7 +1,3 @@
--- modules/layout.lua
---
--- Layout engine configuration.
-
 hl.config({
     dwindle = {
         preserve_split = true,

@@ -3,9 +3,6 @@ import QtQuick.Layouts
 import "../../components"
 import "../../services"
 
-// A selectable device row (sound page): badge, label, check when it is the
-// default.
-
 Rectangle {
     id: row
 

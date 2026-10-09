@@ -1,9 +1,6 @@
 import QtQuick
 import "../services"
 
-// The battery capsule: 20x11 body with an accent fill, plus the little
-// terminal nub. The track tints when charging so it reads at a glance.
-
 Item {
     id: root
 
@@ -15,10 +12,10 @@ Item {
     readonly property real bodyHeight: 11
     readonly property real inset: 0.75
 
-    implicitWidth: bodyWidth + 1.5 + 2    // body + gap + terminal
+    implicitWidth: bodyWidth + 1.5 + 2
     implicitHeight: bodyHeight
 
-    Rectangle {                              // body / track
+    Rectangle {
         width: root.bodyWidth
         height: root.bodyHeight
         radius: 3.5
@@ -26,7 +23,7 @@ Item {
             ? Theme.withAlpha(accent, 0.22)
             : Theme.withAlpha(Theme.colors.text, 0.16)
 
-        Rectangle {                          // fill
+        Rectangle {
             x: root.inset
             y: root.inset
             height: root.bodyHeight - 2 * root.inset
@@ -40,7 +37,7 @@ Item {
         }
     }
 
-    Rectangle {                              // terminal nub
+    Rectangle {
         x: root.bodyWidth + 1.5
         y: (root.bodyHeight - 4.5) / 2
         width: 2

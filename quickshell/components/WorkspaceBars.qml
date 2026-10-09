@@ -1,19 +1,9 @@
 import QtQuick
 import "../services"
 
-// The workspace dots: five fixed slots, slot i standing for workspace i+1,
-// the focused one scaled up on a spring with a soft glow behind it.
-//
-// The face owns the island's single MouseArea (it has to, so hover covers
-// the whole pill), so per-bar MouseAreas would never see a press -- hit
-// tests go through indexAt(x) instead, and a click in the gap next to a
-// bar counts as that bar.
-
 Item {
     id: root
 
-    // Set per screen by the island; the slots are the same five everywhere,
-    // so occupancy is read globally instead of filtered to this monitor.
     property color accent: Theme.colors.accent
 
     readonly property int barWidth: 6
@@ -21,13 +11,9 @@ Item {
     readonly property int spacing: 4
     readonly property int pitch: barWidth + spacing
 
-    // Five slots by contract, never "however many workspaces exist".
     readonly property int slotCount: 5
     readonly property var slotIds: [1, 2, 3, 4, 5]
 
-    // Fixed at five so the pill's rest layout never jumps as workspaces
-    // appear; tall enough for the active bar's 1.3x, so the row centres
-    // on its tallest member instead of clipping it.
     implicitWidth: slotCount * barWidth + (slotCount - 1) * spacing
     implicitHeight: Math.round(barHeight * 1.3)
 
@@ -66,9 +52,6 @@ Item {
                 Behavior on opacity { NumberAnimation { duration: Config.hover(); easing.type: Easing.OutCubic } }
             }
 
-            // Colour ladder, all palette keys: focused takes the accent,
-            // occupied a softened foreground (full foreground read as too
-            // bright), an empty slot the muted grey.
             Rectangle {
                 anchors.fill: parent
                 radius: width / 2

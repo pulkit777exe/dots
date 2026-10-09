@@ -5,12 +5,6 @@ import Quickshell.Io
 import "../components"
 import "../services"
 
-// The clipboard manager, backed by cliphist. The list shows each entry's
-// cliphist preview; image entries (cliphist labels them
-// `[[ binary data … png WxH ]]`) render a thumbnail instead, and Enter
-// on one swaps the panel for the full-size preview — Enter there copies
-// it to the clipboard, Escape steps back to the list.
-
 PopupPanel {
     id: root
 
@@ -21,14 +15,10 @@ PopupPanel {
     cornerRadius: 22
     backgroundColor: Theme.panelFill
 
-    // ---- history ----------------------------------------------------------
-
-    // [{ id, preview, image, mime }], newest first, as cliphist lists them.
     property var entries: []
     property string query: ""
     property int selectedIndex: 0
 
-    // id -> decoded file path, replaced wholesale so row bindings re-run.
     property var thumbs: ({})
 
     readonly property var results: {
@@ -56,12 +46,8 @@ PopupPanel {
         NumberAnimation { duration: Config.movement(0.5); easing.type: Easing.OutCubic }
     }
 
-    // ---- cliphist ---------------------------------------------------------
-
     readonly property string thumbDir: Quickshell.statePath("cliphist-thumbs")
 
-    // Wipe the thumbnail cache with every refresh: ids index a moving
-    // history, so a stale file would be a stale picture.
     function refresh() {
         if (lister.running) lister.running = false;
         lister.running = true;
@@ -115,17 +101,13 @@ PopupPanel {
         UiState.close();
     }
 
-    // Enter in the list: text copies straight away, images preview first.
     function activateSelection() {
         if (!selected) return;
         if (selected.image) UiState.clipboardView = "image";
         else copySelected();
     }
 
-    // Enter on the preview: the confirmation, so it copies and closes.
     function commitImage() { copySelected(); }
-
-    // ---- keyboard ---------------------------------------------------------
 
     function moveSelection(delta) {
         if (results.length === 0) return;
@@ -133,7 +115,6 @@ PopupPanel {
         ensureVisible(selectedIndex);
     }
 
-    // Scroll the variable-height row into the viewport.
     function ensureVisible(index) {
         list.positionViewAtIndex(index, ListView.Contain);
     }
@@ -151,18 +132,10 @@ PopupPanel {
         }
     }
 
-    // The preview page steals the keyboard so Escape reaches PopupPanel's
-    // back contract (list, then close) and Enter can confirm. Coming back
-    // hands the keyboard to the search field again, or the list would be
-    // arrow- and Enter-dead until a click.
     onImageViewChanged: {
         if (imageView) forceActiveFocus();
         else if (open) focusRetry.restart();
     }
-    // Root-level Enter/arrows so a keypress always lands somewhere
-    // sensible even in the gap before the search field has focus (the
-    // field consumes these itself while focused, so they never bubble
-    // into a double move).
     Keys.onReturnPressed: imageView ? commitImage() : activateSelection()
     Keys.onEnterPressed: imageView ? commitImage() : activateSelection()
     Keys.onUpPressed: if (!imageView) moveSelection(-1)
@@ -177,8 +150,6 @@ PopupPanel {
             search.forceInputFocus();
         }
     }
-
-    // ---- the list page ----------------------------------------------------
 
     ColumnLayout {
         id: listColumn
@@ -206,7 +177,7 @@ PopupPanel {
             }
         }
 
-        Rectangle {                       // the boxed field from the reference
+        Rectangle {
             Layout.fillWidth: true
             implicitHeight: 36
             radius: 8
@@ -236,7 +207,7 @@ PopupPanel {
             }
         }
 
-        Item {                              // viewport: the height cap lives here
+        Item {
             id: listViewport
 
             Layout.fillWidth: true
@@ -249,9 +220,8 @@ PopupPanel {
                 NumberAnimation { duration: Config.movement(0.35); easing.type: Easing.OutCubic }
             }
 
-            ListView {                       // virtualised: only the visible
-                id: list                     // rows exist, so only the image
-                                             // rows on screen spawn a decode
+            ListView {
+                id: list
                 anchors.fill: parent
                 clip: true
                 boundsBehavior: Flickable.StopAtBounds
@@ -288,7 +258,7 @@ PopupPanel {
                         elide: Text.ElideRight
                     }
 
-                    Rectangle {                      // the thumbnail card
+                    Rectangle {
                         visible: row.modelData.image
                         anchors.centerIn: parent
                         width: 140
@@ -307,11 +277,6 @@ PopupPanel {
                         }
                     }
 
-                    // One decode per row, memoised in `thumbs`. Cliphist
-                    // re-ids entries on dedupe and evicts the oldest, so an
-                    // id can go stale while the list is open: keep the file
-                    // only when it really decoded to an image, exit non-zero
-                    // otherwise, and the map never holds garbage.
                     Process {
                         id: thumbber
                         running: false
@@ -346,7 +311,7 @@ PopupPanel {
                 }
             }
 
-            Label {                          // empty state, centred in the viewport
+            Label {
                 anchors.centerIn: parent
                 visible: root.results.length === 0
                 text: "Clipboard history is empty"
@@ -355,8 +320,6 @@ PopupPanel {
             }
         }
     }
-
-    // ---- the image preview page ------------------------------------------
 
     ColumnLayout {
         id: imageColumn

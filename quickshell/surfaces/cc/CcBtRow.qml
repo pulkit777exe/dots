@@ -3,9 +3,6 @@ import QtQuick.Layouts
 import "../../components"
 import "../../services"
 
-// One bluetooth device row: badge, name + state, and the one action the
-// state implies (pair / connect / disconnect).
-
 Rectangle {
     id: row
 

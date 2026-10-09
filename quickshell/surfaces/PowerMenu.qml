@@ -3,8 +3,6 @@ import QtQuick.Layouts
 import "../components"
 import "../services"
 
-// One row of five tiles; Reboot and Power Off ask twice before acting.
-
 PopupPanel {
     id: root
 

@@ -3,8 +3,6 @@ import QtQuick.Layouts
 import "../../components"
 import "../../services"
 
-// Bluetooth drill page: connected, saved, then nearby devices.
-
 CcPage {
     id: page
 

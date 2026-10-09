@@ -1,13 +1,4 @@
 #!/usr/bin/env python3
-"""Monitor info and per-monitor brightness for the shell's Display page.
-
-    monitors.py info             one JSON array to stdout
-    monitors.py set NAME PCT     set brightness (0-100), print the new value
-
-Hyprland reports geometry/mode/scale/focus; brightness needs ddcutil for
-external panels and brightnessctl for the laptop backlight, so this glues
-the two together rather than making QML run three parsers.
-"""
 
 import json
 import re
@@ -15,8 +6,7 @@ import shutil
 import subprocess
 import sys
 
-BRIGHTNESS_VCP = "10"  # MCCS VCP code for Brightness
-
+BRIGHTNESS_VCP = "10"
 
 def run(cmd, timeout=8):
     try:
@@ -24,16 +14,13 @@ def run(cmd, timeout=8):
     except Exception:
         return ""
 
-
 def hyprctl_json(cmd):
     try:
         return json.loads(run(["hyprctl", "-j"] + cmd) or "[]")
     except Exception:
         return []
 
-
 def ddc_buses():
-    """connector name (card1-DP-1 -> DP-1) -> i2c bus number"""
     out = run(["ddcutil", "detect", "--brief"], timeout=10)
     buses = {}
     block, connector, bus = {}, None, None
@@ -51,7 +38,6 @@ def ddc_buses():
         buses[connector] = bus
     return buses
 
-
 def ddc_brightness(bus):
     out = run(["ddcutil", "-b", str(bus), "getvcp", BRIGHTNESS_VCP])
     m = re.search(r"current value\s*=\s*(\d+)\s*,\s*max value\s*=\s*(\d+)", out)
@@ -60,9 +46,7 @@ def ddc_brightness(bus):
     cur, mx = int(m.group(1)), int(m.group(2))
     return round(cur / mx * 100) if mx else None
 
-
 def backlight_brightness():
-    """(current, max) of the laptop backlight, via brightnessctl."""
     if not shutil.which("brightnessctl"):
         return None
     out = run(["brightnessctl", "-m"])
@@ -74,7 +58,6 @@ def backlight_brightness():
     except ValueError:
         return None
     return (cur, mx)
-
 
 def info():
     monitors = hyprctl_json(["monitors"])
@@ -88,7 +71,7 @@ def info():
             hz = float(hz)
         except (TypeError, ValueError):
             hz = 0.0
-        if hz > 1000:  # millihertz
+        if hz > 1000:
             hz /= 1000
         bus = buses.get(name)
         brightness = ddc_brightness(bus) if bus is not None else None
@@ -106,7 +89,6 @@ def info():
         })
     return result
 
-
 def set_brightness(name, pct):
     pct = max(1, min(100, int(round(pct))))
     buses = ddc_buses() if shutil.which("ddcutil") else {}
@@ -123,7 +105,6 @@ def set_brightness(name, pct):
         value = round(panel[0] / panel[1] * 100) if panel and panel[1] else pct
     print(json.dumps(value))
 
-
 def main():
     if len(sys.argv) >= 2 and sys.argv[1] == "info":
         print(json.dumps(info()))
@@ -131,7 +112,6 @@ def main():
         set_brightness(sys.argv[2], float(sys.argv[3]))
     else:
         sys.exit("usage: monitors.py info | monitors.py set NAME PCT")
-
 
 if __name__ == "__main__":
     main()

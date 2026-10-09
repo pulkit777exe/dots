@@ -1,9 +1,3 @@
--- modules/keybinds/media.lua
---
--- Hardware media keys.
--- Direct system commands only.
-
--- Volume
 hl.bind(
     "XF86AudioRaiseVolume",
     hl.dsp.exec_cmd(
@@ -36,7 +30,6 @@ hl.bind(
     }
 )
 
--- Microphone
 hl.bind(
     "XF86AudioMicMute",
     hl.dsp.exec_cmd(
@@ -47,9 +40,6 @@ hl.bind(
     }
 )
 
--- Brightness: via the shell, not raw brightnessctl -- the service clamps
--- at 1% (a bare `set 5%-` can bottom out at a black panel), keeps the OSD
--- feedback instant, and coalesces held-key repeats into one write.
 hl.bind(
     "XF86MonBrightnessUp",
     hl.dsp.exec_cmd(
@@ -72,7 +62,6 @@ hl.bind(
     }
 )
 
--- Media
 hl.bind(
     "XF86AudioNext",
     hl.dsp.exec_cmd("playerctl next"),

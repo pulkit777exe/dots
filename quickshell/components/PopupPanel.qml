@@ -1,14 +1,6 @@
 import QtQuick
 import "../services"
 
-// The frame every popup shares: the island's panel, re-purposed as a
-// floating surface. Owns the open/closed presentation (fade + slide),
-// keyboard focus, and the Escape contract: back one level in a drill,
-// close otherwise.
-//
-// A surface sets `open` to its UiState mode and `topY` where it differs
-// from the default (the settings app passes its centred position).
-
 Surface {
     id: panel
 

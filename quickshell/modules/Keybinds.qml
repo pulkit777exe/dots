@@ -6,10 +6,6 @@ import Quickshell.Io
 import Quickshell.Hyprland
 import "../services"
 
-// The shell's IPC and global-shortcut surface. The names here are a
-// contract: hypr/modules/keybinds/quickshell.lua binds `quickshell:<name>`
-// and README documents `quickshell ipc call shell <name>`.
-
 Singleton {
     id: root
 

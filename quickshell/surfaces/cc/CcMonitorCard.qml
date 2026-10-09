@@ -3,12 +3,10 @@ import QtQuick.Layouts
 import "../../components"
 import "../../services"
 
-// One monitor: identity row, brightness slider, scale pills, resolution.
-
 Rectangle {
     id: card
 
-    property var monitor: null     // an entry of Brightness.monitorList
+    property var monitor: null
 
     radius: 15
     color: Theme.cc.item

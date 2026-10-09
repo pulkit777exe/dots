@@ -1,8 +1,6 @@
 import QtQuick
 import "../services"
 
-// The 44x26 switch used by settings rows and the control centre.
-
 Rectangle {
     id: root
 

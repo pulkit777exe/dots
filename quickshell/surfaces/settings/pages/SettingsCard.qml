@@ -3,8 +3,6 @@ import QtQuick.Layouts
 import "../../../components"
 import "../../../services"
 
-// Card shell: rows declared straight into the inner column.
-
 Surface {
     id: root
 

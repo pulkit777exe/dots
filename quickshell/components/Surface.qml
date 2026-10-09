@@ -2,12 +2,6 @@ import QtQuick
 import QtQuick.Effects
 import "../services"
 
-// The one framed panel: rounded rect, hairline border, drop shadow.
-//
-// The shadow is a layer effect, so it is off unless asked for -- and a
-// shadow on a layer clips to the item, which is why this wraps rather than
-// every surface rolling its own.
-
 Item {
     id: root
 
