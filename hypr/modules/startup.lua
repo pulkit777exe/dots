@@ -19,11 +19,11 @@ local home = os.getenv("HOME")
 hl.on("hyprland.start", function()
     -- Wallpaper daemon only. Do NOT hardcode which wallpaper to show
     -- here — that was pointing at a fixed ~/Downloads path belonging
-    -- to one specific theme, which breaks on a fresh machine and
-    -- ignores whatever theme/wallpaper the user actually had selected.
+    -- to one specific palette, which breaks on a fresh machine and
+    -- ignores whatever wallpaper the user actually had selected.
     -- Quickshell's Theme service (services/Theme.qml) is the single
-    -- source of truth for "which wallpaper for which theme"; it reads
-    -- colors/index.json + the per-theme wallpaperIndex and calls
+    -- source of truth for "which wallpaper for which palette"; it reads
+    -- colors/index.json + the per-palette wallpaperIndex and calls
     -- `hyprctl hyprpaper preload/wallpaper` itself as soon as it starts
     -- (see onCurrentWallpaperChanged / _applyWallpaper). All this needs
     -- to do is make sure the daemon is up before that happens.

@@ -7,11 +7,11 @@ sampling. This script is the shared desktop layer: it copies that palette
 out to the files Hyprland/GTK/CSS/kitty consumers read and pushes it to
 whatever is already running.
 
-Active theme resolution, highest priority first:
-  1. CLI argument:      publish-colors.py <theme>
+Active palette resolution, highest priority first:
+  1. CLI argument:      publish-colors.py <name>
   2. $QUICKSHELL_THEME
   3. `current` in ~/.config/colors/index.json (falls back to `default`)
-  4. "everforest"
+  4. "ariadne"
 """
 from __future__ import annotations
 
@@ -29,27 +29,6 @@ _NEW_PARSERS: bool | None = None
 INDEX_JSON = COLORS_DIR / "index.json"
 THEME_ENV = "QUICKSHELL_THEME"
 DEFAULT_THEME = "ariadne"
-FALLBACK = {
-    "background": "#202020",
-    "surface": "#282828",
-    "surfaceAlt": "#303030",
-    "surfaceElevated": "#383838",
-    "surfaceMuted": "#b0282828",
-    "border": "#1a404040",
-    "divider": "#12404040",
-    "foreground": "#f0f0f0",
-    "muted": "#b0b0b0",
-    "accent": "#88c0d0",
-    "accentVariant": "#6aa8b8",
-    "accentText": "#202020",
-    "error": "#e06060",
-    "warning": "#e0c060",
-    "success": "#60c080",
-    # aliases used by existing QML
-    "text": "#f0f0f0",
-    "textMuted": "#b0b0b0",
-    "danger": "#e06060",
-}
 
 
 def hex_to_rgb(h: str):
@@ -142,29 +121,64 @@ def write_kitty(path: Path, colors: dict):
     path.write_text("".join(lines))
 
 
-def write_gtk(path: Path, colors: dict):
-    """The palette GTK reads: the classic GTK3 names plus the libadwaita
-    window/view/accent names user CSS can override in gtk-4.0, so both
-    generations of GTK apps follow the theme."""
-    path.write_text(
-        f"@define-color theme_bg_color {colors['background']};\n"
-        f"@define-color theme_fg_color {colors['foreground']};\n"
-        f"@define-color theme_selected_bg_color {colors['accent']};\n"
-        f"@define-color theme_selected_fg_color {colors['accentText']};\n"
-        f"@define-color theme_base_color {colors['surface']};\n"
-        f"@define-color theme_text_color {colors['foreground']};\n"
-        f"@define-color window_bg_color {colors['background']};\n"
-        f"@define-color window_fg_color {colors['foreground']};\n"
-        f"@define-color view_bg_color {colors['surface']};\n"
-        f"@define-color view_fg_color {colors['foreground']};\n"
-        f"@define-color accent_color {colors['accent']};\n"
-        f"@define-color accent_bg_color {colors['accent']};\n"
-        f"@define-color destructive_color {colors['error']};\n"
-        f"@define-color error_color {colors['error']};\n"
-        f"@define-color warning_color {colors['warning']};\n"
-        f"@define-color success_color {colors['success']};\n"
-        f"@define-color borders {colors['surfaceAlt']};\n"
-    )
+def write_gtk(path: Path, colors: dict) -> None:
+    """The palette GTK reads: the classic GTK3 names plus the full set of
+    named colours current libadwaita/GTK4 apps resolve, so both
+    generations of GTK apps follow the palette."""
+    c = colors
+    defs = [
+        # GTK3 classics
+        ("theme_bg_color", c["background"]),
+        ("theme_fg_color", c["foreground"]),
+        ("theme_selected_bg_color", c["accent"]),
+        ("theme_selected_fg_color", c["accentText"]),
+        ("theme_base_color", c["surface"]),
+        ("theme_text_color", c["foreground"]),
+        ("borders", c["surfaceAlt"]),
+        # libadwaita / current GTK4
+        ("window_bg_color", c["background"]),
+        ("window_fg_color", c["foreground"]),
+        ("window_backdrop_fg_color", c["muted"]),
+        ("view_bg_color", c["surface"]),
+        ("view_fg_color", c["foreground"]),
+        ("view_backdrop_fg_color", c["muted"]),
+        ("headerbar_bg_color", c["surface"]),
+        ("headerbar_fg_color", c["foreground"]),
+        ("headerbar_backdrop_fg_color", c["muted"]),
+        ("headerbar_border_color", c["divider"]),
+        ("headerbar_shade_color", c["surfaceMuted"]),
+        ("sidebar_bg_color", c["surface"]),
+        ("sidebar_fg_color", c["foreground"]),
+        ("sidebar_backdrop_fg_color", c["muted"]),
+        ("sidebar_border_color", c["divider"]),
+        ("sidebar_shade_color", c["surfaceMuted"]),
+        ("popover_bg_color", c["surfaceElevated"]),
+        ("popover_fg_color", c["foreground"]),
+        ("dialog_bg_color", c["surfaceElevated"]),
+        ("dialog_fg_color", c["foreground"]),
+        ("card_bg_color", c["surfaceElevated"]),
+        ("card_fg_color", c["foreground"]),
+        ("thumbnail_bg_color", c["surfaceAlt"]),
+        ("thumbnail_fg_color", c["foreground"]),
+        ("accent_color", c["accent"]),
+        ("accent_bg_color", c["accent"]),
+        ("accent_fg_color", c["accentText"]),
+        ("destructive_color", c["error"]),
+        ("destructive_bg_color", c["error"]),
+        ("destructive_fg_color", c["accentText"]),
+        ("error_color", c["error"]),
+        ("error_bg_color", c["error"]),
+        ("error_fg_color", c["accentText"]),
+        ("success_color", c["success"]),
+        ("success_bg_color", c["success"]),
+        ("success_fg_color", c["accentText"]),
+        ("warning_color", c["warning"]),
+        ("warning_bg_color", c["warning"]),
+        ("warning_fg_color", c["accentText"]),
+        ("shade_color", c["surfaceMuted"]),
+        ("scrollbar_outline_color", c["muted"]),
+    ]
+    path.write_text("".join(f"@define-color {name} {value};\n" for name, value in defs))
 
 
 def run(cmd: list[str]) -> None:
@@ -235,11 +249,14 @@ def hyprland_uses_new_parsers() -> bool:
 def apply_live(colors: dict) -> None:
     """Push the palette to things already running.
 
-    Borders/glow reload through Hyprland, GTK apps pick the files up on
-    next launch, and kitty instances already open are repainted over
-    their remote-control sockets (kitty.conf sets listen_on per
-    instance).
+    GTK files land under the same XDG root the palette resolved from, so
+    scratch publishes (the tests run it per palette) stay in their
+    sandbox; borders, gsettings and the kitty sockets are only touched
+    when publishing to the real ~/.config/colors.
     """
+    config_home = Path(os.environ.get("XDG_CONFIG_HOME", HOME / ".config"))
+    live = COLORS_DIR == HOME / ".config" / "colors"
+
     acc = colors["accent"].lstrip("#")
     surf = colors["surface"].lstrip("#")
     if len(acc) == 8:
@@ -247,16 +264,18 @@ def apply_live(colors: dict) -> None:
     if len(surf) == 8:
         surf = surf[2:]
 
-    if hyprland_uses_new_parsers():
+    if live and hyprland_uses_new_parsers():
         # general.lua re-reads colors/hyprland.conf on load, so reloading is
         # what actually applies the new border colours on 0.56+.
         run(["hyprctl", "reload"])
-    else:
+    elif live:
         run(["hyprctl", "keyword", "general:col.active_border", f"rgba({acc}ff)"])
         run(["hyprctl", "keyword", "general:col.inactive_border", f"rgba({surf}aa)"])
 
-    gtk3_dir = HOME / ".config" / "gtk-3.0"
-    gtk4_dir = HOME / ".config" / "gtk-4.0"
+    gtk3_dir = config_home / "gtk-3.0"
+    gtk4_dir = config_home / "gtk-4.0"
+    for gtk_dir in (gtk3_dir, gtk4_dir):
+        gtk_dir.mkdir(parents=True, exist_ok=True)
     write_gtk(gtk3_dir / "colors.css", colors)
     write_gtk(gtk4_dir / "colors.css", colors)
     # gtk.css must stay a pure @import: an earlier generator wrote its
@@ -273,12 +292,6 @@ def apply_live(colors: dict) -> None:
         else:
             ensure_gtk_import(gtk_css)
 
-    # Kitty follows live too: kitty.conf includes the generated palette
-    # for future launches, and this repaints the instances already open.
-    kitty_conf = COLORS_DIR / "kitty.conf"
-    for sock in sorted(Path("/tmp").glob("kitty-*")):
-        run(["kitty", "@", "--to", f"unix:{sock}", "set-colors", "-a", str(kitty_conf)])
-
     # The color-scheme signal is what actually matters for most GTK3/
     # GTK4/libadwaita apps in practice — the @define-color overrides
     # above only take effect on apps using an older, non-libadwaita
@@ -287,11 +300,19 @@ def apply_live(colors: dict) -> None:
     # this setting and largely ignores arbitrary accent hex values
     # (GNOME's own accent-color setting is a fixed named palette, not
     # arbitrary hex, so we don't attempt to force it here).
+    if not live:
+        return
     is_dark = hex_lightness(colors["background"]) < 0.5
     run([
         "gsettings", "set", "org.gnome.desktop.interface",
         "color-scheme", "prefer-dark" if is_dark else "default",
     ])
+
+    # kitty follows live too: kitty.conf includes the generated palette
+    # for future launches, and this repaints the instances already open.
+    kitty_conf = COLORS_DIR / "kitty.conf"
+    for sock in sorted(Path("/tmp").glob("kitty-*")):
+        run(["kitty", "@", "--to", f"unix:{sock}", "set-colors", "-a", str(kitty_conf)])
 
 
 def resolve_theme(cli_theme: str | None) -> str:
@@ -313,22 +334,20 @@ def resolve_theme(cli_theme: str | None) -> str:
 
 
 def load_theme_palette(theme: str) -> dict:
-    """Read a theme's own hand-authored colors.json.
+    """Read a palette's own hand-authored colors.json.
 
-    Missing keys are filled from FALLBACK (same defaulting list-themes.py
-    applies) so a partially hand-edited palette can't break the writers
-    below or leave current.json out of step with what the shell renders.
+    There is no fallback fill: the tests enforce that every palette
+    carries the same complete key set, so a missing key here means the
+    file was hand-broken and publishing must fail loudly rather than
+    quietly render parts of the desktop with invented colours.
     """
     path = COLORS_DIR / "themes" / theme / "colors.json"
     if not path.is_file():
-        raise FileNotFoundError(f"no colors.json for theme {theme!r} ({path})")
+        raise FileNotFoundError(f"no colors.json for palette {theme!r} ({path})")
     palette = json.loads(path.read_text())
     if not isinstance(palette, dict):
-        raise ValueError(f"{path} is not a color palette object")
-    colors = {k: v for k, v in palette.items() if isinstance(v, str)}
-    for k, v in FALLBACK.items():
-        colors.setdefault(k, v)
-    return colors
+        raise ValueError(f"{path} is not a colour palette object")
+    return {k: v for k, v in palette.items() if isinstance(v, str)}
 
 
 def main():

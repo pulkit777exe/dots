@@ -2,32 +2,30 @@
 --
 -- Window appearance.
 
--- The inner window glow is tinted with the active theme's accent, so
--- focus reads as a soft halo of light rather than the stock near-black
--- vignette. The accent is parsed out of the generated
--- colors/hyprland.conf (the same file general.lua seeds borders from),
--- so a theme switch + reload retints the glow along with everything
--- else. Before any theme has been published the colour stays nil and
--- Hyprland's default applies.
-local function read_theme_accent()
+-- Colours come from the generated palette (colors/hyprland.conf,
+-- seeded by publish-colors.py): the glow is the accent at ~20% alpha,
+-- a subtle halo rather than a neon edge, and the shadow the background
+-- at ~93%. Only the alphas are literal; before any palette is
+-- published both stay nil and Hyprland's defaults apply.
+local function read_colours()
     local home = os.getenv("HOME")
     local f = io.open(home .. "/.config/colors/hyprland.conf", "r")
     if not f then
-        return nil
+        return nil, nil
     end
 
     local contents = f:read("*a")
     f:close()
 
     local accent = contents:match("%$accent%s*=%s*rgb%(([0-9a-fA-F]+)%)")
-    if not accent then
-        return nil
-    end
+    local background = contents:match("%$bg%s*=%s*rgb%(([0-9a-fA-F]+)%)")
 
-    -- 0x33 is ~20% alpha: subtle, a hint of the accent rather than a
-    -- neon edge.
-    return "rgba(" .. accent .. "33)"
+    local glow = accent and ("rgba(" .. accent .. "33)") or nil
+    local shadow = background and ("rgba(" .. background .. "ee)") or nil
+    return glow, shadow
 end
+
+local glowColour, shadowColour = read_colours()
 
 hl.config({
     decoration = {
@@ -44,14 +42,14 @@ hl.config({
             enabled = true,
             range = 4,
             render_power = 3,
-            color = 0xee1a1a1a,
+            color = shadowColour,
         },
 
         glow = {
             enabled = true,
             range = 10,
             render_power = 3,
-            color = read_theme_accent(),
+            color = glowColour,
         },
 
         blur = {

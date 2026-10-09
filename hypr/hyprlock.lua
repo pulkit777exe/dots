@@ -11,6 +11,12 @@
 -- password hint in the lower third, and Shut Down / Restart pills along the
 -- bottom. Nothing else -- no song strip, no stray prompts.
 --
+-- Colours: every colour below is interpolated from the generated palette at
+-- ~/.config/colors/current.json (publish-colors.py rewrites it on every
+-- palette push), so the lock screen follows the desktop instead of freezing
+-- on whatever palette it was authored against. Only alpha levels are
+-- literal; if no palette exists the conf is left untouched.
+--
 -- Geometry, PROVEN against live runs on the 1920x1080 panel (not derived
 -- from theory like the previous revision): `position` is in PIXELS from the
 -- widget's alignment anchor, and with valign = center positive y moves UP.
@@ -39,11 +45,67 @@
 -- Shut Down / Restart use hyprlock's `onclick` on both the pill shape and
 -- its label, so a click anywhere on the pill lands.
 
+-- The palette behind every colour in the conf. Keys used: background,
+-- surface (glass pills), text, border (hairlines; its own alpha is
+-- stripped and the per-element alphas below re-applied).
+local function read_palette()
+    local f = io.open(os.getenv("HOME") .. "/.config/colors/current.json", "r")
+    if not f then
+        return nil
+    end
+
+    local contents = f:read("*a")
+    f:close()
+
+    local colors = {}
+    for key, hex in contents:gmatch('"([%w_]+)"%s*:%s*"#([0-9a-fA-F]+)"') do
+        colors[key] = hex
+    end
+
+    if not (colors.background and colors.surface and colors.text and colors.border) then
+        return nil
+    end
+    return colors
+end
+
+local palette = read_palette()
+if not palette then
+    io.stderr:write(
+        "hyprlock.lua: no palette at ~/.config/colors/current.json; "
+            .. "leaving hyprlock.conf untouched\n"
+    )
+    return
+end
+
+local function rgba(hex, alpha)
+    return "rgba(" .. hex .. alpha .. ")"
+end
+
+-- The border token carries its own alpha; per-element hairline strengths
+-- re-apply it below, so keep only its RGB.
+local ring = palette.border:gsub("#", "")
+if #ring == 8 then
+    ring = ring:sub(3)
+end
+
+local colours = {
+    ["{{bg}}"] = rgba(palette.background, "ff"),     -- lock fallback fill
+    ["{{veil}}"] = rgba(palette.background, "61"),   -- 0.38, status pill
+    ["{{glass}}"] = rgba(palette.surface, "8c"),     -- 0.55, power pills
+    ["{{text92}}"] = rgba(palette.text, "eb"),       -- 0.92, labels
+    ["{{text90}}"] = rgba(palette.text, "e6"),       -- 0.90, username/dots
+    ["{{text55}}"] = rgba(palette.text, "8c"),       -- 0.55, hint
+    ["{{clear}}"] = rgba(palette.background, "00"),  -- alpha 0: invisible
+    ["{{hair14}}"] = rgba(ring, "24"),               -- 0.14, status pill
+    ["{{hair16}}"] = rgba(ring, "29"),               -- 0.16, power pills
+    ["{{ring25}}"] = rgba(ring, "40"),               -- 0.25, avatar ring
+}
+
 local config = [[
 background {
     monitor =
     path = screenshot
-    color = rgba(34, 32, 32, 1.0)
+    color = {{bg}}
     blur_passes = 3
     contrast = 0.8916
     brightness = 0.8172
@@ -63,10 +125,10 @@ general {
 shape {
     monitor =
     size = 82, 34
-    color = rgba(0, 0, 0, 0.38)
+    color = {{veil}}
     rounding = 10
     border_size = 1
-    border_color = rgba(255, 255, 255, 0.14)
+    border_color = {{hair14}}
     position = 870, 493
     halign = center
     valign = center
@@ -75,7 +137,7 @@ shape {
 label {
     monitor =
     text = cmd[update:10000] ~/.config/hypr/hyprlock/scripts/battery.sh
-    color = rgba(238, 240, 235, 0.92)
+    color = {{text92}}
     font_size = 15
     font_family = SF Pro Display
     position = 870, 493
@@ -86,7 +148,7 @@ label {
 label {
     monitor =
     text = cmd[update:5000] ~/.config/hypr/hyprlock/scripts/wifi.sh
-    color = rgba(238, 240, 235, 0.92)
+    color = {{text92}}
     font_size = 17
     font_family = JetBrainsMonoNL Nerd Font Mono
     position = 924, 493
@@ -103,7 +165,7 @@ label {
 label {
     monitor =
     text = cmd[update:1000] date '+%A, %B %d'
-    color = rgba(238, 240, 235, 0.92)
+    color = {{text92}}
     font_size = 26
     font_family = SF Pro Display
     position = 0, 399
@@ -114,7 +176,7 @@ label {
 label {
     monitor =
     text = cmd[update:1000] date '+%I:%M'
-    color = rgba(238, 240, 235, 0.92)
+    color = {{text92}}
     font_size = 120
     font_family = SF Pro Display
     position = 0, 307.5
@@ -128,7 +190,7 @@ image {
     monitor =
     path = ~/.config/hypr/hyprlock/assets/avatar.jpeg
     border_size = 2
-    border_color = rgba(255, 255, 255, 0.25)
+    border_color = {{ring25}}
     size = 52
     rounding = -1
     rotate = 0
@@ -142,7 +204,7 @@ image {
 label {
     monitor =
     text = $USER
-    color = rgba(238, 240, 235, 0.90)
+    color = {{text90}}
     font_size = 15
     font_family = SF Pro Display
     position = 0, -386
@@ -160,7 +222,7 @@ label {
 label {
     monitor =
     text = Press any Key to Enter Password
-    color = rgba(238, 240, 235, 0.55)
+    color = {{text55}}
     font_size = 13
     font_family = SF Pro Display
     position = 0, -432
@@ -175,9 +237,9 @@ input-field {
     dots_size = 0.22
     dots_spacing = 0.28
     dots_center = true
-    outer_color = rgba(0, 0, 0, 0)
-    inner_color = rgba(255, 255, 255, 0)
-    font_color = rgba(238, 240, 235, 0.9)
+    outer_color = {{clear}}
+    inner_color = {{clear}}
+    font_color = {{text90}}
     fade_on_empty = false
     font_family = SF Pro Display
     placeholder_text =
@@ -193,10 +255,10 @@ input-field {
 shape {
     monitor =
     size = 150, 40
-    color = rgba(18, 18, 18, 0.55)
+    color = {{glass}}
     rounding = 20
     border_size = 1
-    border_color = rgba(255, 255, 255, 0.16)
+    border_color = {{hair16}}
     position = -87, -492
     halign = center
     valign = center
@@ -206,7 +268,7 @@ shape {
 label {
     monitor =
     text = Shut Down
-    color = rgba(238, 240, 235, 0.95)
+    color = {{text92}}
     font_size = 14
     font_family = SF Pro Display
     position = -87, -492
@@ -218,10 +280,10 @@ label {
 shape {
     monitor =
     size = 150, 40
-    color = rgba(18, 18, 18, 0.55)
+    color = {{glass}}
     rounding = 20
     border_size = 1
-    border_color = rgba(255, 255, 255, 0.16)
+    border_color = {{hair16}}
     position = 87, -492
     halign = center
     valign = center
@@ -231,7 +293,7 @@ shape {
 label {
     monitor =
     text = Restart
-    color = rgba(238, 240, 235, 0.95)
+    color = {{text92}}
     font_size = 14
     font_family = SF Pro Display
     position = 87, -492
@@ -240,6 +302,10 @@ label {
     onclick = systemctl reboot
 }
 ]]
+
+for token, value in pairs(colours) do
+    config = config:gsub(token, value)
+end
 
 local path = os.getenv("HOME") .. "/.config/hypr/hyprlock.conf"
 

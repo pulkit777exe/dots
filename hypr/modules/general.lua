@@ -2,16 +2,15 @@
 --
 -- Core compositor behavior.
 
--- Border colors follow whatever theme is currently active. The live
--- path (quickshell/scripts/publish-colors.py's apply_live()) pushes
--- new colors via `hyprctl keyword general:col.active_border ...` the
--- instant a theme is switched — but that only reaches an already-
--- running Hyprland session. On a fresh login/reboot, before any theme
--- switch happens this session, we still want last time's theme, not
+-- Border colours follow the generated palette. The live path
+-- (quickshell/scripts/publish-colors.py's apply_live()) reloads
+-- Hyprland the instant a palette is pushed — but that only reaches an
+-- already-running session. On a fresh login/reboot, before any push
+-- happens this session, we still want the last published colours, not
 -- Hyprland's built-in default. So read the same generated
--- colors/hyprland.conf every other app reads from and seed the config
--- with it; the live keyword updates take over from there.
-local function read_theme_border_colors()
+-- colors/hyprland.conf every other consumer reads from and seed the
+-- config with it; live reloads take over from there.
+local function read_border_colors()
     local home = os.getenv("HOME")
     local path = home .. "/.config/colors/hyprland.conf"
     local f = io.open(path, "r")
@@ -35,7 +34,7 @@ local function read_theme_border_colors()
     }
 end
 
-local themeBorders = read_theme_border_colors()
+local paletteBorders = read_border_colors()
 
 hl.config({
     general = {
@@ -56,8 +55,8 @@ hl.config({
 
         -- Falls back to Hyprland's own default border colors only if
         -- colors/hyprland.conf hasn't been generated yet (i.e. no
-        -- theme has ever been applied on this machine).
-        ["col.active_border"] = themeBorders and themeBorders.active or nil,
-        ["col.inactive_border"] = themeBorders and themeBorders.inactive or nil,
+        -- palette has ever been published on this machine).
+        ["col.active_border"] = paletteBorders and paletteBorders.active or nil,
+        ["col.inactive_border"] = paletteBorders and paletteBorders.inactive or nil,
     },
 })
