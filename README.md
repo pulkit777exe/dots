@@ -66,8 +66,8 @@ Each top-level directory is one unit that is symlinked into `~/.config/<name>`.
 | --- | --- |
 | `hypr/` | Hyprland config in Lua. `hyprland.lua` requires `modules/*` in order, then `hypridle.lua`, which writes `hypridle.conf` and starts the daemon once per session. |
 | `quickshell/` | The shell. `shell.qml` is the entrypoint; `services/` are singletons, `surfaces/` are windows, `modules/Keybinds.qml` is the shortcut hub. |
-| `colors/` | Theme palettes and the *generated* per-app colour files (`current.json`, `hyprland.conf`, `kitty.conf`, `gtk.css`, `colors.css`, `colors.sh`). |
-| `kitty/` | Terminal config. `kitty.conf` is the whole config and the terminal keeps its stock background — nothing includes `current-theme.conf`, which is kept only as a record of the last generated palette. |
+| `colors/` | Palettes and the *generated* per-app colour files (`current.json`, `hyprland.conf`, `kitty.conf`, `gtk.css`, `colors.css`, `colors.sh`). |
+| `kitty/` | Terminal config. `kitty.conf` includes the generated `../colors/kitty.conf`, so the terminal follows the palette; open instances are repainted live over the remote-control socket. |
 | `vlc/`, `Thunar/` | App config. |
 
 `hypr/modules/` is the shape to follow when adding config: one file per concern,
@@ -163,23 +163,24 @@ Palettes are static and picked by name — there is no wallpaper sampling. Colou
 flow one direction:
 
 ```
-you pick a theme  (CLI arg -> $QUICKSHELL_THEME -> colors/index.json -> everforest)
+you pick a palette  (CLI arg -> $QUICKSHELL_THEME -> colors/index.json `current`)
   -> quickshell/scripts/publish-colors.py
   -> ~/.config/colors/current.json + hyprland.conf, colors.css, colors.sh, gtk.css, kitty.conf
   -> every app
 ```
 
 - **Palettes** live in `colors/themes/<name>/colors.json`, one flat object of
-  18 colour keys. Add a theme by dropping a new directory in there and running
+  18 colour keys. Add a palette by dropping a new directory in there and running
   `quickshell/scripts/list-themes.py`; nothing else needs to change.
-- **`kitty.conf` is written but never applied.** The terminal stays on kitty's
-  own defaults, so switching themes must not repaint it. The file is emitted
-  only so you have a record of the palette.
-- **The active theme** is `colors/index.json`. Its `themes` key is an *object*
-  mapping theme key → metadata, **not** a list. `quickshell/scripts/list-themes.py`
-  reads it, fills in each theme's `wallpaperDir` by probing the usual locations,
+- **`kitty.conf` is applied.** `kitty.conf` includes the generated palette for
+  future launches, and every palette push repaints open terminals live over
+  their remote-control sockets.
+- **The active palette** is `colors/index.json`'s `current`. Its `themes` key is
+  an *object* mapping palette key → metadata, **not** a list.
+  `quickshell/scripts/list-themes.py`
+  reads it, fills in each palette's `wallpaperDir` by probing the usual locations,
   and writes the result back. If you hand-edit it, keep it an object.
-- **Wallpapers** are looked for in `~/Downloads/<theme>`, `~/Pictures/Wallpapers/<theme>`,
+- **Wallpapers** are looked for in `~/Downloads/<palette>`, `~/Pictures/Wallpapers/<palette>`,
   `~/wallpapers/<theme>`, then `colors/themes/<theme>/`. They are *not* committed
   (they are large binaries) — point `wallpaperDir` at your own copy.
   `quickshell/scripts/generate-theme-wallpapers.py` will synthesise

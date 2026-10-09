@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Discover themes from ~/.config/colors — never from the Quickshell tree.
+"""Discover palettes from ~/.config/colors — never from the Quickshell tree.
 
-index.json maps theme keys to wallpaper directories (usually outside
-this repo) and names the active theme (`current`, seeded from `default`).
-Per-theme colors/themes/<key>/colors.json is the hand-authored static
+index.json maps palette keys to wallpaper directories (usually outside
+this repo) and names the active palette (`current`, seeded from `default`).
+Per-palette colors/themes/<key>/colors.json is the hand-authored static
 palette — the single source of truth for both the shell and the desktop.
 """
 import json
@@ -16,18 +16,9 @@ CONFIG = pathlib.Path(os.environ.get("XDG_CONFIG_HOME", HOME / ".config"))
 COLORS_ROOT = CONFIG / "colors"
 INDEX = COLORS_ROOT / "index.json"
 
-FALLBACK = {
-    "background": "#202020", "surface": "#282828", "surfaceAlt": "#303030",
-    "border": "#404040", "text": "#f0f0f0", "textMuted": "#b0b0b0",
-    "foreground": "#f0f0f0", "muted": "#b0b0b0",
-    "accent": "#88c0d0", "accentText": "#202020", "accentVariant": "#6aa8b8",
-    "danger": "#e06060", "warning": "#e0c060", "success": "#60c080",
-    "error": "#e06060",
-}
-
 KNOWN_DIRS = {
     "ariadne": ["aridane", "ariadne"],
-    "catppuccin": ["catpuccin", "catppuccin"],
+    "catppuccin": ["catpuccin", "catpuccin"],
     "everforest": ["everforest"],
     "gruvbox": ["gruvbox"],
     "horizon": ["horizon"],
@@ -50,17 +41,20 @@ def discover_images(root: pathlib.Path):
 
 
 def load_colors(theme_key: str):
+    """The palette exactly as authored; no invented colours here.
+
+    A missing or broken colors.json yields an empty set — the shell's
+    own pre-discovery defaults cover that, and the tests enforce that
+    the real palettes are complete.
+    """
     p = COLORS_ROOT / "themes" / theme_key / "colors.json"
     if p.is_file():
         try:
             data = json.loads(p.read_text())
-            colors = {k: v for k, v in data.items() if isinstance(v, str)}
-            for k, v in FALLBACK.items():
-                colors.setdefault(k, v)
-            return colors
+            return {k: v for k, v in data.items() if isinstance(v, str)}
         except Exception:
             pass
-    return dict(FALLBACK)
+    return {}
 
 
 def guess_wallpaper_dir(key: str) -> pathlib.Path | None:

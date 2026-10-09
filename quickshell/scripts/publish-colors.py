@@ -300,9 +300,15 @@ def apply_live(colors: dict) -> None:
     # this setting and largely ignores arbitrary accent hex values
     # (GNOME's own accent-color setting is a fixed named palette, not
     # arbitrary hex, so we don't attempt to force it here).
+    is_dark = hex_lightness(colors["background"]) < 0.5
+    for gtk_dir in (gtk3_dir, gtk4_dir):
+        (gtk_dir / "settings.ini").write_text(
+            "[Settings]\ngtk-application-prefer-dark-theme="
+            + ("1" if is_dark else "0")
+            + "\n"
+        )
     if not live:
         return
-    is_dark = hex_lightness(colors["background"]) < 0.5
     run([
         "gsettings", "set", "org.gnome.desktop.interface",
         "color-scheme", "prefer-dark" if is_dark else "default",

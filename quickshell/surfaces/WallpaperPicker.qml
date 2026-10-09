@@ -3,7 +3,7 @@ import QtQuick.Layouts
 import "../components"
 import "../services"
 
-// Wallpaper strip: title + theme name, a centred run of thumbnails kept
+// Wallpaper strip: title + palette name, a centred run of thumbnails kept
 // centred by the highlight range, and a caption + n/total footer.
 PopupPanel {
     id: root
@@ -16,7 +16,7 @@ PopupPanel {
 
     readonly property var walls: Theme.wallpapers
     readonly property int applied: Theme.wallpaperIndexCurrent
-    readonly property string themeName: Theme.displayName
+    readonly property string paletteName: Theme.displayName
     property int currentIndex: 0
 
     readonly property real itemW: 170
@@ -80,7 +80,7 @@ PopupPanel {
 
             Label {
                 Layout.alignment: Qt.AlignVCenter
-                text: root.themeName
+                text: root.paletteName
                 font.pixelSize: Theme.px(11)
                 color: Theme.withAlpha(Theme.colors.text, 0.45)
                 elide: Text.ElideRight
