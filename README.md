@@ -98,17 +98,18 @@ Fedora-first. `install.sh --check` reports what's missing.
 - `playerctl` — `XF86Audio*` media keys
 - `openwhispr` — only if you use `hypr/openwhispr-binds.lua`
 
-**Fonts** — the desktop names three families. `install.sh` verifies all three;
-`scripts/install-fonts.sh` installs the two that are free to redistribute.
+**Fonts** — the desktop names three families, vendored in `fonts/` so a fresh
+clone needs no network. `install.sh` installs them automatically and keeps the
+check red until all three are present.
 
-- `SF Pro Display` — all UI text: shell, settings, lock screen. Apple's license
-  blocks auto-install; copy `SF Pro Display Regular.otf` and
-  `SF Pro Display Bold.otf` into `~/.local/share/fonts` once (the script prints
-  these steps).
+- `SF Pro Display` — all UI text: shell, settings, lock screen. The one manual
+  step: Apple's license forbids vendoring it in a public repo, so copy
+  `SF Pro Display Regular.otf` and `SF Pro Display Bold.otf` into
+  `~/.local/share/fonts` once (the installer prints these steps).
 - `JetBrainsMonoNL Nerd Font Mono` — kitty's terminal font and the lock screen's
-  wifi glyph. Installed from the nerd-fonts release by the script.
-- `Material Symbols Rounded` — every icon glyph in the shell. Installed from
-  Google's variable font by the same script.
+  wifi glyph. Vendored: Regular/Bold/Italic/BoldItalic, nerd-fonts v3.5.1 (OFL).
+- `Material Symbols Rounded` — every icon glyph in the shell. Vendored: Google's
+  variable font (Apache-2.0).
 
 ## Keybinds
 

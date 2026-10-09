@@ -352,6 +352,12 @@ main() {
     check_bin playerctl "sudo dnf install playerctl — XF86Audio* media keys"
     check_bin hyprsunset "blue-light filter; without it the control centre's Night Light toggle does nothing" optional
 
+    if [ "$CHECK_ONLY" -eq 0 ]; then
+        echo
+        log "installing vendored fonts"
+        run "$REPO_DIR/scripts/install-fonts.sh" || warn "font install incomplete — SF Pro Display is the usual reason (see above)"
+    fi
+
     echo
     log "checking fonts"
     check_font "SF Pro Display" "shell + settings + lock screen text"
