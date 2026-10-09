@@ -98,6 +98,18 @@ Fedora-first. `install.sh --check` reports what's missing.
 - `playerctl` — `XF86Audio*` media keys
 - `openwhispr` — only if you use `hypr/openwhispr-binds.lua`
 
+**Fonts** — the desktop names three families. `install.sh` verifies all three;
+`scripts/install-fonts.sh` installs the two that are free to redistribute.
+
+- `SF Pro Display` — all UI text: shell, settings, lock screen. Apple's license
+  blocks auto-install; copy `SF Pro Display Regular.otf` and
+  `SF Pro Display Bold.otf` into `~/.local/share/fonts` once (the script prints
+  these steps).
+- `JetBrainsMonoNL Nerd Font Mono` — kitty's terminal font and the lock screen's
+  wifi glyph. Installed from the nerd-fonts release by the script.
+- `Material Symbols Rounded` — every icon glyph in the shell. Installed from
+  Google's variable font by the same script.
+
 ## Keybinds
 
 `SUPER` is the Windows key.
@@ -185,9 +197,9 @@ you pick a palette  (CLI arg -> $QUICKSHELL_THEME -> colors/index.json `current`
   (they are large binaries) — point `wallpaperDir` at your own copy.
   `quickshell/scripts/generate-theme-wallpapers.py` will synthesise
   palette-matched placeholders if you just want something coherent.
-- `hypr/modules/general.lua` seeds Hyprland's border colours from
-  `colors/hyprland.conf` at startup; `publish-colors.py` then updates them live
-  on every theme switch, so a fresh login matches your last theme.
+- `hypr/modules/colours.lua` reads `colors/hyprland.conf` once per startup;
+  `general.lua` derives the border colours from it and `decoration.lua` the
+  window shadow and the accent glow, so a fresh login matches your last palette.
 
 ## Updating
 
@@ -202,7 +214,7 @@ rather than overwriting it, so your previous config is always recoverable.
 ## Troubleshooting
 
 Start with the checker — it verifies the symlinks, the files Hyprland and the
-global shortcuts depend on, and the shape of the theme catalog:
+global shortcuts depend on, the fonts, and the shape of the theme catalog:
 
 ```bash
 ./install.sh --check

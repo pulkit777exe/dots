@@ -1,22 +1,7 @@
 #!/usr/bin/env bash
-# install.sh — link this repo's configs into ~/.config and sanity-check the
-# runtime deps they need. Safe to re-run any time (idempotent): anything it
-# would replace is moved aside, never deleted.
-#
-# Works both from a checkout and when piped:
-#     ./install.sh
-#     ./install.sh --dry-run          # show the plan, change nothing
-#     ./install.sh --check            # verify the current session only
-#     curl -fsSL <raw>/install.sh | bash -s -- --dry-run
-#
-# Written for Fedora first (dnf/COPR), since that's the target machine, but
-# the symlinking itself is distro-agnostic.
 
 set -euo pipefail
 
-# Resolve the repo root whether we're a file on disk or a stream on stdin.
-# BASH_SOURCE points at the fd name ("bash"/"/dev/stdin") when piped, so
-# fall back to a clone next to the script, then to the cwd.
 resolve_repo_dir() {
     local src="${BASH_SOURCE[0]:-}"
     local dir=""
@@ -42,7 +27,6 @@ DRY_RUN=0
 CHECK_ONLY=0
 ASSUME_YES=0
 
-# Every top-level dir in this repo that's meant to land in ~/.config/<name>.
 UNITS=(colors hypr kitty quickshell vlc Thunar)
 
 log()  { printf '\033[1;32m==>\033[0m %s\n' "$1"; }
@@ -87,8 +71,6 @@ link_unit() {
         return
     fi
 
-    # A unit dir that exists but is empty would install a hollow config that
-    # silently breaks the apps reading it. Treat that as an error, not a pass.
     if [ -z "$(ls -A "$src" 2>/dev/null)" ]; then
         err "skipping $name — $src exists but is empty"
         return 1
@@ -105,10 +87,6 @@ link_unit() {
         if [ "$DRY_RUN" -eq 1 ]; then
             warn "$dst exists and isn't our symlink — would move it to $backup"
         elif [ "$ASSUME_YES" -eq 0 ]; then
-            # This is the only step that touches files the repo didn't
-            # create. Refuse rather than guess when there is no TTY to ask
-            # on — a non-interactive run (CI, cron, a piped bootstrap) must
-            # never silently relocate someone's live config.
             if [ ! -t 0 ]; then
                 err "$dst exists and isn't our symlink, and there is no terminal to confirm on."
                 err "Re-run with --yes to allow moving it to $backup, or move it yourself first."
@@ -138,16 +116,6 @@ link_unit() {
     fi
 }
 
-# check_bin <name> <hint> [required|optional] [abs-path ...]
-#
-# Several of these daemons are not on PATH even when installed: polkitd
-# lives at /usr/lib/polkit-1/polkitd and is never symlinked into /usr/bin,
-# so `command -v polkit` reported a working system as broken. Allow
-# absolute-path fallbacks.
-#
-# The kind argument separates a dependency this config cannot run without
-# from a nicety — "3 things missing" is only useful if you know which of
-# them matter.
 check_bin() {
     local bin="$1" pkg_hint="$2" kind="${3:-required}"
     shift 3 2>/dev/null || shift $#
@@ -178,20 +146,34 @@ check_bin() {
     else
         err "$bin not found — $pkg_hint"
         MISSING+=("$bin")
-        # Tracked separately from the config checks so a missing required
-        # binary can fail the run's verdict. It shares MISSING with
-        # check_session's own findings purely so one summary lists them all.
         MISSING_REQ_BIN+=("$bin")
     fi
-    # Deliberately return 0. Callers are bare statements under `set -e`, and
-    # a non-zero here would abort the whole run on the first missing
-    # dependency. The MISSING arrays are what carry the result.
     return 0
 }
 
 MISSING=()
 MISSING_OPTIONAL=()
 MISSING_REQ_BIN=()
+
+check_font() {
+    local family="$1" what="$2"
+
+    if ! command -v fc-list >/dev/null 2>&1; then
+        warn "fc-list not found — sudo dnf install fontconfig (font checks skipped)"
+        return 0
+    fi
+
+    if [ "$(fc-list 2>/dev/null | grep -ci "$family")" -gt 0 ]; then
+        log "font: $family — $what"
+        return 0
+    fi
+
+    err "font missing: $family — $what"
+    err "  run scripts/install-fonts.sh (SF Pro Display needs a one-time manual download; the script explains)"
+    MISSING+=("font:$family")
+    MISSING_REQ_BIN+=("font:$family")
+    return 0
+}
 
 check_session() {
     local fail=0
@@ -212,12 +194,6 @@ check_session() {
         fi
     done
 
-    # The shell is only useful if its entrypoint and the Keybinds singleton
-    # are both present — those are the two files Hyprland and the global
-    # shortcuts depend on.
-    # hypr/scripts/qs-call is here because a keybind names it by absolute
-    # path. If it goes missing, SUPER+slash does nothing and the only
-    # symptom is a launcher that will not open.
     for f in "$CONFIG_DIR/quickshell/shell.qml" "$CONFIG_DIR/quickshell/modules/Keybinds.qml" \
              "$CONFIG_DIR/quickshell/modules/qmldir" "$CONFIG_DIR/hypr/hyprland.lua" \
              "$CONFIG_DIR/hypr/scripts/qs-call" \
@@ -230,9 +206,6 @@ check_session() {
         fi
     done
 
-    # A keybind that execs a script needs it executable. Present-but-not-+x
-    # is worse than missing, because the check above passes and the only
-    # symptom is a key that silently does nothing.
     for f in "$CONFIG_DIR/hypr/scripts/qs-call"; do
         if [ -e "$f" ] && [ ! -x "$f" ]; then
             err "not executable: ${f#"$CONFIG_DIR"/}  (chmod +x, or the keybind that runs it is dead)"
@@ -240,7 +213,6 @@ check_session() {
         fi
     done
 
-    # The theme catalog must be the dict form the discovery script expects.
     if [ -e "$CONFIG_DIR/colors/index.json" ]; then
         if command -v python3 >/dev/null 2>&1; then
             if python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); sys.exit(0 if isinstance(d.get("themes"), dict) else 1)' \
@@ -252,15 +224,6 @@ check_session() {
             fi
         fi
     fi
-
-    # ---- Runtime surface: IPC targets and global shortcuts -------------
-    #
-    # The file checks above all pass while the shell is completely
-    # unreachable. Keybinds is a `pragma Singleton` instantiated by exactly
-    # one reference in shell.qml; delete that reference and the singleton is
-    # never constructed, so its IpcHandlers never register, `qs ipc call
-    # shell` answers "Target not found", and every surface is gone -- with no
-    # error and no warning anywhere. This is the check that catches it.
 
     if command -v qs >/dev/null 2>&1; then
         if ipc_show="$(qs -p "$CONFIG_DIR/quickshell" ipc show 2>/dev/null)" && [ -n "$ipc_show" ]; then
@@ -280,7 +243,6 @@ check_session() {
                 log "qs ipc show: shell + uis present ($n targets)"
             fi
         else
-            # Not a failure: a fresh install has not launched the shell yet.
             warn "qs ipc show: no running instance -- skipping the IPC target check"
         fi
     else
@@ -303,10 +265,6 @@ check_session() {
         warn "hyprctl not on PATH -- skipping the globalshortcut check"
     fi
 
-    # Quickshell's Qt6 minor is not derivable from outside -- Qt6 keeps the
-    # soname at libQt6Core.so.6 whatever the minor is. What is meaningful is
-    # *where* it resolves from: a build carrying its own Qt next to a
-    # different system Qt is the mismatch worth warning about.
     if qs_bin="$(command -v quickshell)" && [ -n "$qs_bin" ]; then
         qtlib="$(ldd "$qs_bin" 2>/dev/null | grep -oE '/[^ ]*libQt6Core\.so\.[0-9]+' | head -1)"
         if [ -n "$qtlib" ]; then
@@ -332,10 +290,6 @@ check_session() {
         warn "missing optional (features degrade): ${MISSING_OPTIONAL[*]}"
     fi
 
-    # A missing required binary is part of the verdict even though the config
-    # checks are what this function owns. Without this the run printed
-    # "check passed" on a machine missing a required dependency, and exited 0,
-    # so bootstrap.sh read a broken install as a good one.
     if [ "${#MISSING_REQ_BIN[@]}" -gt 0 ]; then
         fail=1
     fi
@@ -350,11 +304,6 @@ check_session() {
 }
 
 main() {
-    # Refuse root. CONFIG_DIR is derived from $HOME, so under sudo this
-    # installs into /root/.config instead of the real user's config — it
-    # reports success while doing nothing useful, and leaves stray symlinks
-    # in root's home pointing into the user's dotfiles. Nothing here needs
-    # root: it only writes inside $HOME.
     if [ "$(id -u)" -eq 0 ]; then
         err "Refusing to run as root."
         err "Run it as your normal user:  ./install.sh"
@@ -392,13 +341,9 @@ main() {
     check_bin python3 "sudo dnf install python3"
     check_bin cliphist "sudo dnf install cliphist   (or: go install github.com/sentriz/cliphist@latest)"
     check_bin wl-copy "sudo dnf install wl-clipboard"
-    # Referenced by modules/startup.lua and services/Theme.qml.
     check_bin hyprpaper "sudo dnf install hyprpaper — without it the wallpaper daemon never starts"
-    # Referenced by hypr/hyprlock.lua and the SUPER+L bind.
     check_bin hyprlock "sudo dnf install hyprlock — without it SUPER+L does nothing"
-    # Referenced by hypr/hypridle.conf.
     check_bin hypridle "sudo dnf install hypridle — without it idleDPMS/idle actions never fire"
-    # Not a bare `polkit` binary: the daemon is polkitd and ships outside PATH.
     check_bin polkitd "sudo dnf install polkit" required /usr/lib/polkit-1/polkitd /usr/libexec/polkitd
 
     echo
@@ -406,6 +351,23 @@ main() {
     check_bin brightnessctl "sudo dnf install brightnessctl — XF86MonBrightness* keys"
     check_bin playerctl "sudo dnf install playerctl — XF86Audio* media keys"
     check_bin hyprsunset "blue-light filter; without it the control centre's Night Light toggle does nothing" optional
+
+    echo
+    log "checking fonts"
+    check_font "SF Pro Display" "shell + settings + lock screen text"
+    check_font "JetBrainsMonoNL Nerd Font Mono" "kitty + lock-screen wifi glyph"
+    check_font "Material Symbols Rounded" "shell icon glyphs"
+
+    if [ "$CHECK_ONLY" -eq 0 ] && [ "$DRY_RUN" -eq 0 ]; then
+        echo
+        log "generating derived state (palette outputs + hyprlock.conf)"
+        if command -v python3 >/dev/null 2>&1; then
+            run python3 "$CONFIG_DIR/quickshell/scripts/publish-colors.py" || warn "publish-colors.py failed — run it by hand"
+        fi
+        if command -v lua >/dev/null 2>&1; then
+            run lua "$CONFIG_DIR/hypr/hyprlock.lua" || warn "hyprlock.conf not generated — run it by hand"
+        fi
+    fi
 
     local cs=0
     check_session || cs=$?
@@ -417,9 +379,6 @@ main() {
         log "done — log out, select the Hyprland session, and log back in"
     fi
 
-    # The links are in place either way, so a missing dependency is reported
-    # rather than fatal to the run itself. The exit code still reflects it so
-    # bootstrap.sh (and CI) do not read a broken machine as a clean install.
     if [ "$cs" -ne 0 ]; then
         err "finished with errors — see above"
         return "$cs"
