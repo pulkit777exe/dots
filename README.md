@@ -8,7 +8,21 @@ generated from a single palette per theme.
 
 ## Install
 
-One command on a fresh machine:
+Fresh Fedora machine — packages first, then configs:
+
+```bash
+git clone https://github.com/pulkit777exe/dots.git ~/dots
+~/dots/scripts/setup.sh --all    # dnf packages, drivers, shell tooling, then links configs
+```
+
+`setup.sh` provisions per group (`--desktop`, `--shell`, `--nvidia`, `--dev`;
+default is desktop + shell, `--all` is everything) and finishes by running
+`install.sh`. It never runs as root — `sudo` is used per `dnf` command only —
+and it skips anything already present. NVIDIA (`--nvidia`) needs a reboot
+afterwards, and Secure Boot needs the akmods key enrolled once (the script
+prints the exact command when it applies).
+
+Configs only (packages already handled):
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/pulkit777exe/dots/main/bootstrap.sh | bash
@@ -60,7 +74,8 @@ will and won't touch, and the audit summary.
 
 ## Layout
 
-Each top-level directory is one unit that is symlinked into `~/.config/<name>`.
+Each top-level directory is one unit that is symlinked into `~/.config/<name>`,
+except `zsh/`, whose `.zshrc` is symlinked directly to `~/.zshrc`.
 
 | Unit | What it is |
 | --- | --- |
@@ -69,6 +84,7 @@ Each top-level directory is one unit that is symlinked into `~/.config/<name>`.
 | `colors/` | Palettes and the *generated* per-app colour files (`current.json`, `hyprland.conf`, `kitty.conf`, `gtk.css`, `colors.css`, `colors.sh`). |
 | `kitty/` | Terminal config. `kitty.conf` includes the generated `../colors/kitty.conf`, so the terminal follows the palette; open instances are repainted live over the remote-control socket. |
 | `vlc/`, `Thunar/` | App config. |
+| `zsh/` | Shell config. `.zshrc` links to `~/.zshrc`; secrets live in untracked `~/.zshrc.local` (see `zsh/.zshrc.local.example`). |
 
 `hypr/modules/` is the shape to follow when adding config: one file per concern,
 `require`d explicitly from `hyprland.lua`, with a header comment explaining
@@ -80,14 +96,22 @@ Fedora-first. `install.sh --check` reports what's missing.
 
 **Required**
 
-- `hyprland` — `sudo dnf copr enable solopasha/hyprland && sudo dnf install hyprland`
-- `quickshell` — not in Fedora's official repos. Needs a COPR build (availability
-  moves fast) or a source build, and **must match your Qt6 minor version**.
+- `hyprland` + `quickshell` — neither is in Fedora's official repos.
+  Both come from one COPR: `sudo dnf copr enable nett00n/hyprland &&
+  sudo dnf install hyprland quickshell` (`scripts/setup.sh` does this).
+  quickshell **must match your Qt6 minor version**.
 - `kitty`, `python3`, `cliphist`, `wl-clipboard`
+- `zsh` — `sudo dnf install zsh`. The repo manages `~/.zshrc` (see `zsh/`); API
+  keys and other secrets stay in untracked `~/.zshrc.local`, never in the repo.
 - `hyprpaper` — `modules/startup.lua` starts it and `Theme.qml` drives it. No
   wallpaper without it.
 - `hyprlock` — `hypr/hyprlock.lua` is the lock screen; `SUPER + L` calls it.
 - `hypridle` — `hypr/hypridle.conf` drives display sleep and idle actions.
+- `grim`, `slurp` — screenshot pipeline (`grimblast` is fetched from upstream
+  by `scripts/setup.sh` when no enabled repo carries it).
+- `Thunar`, `gvfs` — file manager and its volume handling.
+- `xdg-desktop-portal-hyprland`, `xdg-desktop-portal-gtk` — screen-share and
+  file-chooser portals.
 - `polkitd` — the auth daemon. Note it is **not on `PATH`**; it lives at
   `/usr/lib/polkit-1/polkitd`. `install.sh` looks there explicitly, because a
   plain `command -v polkit` check reports a working system as broken.
@@ -97,6 +121,7 @@ Fedora-first. `install.sh --check` reports what's missing.
 - `brightnessctl` — `XF86MonBrightness*`
 - `playerctl` — `XF86Audio*` media keys
 - `openwhispr` — only if you use `hypr/openwhispr-binds.lua`
+- `starship`, `zoxide` — prompt and directory jumper in `zsh/.zshrc`; the config guards their absence
 
 **Fonts** — the desktop names three families, vendored in `fonts/` so a fresh
 clone needs no network. `install.sh` installs them automatically and keeps the
@@ -128,11 +153,16 @@ check red until all three are present.
 | `SUPER + C` | Clipboard manager |
 | `SUPER + SHIFT + L` | Power menu |
 | `SUPER + ESCAPE` | Close all overlays |
+| `SUPER + R` | Reload desktop (Hyprland config + shell restart) |
 
 These go through Hyprland's `global` dispatcher, so they cost no process
 spawn and show up in `hyprctl globalshortcuts`. The source of truth for the
 names is `quickshell/modules/Keybinds.qml`; `hypr/modules/keybinds/quickshell.lua`
 must match it 1:1. If you add one, add it to both.
+
+`SUPER + R` is the exception: it is a direct exec bind with no `Keybinds.qml`
+twin, because it restarts the shell and must fire even when the shell is
+wedged or mid-restart.
 
 ### Windows and workspaces
 
@@ -182,6 +212,20 @@ you pick a palette  (CLI arg -> $QUICKSHELL_THEME -> colors/index.json `current`
   -> every app
 ```
 
+GTK note: a user-stylesheet `@define-color` does **not** override Adwaita's
+own definitions on this stack (verified — redefined `theme_selected_bg_color`
+still rendered blue while a direct rule in the same file applied, and accent
+widgets paint via `background-image`, which sits over `background-color`).
+So `publish-colors.py` writes **explicit widget rules with literal colors**
+into `~/.config/gtk-3.0/gtk.css` (window, views, selection, headerbar,
+sidebar, popovers, switches) and `~/.config/gtk-4.0/gtk.css` (selection,
+accent button, checks, switches), using the `background:` shorthand so the
+theme's background images don't survive underneath. Icon glyphs (e.g.
+folder icons) come from the icon theme, not CSS — `publish-colors.py`
+generates a minimal `dots` theme (Adwaita underneath, palette-tinted
+`folder`/`folder-open` only) into `~/.local/share/icons/dots` and selects
+it, so folders re-tint with every palette.
+
 - **Palettes** live in `colors/themes/<name>/colors.json`, one flat object of
   18 colour keys. Add a palette by dropping a new directory in there and running
   `quickshell/scripts/list-themes.py`; nothing else needs to change.
@@ -193,9 +237,11 @@ you pick a palette  (CLI arg -> $QUICKSHELL_THEME -> colors/index.json `current`
   `quickshell/scripts/list-themes.py`
   reads it, fills in each palette's `wallpaperDir` by probing the usual locations,
   and writes the result back. If you hand-edit it, keep it an object.
-- **Wallpapers** are looked for in `~/Downloads/<palette>`, `~/Pictures/Wallpapers/<palette>`,
-  `~/wallpapers/<theme>`, then `colors/themes/<theme>/`. They are *not* committed
-  (they are large binaries) — point `wallpaperDir` at your own copy.
+- **Wallpapers** live in `~/Pictures/Themes/<theme>/`, one directory per
+  palette. Older spots (`~/Downloads/<palette>`, `~/Pictures/Wallpapers/<palette>`,
+  `~/wallpapers/<theme>`, `colors/themes/<theme>/`) still work as fallbacks.
+  They are *not* committed (they are large binaries) — point `wallpaperDir`
+  at your own copy.
   `quickshell/scripts/generate-theme-wallpapers.py` will synthesise
   palette-matched placeholders if you just want something coherent.
 - `hypr/modules/colours.lua` reads `colors/hyprland.conf` once per startup;

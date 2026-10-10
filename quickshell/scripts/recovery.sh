@@ -98,31 +98,46 @@ case "${1:-status}" in
         if command -v hyprctl >/dev/null 2>&1; then
             hyprctl reload
         fi
+        # Daemons are ensured, never restarted: a blind restart kills the
+        # wallpaper and the idle timers for no reason. pgrep-guarded start
+        # is the same idempotent pattern as hypr/hypridle.lua.
+        for daemon in hyprpaper hypridle; do
+            if pgrep -x "$daemon" >/dev/null 2>&1; then
+                echo "  $daemon already running"
+            elif command -v "$daemon" >/dev/null 2>&1; then
+                setsid "$daemon" >/dev/null 2>&1 < /dev/null &
+                echo "  started missing $daemon"
+            else
+                echo "  $daemon not installed, skipping" >&2
+            fi
+        done
+        # Quickshell goes last: restarting it drops the global shortcuts
+        # for ~2s and kills in-flight IPC, so everything cheaper happens
+        # first. hyprlock and polkitd are deliberately never touched here.
         stop_shell
         # setsid, not a bare &: a backgrounded child of this script gets
         # SIGHUP when the script's terminal goes away, so the shell would
         # die the moment the user closed the window that started recovery.
         setsid quickshell -p "$CONFIG_DIR" >/dev/null 2>&1 < /dev/null &
         # Confirm it came up rather than reporting success unconditionally.
-        for _ in 1 2 3 4 5 6 7 8 9 10; do
-            sleep 1
-            if pgrep -x quickshell >/dev/null 2>&1; then
-                # The IpcHandlers only register once Keybinds is constructed,
-                # so this is the check that says the shell is actually usable.
-                if command -v qs >/dev/null 2>&1 \
-                   && qs -p "$CONFIG_DIR" ipc show 2>/dev/null | grep -qx "target uis"; then
-                    echo "Quickshell restarted, shell + uis targets registered."
-                else
-                    echo "Quickshell restarted, but the uis target is not up yet."
-                fi
+        # The process existing is not enough: the IpcHandlers only register
+        # once Keybinds is constructed, and "Not ready to accept queries
+        # yet." mid-startup is retryable (same tolerance as tests/run.sh).
+        started=$SECONDS
+        while [ $((SECONDS - started)) -lt 15 ]; do
+            if pgrep -x quickshell >/dev/null 2>&1 \
+                && command -v qs >/dev/null 2>&1 \
+                && qs -p "$CONFIG_DIR" ipc show 2>/dev/null | grep -qx "target uis"; then
+                echo "Quickshell restarted, shell + uis targets registered."
                 exit 0
             fi
+            sleep 0.5
         done
-        echo "Quickshell did not come up within 10s -- check the log." >&2
+        echo "Quickshell did not register the uis target within 15s -- check the log." >&2
         exit 1
         ;;
     *)
         echo "Quickshell Recovery Tool"
-        echo "Usage: $0 {backup|restore|reset|reload}"
+        echo "Usage: $0 {backup|restore|reset|stop|reload}"
         ;;
 esac

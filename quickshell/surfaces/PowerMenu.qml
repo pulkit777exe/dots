@@ -11,11 +11,11 @@ PopupPanel {
     readonly property real tileWidth: 90
     readonly property real tileHeight: 81
     readonly property real tileSpacing: 8
-    readonly property real containerPadding: 2
+    readonly property real containerPadding: 12
 
     implicitWidth: 5 * tileWidth + 4 * tileSpacing + 2 * containerPadding
     implicitHeight: tileHeight + 2 * containerPadding
-    cornerRadius: 24
+    cornerRadius: open ? 24 : pillRadius
     backgroundColor: Theme.colors.background
 
     component PowerTile: Item {

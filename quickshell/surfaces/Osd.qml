@@ -52,7 +52,7 @@ Item {
     transform: Translate {
         y: root.shown ? 0 : 12
         Behavior on y {
-            NumberAnimation { duration: Config.movement(0.8); easing.type: Easing.OutCubic }
+            NumberAnimation { duration: Config.movement(0.8); easing.type: Easing.OutQuint }
         }
     }
 
@@ -95,7 +95,7 @@ Item {
                         color: Theme.accentFor("osd")
 
                         Behavior on width {
-                            NumberAnimation { duration: Config.movement(0.6); easing.type: Easing.OutCubic }
+                            NumberAnimation { duration: Config.movement(0.6); easing.type: Easing.OutQuint }
                         }
                     }
                 }

@@ -2,14 +2,14 @@ import QtQuick
 import QtQuick.Layouts
 import "../components"
 import "../services"
-import "settings/pages"
+import "./pages"
 
 PopupPanel {
     id: root
 
     open: UiState.settingsOpen
     width: 1320
-    cornerRadius: 24
+    cornerRadius: open ? 24 : pillRadius
     backgroundColor: Theme.colors.background
 
     readonly property int sidebarWidth: 220

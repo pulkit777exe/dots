@@ -9,8 +9,7 @@ Item {
     readonly property bool showStatus: Config.statusEnabled
     readonly property bool showCard: Config.cardEnabled
 
-    readonly property bool hidden: UiState.popupOpen
-        || (Compositor.activeWindowFullscreen && Notifications.toasts.length === 0)
+    readonly property bool hidden: Compositor.activeWindowFullscreen && Notifications.toasts.length === 0
 
     opacity: hidden ? 0 : 1
     visible: opacity > 0.01
@@ -48,11 +47,11 @@ Item {
 
     Behavior on width {
         enabled: !Config.reduceMotion
-        SpringAnimation { spring: 5.8; damping: 0.68; mass: 0.55 }
+        SpringAnimation { spring: 5.8; damping: Config.springDamping; mass: 0.55 }
     }
     Behavior on height {
         enabled: !Config.reduceMotion
-        SpringAnimation { spring: 5.8; damping: 0.68; mass: 0.55 }
+        SpringAnimation { spring: 5.8; damping: Config.springDamping; mass: 0.55 }
     }
 
     readonly property string timeFormat: Config.time24h
@@ -82,7 +81,7 @@ Item {
 
         Behavior on cornerRadius {
             enabled: !Config.reduceMotion
-            SpringAnimation { spring: 5.8; damping: 0.68; mass: 0.55 }
+            SpringAnimation { spring: 5.8; damping: Config.springDamping; mass: 0.55 }
         }
     }
 

@@ -12,7 +12,7 @@ PopupPanel {
     readonly property bool imageView: UiState.clipboardView === "image"
 
     width: imageView ? 460 : 640
-    cornerRadius: 22
+    cornerRadius: open ? 22 : pillRadius
     backgroundColor: Theme.panelFill
 
     property var entries: []
@@ -43,7 +43,7 @@ PopupPanel {
 
     Behavior on width {
         enabled: !Config.reduceMotion
-        NumberAnimation { duration: Config.movement(0.5); easing.type: Easing.OutCubic }
+        NumberAnimation { duration: Config.movement(0.5); easing.type: Easing.OutQuint }
     }
 
     readonly property string thumbDir: Quickshell.statePath("cliphist-thumbs")
@@ -107,16 +107,10 @@ PopupPanel {
         else copySelected();
     }
 
-    function commitImage() { copySelected(); }
-
     function moveSelection(delta) {
         if (results.length === 0) return;
         selectedIndex = Math.max(0, Math.min(results.length - 1, selectedIndex + delta));
-        ensureVisible(selectedIndex);
-    }
-
-    function ensureVisible(index) {
-        list.positionViewAtIndex(index, ListView.Contain);
+        list.positionViewAtIndex(selectedIndex, ListView.Contain);
     }
 
     onOpenChanged: {
@@ -136,8 +130,8 @@ PopupPanel {
         if (imageView) forceActiveFocus();
         else if (open) focusRetry.restart();
     }
-    Keys.onReturnPressed: imageView ? commitImage() : activateSelection()
-    Keys.onEnterPressed: imageView ? commitImage() : activateSelection()
+    Keys.onReturnPressed: imageView ? copySelected() : activateSelection()
+    Keys.onEnterPressed: imageView ? copySelected() : activateSelection()
     Keys.onUpPressed: if (!imageView) moveSelection(-1)
     Keys.onDownPressed: if (!imageView) moveSelection(1)
 
@@ -217,7 +211,7 @@ PopupPanel {
 
             Behavior on Layout.preferredHeight {
                 enabled: !Config.reduceMotion
-                NumberAnimation { duration: Config.movement(0.35); easing.type: Easing.OutCubic }
+                NumberAnimation { duration: Config.movement(0.35); easing.type: Easing.OutQuint }
             }
 
             ListView {

@@ -26,3 +26,11 @@ hl.bind(
     mod .. " + ESCAPE",
     hl.dsp.global("quickshell:closeAll")
 )
+
+-- Reload is a direct exec, not a global shortcut: it restarts the shell,
+-- so it must keep working when the shell is wedged or mid-restart and no
+-- GlobalShortcut can fire. Deliberately has no twin in Keybinds.qml.
+hl.bind(
+    mod .. " + R",
+    hl.dsp.exec_cmd("~/.config/quickshell/scripts/recovery.sh reload")
+)

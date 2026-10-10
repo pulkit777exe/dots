@@ -9,7 +9,7 @@ PopupPanel {
     open: UiState.wallpaperPickerOpen
     width: 1000
     implicitHeight: 238
-    cornerRadius: Config.expandedRadius
+    cornerRadius: open ? Config.expandedRadius : pillRadius
     backgroundColor: Theme.colors.background
 
     readonly property var walls: Theme.wallpapers
@@ -135,23 +135,18 @@ PopupPanel {
                         sourceSize: Qt.size(392, 236)
                     }
 
+                    HoverHandler { id: hover }
+
                     Rectangle {
                         anchors.fill: parent
-                        color: Qt.rgba(0, 0, 0, 0.08)
+                        radius: 12
+                        color: hover.hovered && !card.current ? Qt.rgba(0, 0, 0, 0.18) : Qt.rgba(0, 0, 0, 0.08)
                     }
 
                     SelectionDot {
                         selected: card.selected
                         color: Theme.accentFor("wallpaper-picker")
                     }
-                }
-
-                HoverHandler { id: hover }
-
-                Rectangle {
-                    anchors.fill: parent
-                    radius: 12
-                    color: hover.hovered && !card.current ? Qt.rgba(0, 0, 0, 0.18) : "transparent"
                 }
 
                 TapHandler {

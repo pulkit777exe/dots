@@ -5,6 +5,7 @@ import Quickshell.Hyprland
 import qs.services
 import qs.surfaces
 import qs.modules
+import "./settings-app"
 
 ShellRoot {
     id: shellRoot
@@ -88,15 +89,17 @@ ShellRoot {
             readonly property real topY: Config.notchMode ? 0 : Config.gapFromEdge
 
             implicitHeight: {
+                // Unconditional: every popup reserves its height whether open
+                // or not, so opening/closing never resizes the layer window.
+                // A resize mid-close re-triggers the compositor's layer
+                // animation and visibly kicks the island.
                 let bottom = island.y + island.height;
                 for (const p of barWindow.popups)
-                    if (p.visible) bottom = Math.max(bottom, p.y + p.height);
+                    bottom = Math.max(bottom, p.y + p.height);
                 return bottom + 16;
             }
 
-            exclusiveZone: (barWindow.isFullscreen && island.hidden)
-                ? 0
-                : (Config.barHeight + (Config.notchMode ? 0 : Config.gapFromEdge));
+            exclusiveZone: Compositor.activeWindowFullscreen ? 0 : (Config.barHeight + (Config.notchMode ? 0 : Config.gapFromEdge));
 
             mask: Region {
                 Region { item: island.visible ? island : null }

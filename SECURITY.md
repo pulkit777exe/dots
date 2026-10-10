@@ -80,6 +80,10 @@ than secret, but did not belong in a public repo:
 - `hypr/` and the Quickshell tree had a hardcoded `/home/pulkit/...` path,
   which is both a privacy leak and a portability bug.
 
+Shell secrets (`zsh/`) follow the same rule: `zsh/.zshrc` is tracked and must
+stay free of keys or tokens; anything secret goes in untracked
+`~/.zshrc.local` (see `zsh/.zshrc.local.example`).
+
 Wallpapers are **not** committed — they are large binaries, and
 `colors/index.json` deliberately contains no absolute paths, so
 `list-themes.py` discovers wallpaper directories on each machine at runtime.

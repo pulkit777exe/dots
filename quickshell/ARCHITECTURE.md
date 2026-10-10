@@ -14,7 +14,7 @@ screenshot set with three layers and nothing else:
   path for settings, `UiState` is one mode enum so exactly one overlay can
   be open.
 - **`surfaces/`** — the windows: `Island` (bar), `ControlCenter` (+ `cc/`
-  drill pages), `SettingsApp` (+ `settings/pages/`), `Launcher`,
+  drill pages), `SettingsApp` (+ `settings-app/pages/`), `Launcher`,
   `ThemePicker`, `WallpaperPicker`, `PowerMenu`, `NotificationStack`.
   Surfaces set `width`/`implicitHeight` only; `shell.qml` owns where they
   sit (`anchors.horizontalCenter` + `topY`) and the input mask.

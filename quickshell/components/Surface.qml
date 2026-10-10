@@ -18,10 +18,10 @@ Item {
     property bool shadow: true
     property color shadowColor: Theme.withAlpha(Theme.shadowTint, 0.20)
 
-    default property alias content: body.data
+    default property alias content: contentWrap.data
 
     Rectangle {
-        id: body
+        id: bg
         anchors.fill: parent
         antialiasing: true
 
@@ -45,5 +45,10 @@ Item {
             shadowHorizontalOffset: 0
             blurEnabled: false
         }
+    }
+
+    Item {
+        id: contentWrap
+        anchors.fill: parent
     }
 }

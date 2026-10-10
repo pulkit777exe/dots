@@ -3,27 +3,27 @@
   "themes": {
     "ariadne": {
       "name": "ariadne",
-      "wallpaperDir": "/home/pulkit/Downloads/aridane"
+      "wallpaperDir": "/home/pulkit/Pictures/Themes/ariadne"
     },
     "catppuccin": {
       "name": "catppuccin",
-      "wallpaperDir": "/home/pulkit/Downloads/catpuccin"
+      "wallpaperDir": "/home/pulkit/Pictures/Themes/catppuccin"
     },
     "everforest": {
       "name": "everforest",
-      "wallpaperDir": "/home/pulkit/Downloads/everforest"
+      "wallpaperDir": "/home/pulkit/Pictures/Themes/everforest"
     },
     "gruvbox": {
       "name": "gruvbox",
-      "wallpaperDir": "/home/pulkit/Downloads/gruvbox"
+      "wallpaperDir": "/home/pulkit/Pictures/Themes/gruvbox"
     },
     "horizon": {
       "name": "horizon",
-      "wallpaperDir": "/home/pulkit/Downloads/horizon"
+      "wallpaperDir": "/home/pulkit/Pictures/Themes/horizon"
     },
     "monochrome": {
       "name": "monochrome",
-      "wallpaperDir": "/home/pulkit/Downloads/monochrome"
+      "wallpaperDir": "/home/pulkit/Pictures/Themes/monochrome"
     }
   },
   "current": "monochrome"

@@ -201,11 +201,6 @@ Singleton {
         root.applyMonitor(name, "preferred", scale);
     }
 
-    function setMonitorMode(name: string, mode: string) {
-        const m = monitorList.find(x => x.name === name);
-        root.applyMonitor(name, mode, m ? m.scale : 1);
-    }
-
     IpcHandler {
         target: "brightness"
         function get(): int { return root.level; }

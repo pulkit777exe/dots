@@ -25,7 +25,7 @@ Rectangle {
     scale: area.pressed ? 0.97 : 1.0
     Behavior on scale {
         enabled: !Config.reduceMotion
-        SpringAnimation { spring: 6; damping: 0.7; mass: 0.4 }
+        SpringAnimation { spring: 6; damping: Config.springDamping; mass: 0.4 }
     }
 
     RowLayout {

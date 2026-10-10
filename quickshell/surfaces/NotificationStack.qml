@@ -52,7 +52,7 @@ Item {
                         property: "x"
                         to: 0
                         duration: Config.movement(0.7)
-                        easing.type: Easing.OutCubic
+                        easing.type: Easing.OutQuint
                     }
                 }
                 Component.onCompleted: {

@@ -21,6 +21,4 @@ Singleton {
             || device.state === UPowerDeviceState.PendingCharge
             || device.state === UPowerDeviceState.FullyCharged)
         : false
-
-    readonly property bool plugged: device ? device.state !== UPowerDeviceState.Discharging : true
 }

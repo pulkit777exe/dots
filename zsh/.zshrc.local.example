@@ -1,0 +1,7 @@
+# Copy to ~/.zshrc.local and fill in. Untracked; sourced last by zsh/.zshrc.
+#   cp ~/personal/dots/zsh/.zshrc.local.example ~/.zshrc.local
+
+# export OPENROUTER_API_KEY="<your-key-here>"
+# export ANTHROPIC_BASE_URL="https://openrouter.ai/api"
+# export ANTHROPIC_AUTH_TOKEN="$OPENROUTER_API_KEY"
+# export CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY=1

@@ -9,7 +9,7 @@ PopupPanel {
     open: UiState.themePickerOpen
     width: 804
     implicitHeight: 220
-    cornerRadius: Config.expandedRadius
+    cornerRadius: open ? Config.expandedRadius : pillRadius
     backgroundColor: Theme.colors.background
 
     readonly property var rows: Theme.pickerRows()

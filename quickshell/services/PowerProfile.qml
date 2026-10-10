@@ -10,7 +10,6 @@ Singleton {
 
     property bool available: false
     property string active: "balanced"
-    readonly property var profiles: ["power-saver", "balanced", "performance"]
 
     function setProfile(profile: string) {
         if (!available || profile === active) return;

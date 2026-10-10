@@ -11,8 +11,8 @@ COLORS_ROOT = CONFIG / "colors"
 INDEX = COLORS_ROOT / "index.json"
 
 KNOWN_DIRS = {
-    "ariadne": ["aridane", "ariadne"],
-    "catppuccin": ["catpuccin", "catpuccin"],
+    "ariadne": ["ariadne", "aridane"],
+    "catppuccin": ["catppuccin", "catpuccin"],
     "everforest": ["everforest"],
     "gruvbox": ["gruvbox"],
     "horizon": ["horizon"],
@@ -45,7 +45,7 @@ def load_colors(theme_key: str):
 
 def guess_wallpaper_dir(key: str) -> pathlib.Path | None:
     names = KNOWN_DIRS.get(key, [key])
-    candidates = []
+    candidates = [HOME / "Pictures" / "Themes" / key]
     for name in names:
         candidates.extend([
             HOME / "Downloads" / name,

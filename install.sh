@@ -29,6 +29,9 @@ ASSUME_YES=0
 
 UNITS=(colors hypr kitty quickshell vlc Thunar)
 
+# Repo-rel-source:home-rel-dest pairs for files linked into $HOME, not ~/.config.
+HOME_FILES=(zsh/.zshrc:.zshrc)
+
 log()  { printf '\033[1;32m==>\033[0m %s\n' "$1"; }
 warn() { printf '\033[1;33m!!\033[0m %s\n' "$1" >&2; }
 err()  { printf '\033[1;31mxx\033[0m %s\n' "$1" >&2; }
@@ -46,7 +49,8 @@ usage: install.sh [--dry-run] [--check] [--yes] [--help]
 Moving an existing ~/.config/<unit> aside is always reversible — it is
 renamed to <unit>.pre-install.<timestamp>, never deleted — but it is the
 one step here that touches files this repo did not create, so it asks
-first unless --yes is given.
+first unless --yes is given. The same applies to files linked directly
+into \$HOME (see HOME_FILES, e.g. ~/.zshrc).
 USAGE
 }
 
@@ -113,6 +117,56 @@ link_unit() {
         mkdir -p "$(dirname "$dst")"
         ln -s "$(readlink -f "$src")" "$dst"
         log "linked $name -> $dst"
+    fi
+}
+
+link_home_file() {
+    local src_rel="$1" dst_rel="$2"
+    local src="$REPO_DIR/$src_rel"
+    local dst="$HOME/$dst_rel"
+
+    if [ ! -f "$src" ]; then
+        warn "skipping $dst_rel — $src_rel not present in the repo"
+        return
+    fi
+
+    if [ -L "$dst" ] && [ "$(readlink -f "$dst")" = "$(readlink -f "$src")" ]; then
+        log "$dst_rel already linked"
+        return 0
+    fi
+
+    if [ -e "$dst" ] || [ -L "$dst" ]; then
+        local backup="$dst.pre-install.$(date +%Y%m%d-%H%M%S)"
+
+        if [ "$DRY_RUN" -eq 1 ]; then
+            warn "$dst exists and isn't our symlink — would move it to $backup"
+        elif [ "$ASSUME_YES" -eq 0 ]; then
+            if [ ! -t 0 ]; then
+                err "$dst exists and isn't our symlink, and there is no terminal to confirm on."
+                err "Re-run with --yes to allow moving it to $backup, or move it yourself first."
+                return 1
+            fi
+            warn "$dst exists and isn't our symlink."
+            printf '   Move it to %s ? [y/N] ' "$backup"
+            local reply=""
+            read -r reply || reply=""
+            case "$reply" in
+                [yY]|[yY][eE][sS]) ;;
+                *) warn "left $dst alone"; return 0 ;;
+            esac
+            mv "$dst" "$backup"
+        else
+            warn "$dst exists and isn't our symlink — moving it to $backup"
+            mv "$dst" "$backup"
+        fi
+    fi
+
+    if [ "$DRY_RUN" -eq 1 ]; then
+        log "$dst_rel would be linked -> $dst"
+    else
+        mkdir -p "$(dirname "$dst")"
+        ln -s "$(readlink -f "$src")" "$dst"
+        log "linked $dst_rel -> $dst"
     fi
 }
 
@@ -205,6 +259,23 @@ check_session() {
             fail=1
         fi
     done
+
+    for pair in ${HOME_FILES+"${HOME_FILES[@]}"}; do
+        dst="$HOME/${pair##*:}"
+        if [ -L "$dst" ] && [ "$(readlink -f "$dst")" = "$(readlink -f "$REPO_DIR/${pair%%:*}")" ]; then
+            log "home: ${pair##*:} linked -> $(readlink -f "$dst")"
+        elif [ -e "$dst" ]; then
+            warn "home: ${pair##*:} exists but is not our symlink (run install.sh to take over)"
+            fail=1
+        else
+            err "home: ${pair##*:} not installed"
+            fail=1
+        fi
+    done
+
+    if [ ! -e "$HOME/.zshrc.local" ]; then
+        warn "home: .zshrc.local not present — secrets stay out of the repo; copy zsh/.zshrc.local.example there if you need API keys"
+    fi
 
     for f in "$CONFIG_DIR/hypr/scripts/qs-call"; do
         if [ -e "$f" ] && [ ! -x "$f" ]; then
@@ -329,15 +400,21 @@ main() {
         for u in "${UNITS[@]}"; do
             link_unit "$u" || true
         done
+        echo
+        log "linking home files"
+        for pair in ${HOME_FILES+"${HOME_FILES[@]}"}; do
+            link_home_file "${pair%%:*}" "${pair##*:}" || true
+        done
     fi
 
     echo
     log "checking runtime dependencies (see README.md > Requirements)"
     echo
     log "required runtime"
-    check_bin hyprland "sudo dnf copr enable solopasha/hyprland && sudo dnf install hyprland"
-    check_bin quickshell "not in Fedora's official repos — COPR build (status moves fast) or source build; must match this machine's Qt6 minor version, see README.md"
+    check_bin hyprland "sudo dnf copr enable nett00n/hyprland && sudo dnf install hyprland (or run scripts/setup.sh)"
+    check_bin quickshell "sudo dnf copr enable nett00n/hyprland && sudo dnf install quickshell (or run scripts/setup.sh); must match this machine's Qt6 minor version, see README.md"
     check_bin kitty "sudo dnf install kitty"
+    check_bin zsh "sudo dnf install zsh — the repo manages ~/.zshrc (see zsh/)"
     check_bin python3 "sudo dnf install python3"
     check_bin cliphist "sudo dnf install cliphist   (or: go install github.com/sentriz/cliphist@latest)"
     check_bin wl-copy "sudo dnf install wl-clipboard"
@@ -351,6 +428,12 @@ main() {
     check_bin brightnessctl "sudo dnf install brightnessctl — XF86MonBrightness* keys"
     check_bin playerctl "sudo dnf install playerctl — XF86Audio* media keys"
     check_bin hyprsunset "blue-light filter; without it the control centre's Night Light toggle does nothing" optional
+    check_bin starship "sudo dnf install starship — prompt in zsh/.zshrc degrades gracefully without it" optional
+    check_bin zoxide "sudo dnf install zoxide — directory jumper in zsh/.zshrc degrades gracefully without it" optional
+
+    if [ ! -d "$HOME/.oh-my-zsh" ]; then
+        warn "oh-my-zsh not found at ~/.oh-my-zsh — zsh/.zshrc prints a notice and continues; install from https://ohmyz.sh"
+    fi
 
     if [ "$CHECK_ONLY" -eq 0 ]; then
         echo

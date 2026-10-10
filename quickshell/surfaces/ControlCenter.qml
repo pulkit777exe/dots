@@ -8,7 +8,7 @@ PopupPanel {
 
     open: UiState.controlCenterOpen
     width: 460
-    cornerRadius: 24
+    cornerRadius: open ? 24 : pillRadius
     backgroundColor: Theme.cc.surface
     borderColor: Theme.cc.border
     borderWidth: 1
@@ -64,12 +64,12 @@ PopupPanel {
 
         Behavior on y {
             enabled: !Config.reduceMotion
-            NumberAnimation { duration: Config.movement(0.5); easing.type: Easing.OutCubic }
+            NumberAnimation { duration: Config.movement(0.5); easing.type: Easing.OutQuint }
         }
         Behavior on opacity { NumberAnimation { duration: Config.fade(); easing.type: Easing.OutCubic } }
         Behavior on scale {
             enabled: !Config.reduceMotion
-            NumberAnimation { duration: Config.fade(); easing.type: Easing.OutCubic }
+            NumberAnimation { duration: Config.movement(0.5); easing.type: Easing.OutQuint }
         }
 
         CcDisplayPage {

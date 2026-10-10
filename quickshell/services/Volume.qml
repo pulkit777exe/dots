@@ -22,7 +22,6 @@ Singleton {
 
     readonly property real micVolume: sourceAvailable ? source.audio.volume : 0
     readonly property bool micMuted: sourceAvailable ? source.audio.muted : true
-    readonly property int micVolumePercent: Math.round(micVolume * 100)
 
     readonly property string iconName: {
         if (!sinkAvailable || muted || volumePercent === 0) return "volume_off";

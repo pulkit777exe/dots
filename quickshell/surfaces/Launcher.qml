@@ -9,7 +9,7 @@ PopupPanel {
     open: UiState.launcherOpen
 
     width: 550
-    cornerRadius: 22
+    cornerRadius: open ? 22 : pillRadius
     backgroundColor: Theme.panelFill
 
     readonly property var results: AppLauncher.results
@@ -40,8 +40,6 @@ PopupPanel {
         AppLauncher.launch(results[index]);
         UiState.close();
     }
-
-    function activateSelection() { launchIndex(selectedIndex); }
 
     onOpenChanged: {
         if (open) {
@@ -80,7 +78,7 @@ PopupPanel {
 
             onNavigateUp: root.moveSelection(-1)
             onNavigateDown: root.moveSelection(1)
-            onAccepted: root.activateSelection()
+            onAccepted: root.launchIndex(root.selectedIndex)
 
             onTextChanged: {
                 AppLauncher.setQuery(text);
@@ -106,7 +104,7 @@ PopupPanel {
 
             Behavior on Layout.preferredHeight {
                 enabled: !Config.reduceMotion
-                NumberAnimation { duration: Config.movement(0.35); easing.type: Easing.OutCubic }
+                NumberAnimation { duration: Config.movement(0.35); easing.type: Easing.OutQuint }
             }
 
             clip: true

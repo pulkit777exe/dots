@@ -39,7 +39,7 @@ Item {
 
             Behavior on scale {
                 enabled: !Config.reduceMotion
-                SpringAnimation { spring: 6.0; damping: 0.65; mass: 0.4 }
+                SpringAnimation { spring: 6.0; damping: Config.springDamping; mass: 0.4 }
             }
 
             Rectangle {

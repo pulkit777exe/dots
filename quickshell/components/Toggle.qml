@@ -27,7 +27,7 @@ Rectangle {
 
         Behavior on x {
             enabled: !Config.reduceMotion
-            SpringAnimation { spring: 5.5; damping: 0.68; mass: 0.4 }
+            SpringAnimation { spring: 5.5; damping: Config.springDamping; mass: 0.4 }
         }
     }
 
