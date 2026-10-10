@@ -7,6 +7,9 @@ ColumnLayout {
     id: root
     spacing: 12
 
+    readonly property var searchKeys: ["bar", "island", "notch", "height",
+        "width", "gap", "radius", "status", "now playing", "card"]
+
     SettingsHeader {
         icon: "crop_landscape"
         title: "Bar & Island"

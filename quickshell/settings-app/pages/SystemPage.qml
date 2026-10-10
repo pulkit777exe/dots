@@ -7,6 +7,9 @@ ColumnLayout {
     id: root
     spacing: 12
 
+    readonly property var searchKeys: ["system", "theme", "battery",
+        "power", "profile", "lock", "suspend", "menu", "session"]
+
     SettingsHeader {
         icon: "settings"
         title: "System"

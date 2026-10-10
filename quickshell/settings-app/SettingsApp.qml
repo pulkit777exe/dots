@@ -25,14 +25,94 @@ PopupPanel {
         { title: "Appearance", icon: "palette", page: 2 },
         { title: "Motion", icon: "sensors", page: 3 },
         { title: "Notifications", icon: "notifications", page: 4 },
-        { title: "System", icon: "settings", page: 5 }
+        { title: "System", icon: "settings", page: 5 },
+        { title: "Sound", icon: "volume_up", page: 6 },
+        { title: "Display", icon: "monitor", page: 7 },
+        { title: "Network", icon: "wifi", page: 8 },
+        { title: "Bluetooth", icon: "bluetooth", page: 9 },
+        { title: "Power", icon: "power_settings_new", page: 10 }
     ]
+
+    property var keyOf: ({})
 
     readonly property int current: (Config.currentPage >= 0 && Config.currentPage < navItems.length)
         ? Config.currentPage : 0
+
+    function editDist(a, b) {
+        const m = a.length, n = b.length;
+        if (m === 0) return n;
+        if (n === 0) return m;
+        let prev = [];
+        for (let j = 0; j <= n; j++) prev[j] = j;
+        for (let i = 1; i <= m; i++) {
+            let cur = [i];
+            for (let j = 1; j <= n; j++)
+                cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+            prev = cur;
+        }
+        return prev[n];
+    }
+
+    // Typo-tolerant hit test. Returns rank (lower is better) or -1:
+    // title substring 0, key substring 1, title fuzzy 2, key fuzzy 3.
+    // Fuzzy allows 1 edit on short words, 2 on longer ones.
+    function hitRank(q, title, keys) {
+        const t = title.toLowerCase();
+        if (t.includes(q)) return 0;
+        for (const k of keys)
+            if (k.toLowerCase().includes(q)) return 1;
+        const words = t.split(/[^a-z0-9]+/);
+        for (const w of words) {
+            if (!w) continue;
+            if (root.editDist(q, w) <= (w.length <= 4 ? 1 : 2)) return 2;
+        }
+        for (const k of keys) {
+            for (const w of k.toLowerCase().split(/[^a-z0-9]+/)) {
+                if (!w) continue;
+                if (root.editDist(q, w) <= (w.length <= 4 ? 1 : 2)) return 3;
+            }
+        }
+        return -1;
+    }
+
+    function matchTerm(q, title, keys) {
+        const t = title.toLowerCase();
+        if (t.includes(q)) return "";
+        for (const k of keys)
+            if (k.toLowerCase().includes(q)) return k;
+        return "≈ " + q;
+    }
+
     readonly property string query: search.text
-    readonly property var visibleNav: query.length === 0 ? navItems
-        : navItems.filter(function (n) { return n.title.toLowerCase().indexOf(query.toLowerCase()) !== -1 })
+    readonly property var visibleNav: {
+        if (query.length === 0) {
+            for (const n of navItems) n.match = "";
+            return navItems;
+        }
+        const q = query.trim().toLowerCase();
+        const hits = [];
+        for (const n of navItems) {
+            const rank = root.hitRank(q, n.title, root.keyOf[n.page] || []);
+            if (rank >= 0) {
+                n.match = root.matchTerm(q, n.title, root.keyOf[n.page] || []);
+                n.rank = rank;
+                hits.push(n);
+            }
+        }
+        hits.sort(function (a, b) { return a.rank - b.rank; });
+        return hits;
+    }
+
+    Component.onCompleted: {
+        keyOf = {
+            0: barIslandPage.searchKeys, 1: clockPage.searchKeys,
+            2: appearancePage.searchKeys, 3: motionPage.searchKeys,
+            4: notifPage.searchKeys, 5: systemPage.searchKeys,
+            6: soundPage.searchKeys, 7: displayPage.searchKeys,
+            8: networkPage.searchKeys, 9: btPage.searchKeys,
+            10: powerPage.searchKeys
+        };
+    }
 
     function select(page) { Config.set("currentPage", page) }
     function step(delta) {
@@ -41,6 +121,13 @@ PopupPanel {
     }
 
     onCurrentChanged: contentFlick.contentY = 0
+
+    onOpenChanged: {
+        if (open) {
+            search.text = "";
+            Qt.callLater(() => search.forceInputFocus());
+        }
+    }
 
     RowLayout {
         anchors.fill: parent
@@ -74,6 +161,9 @@ PopupPanel {
                         anchors.rightMargin: 8
                         fieldHeight: 36
                         placeholderText: "Search Settings"
+                        onAccepted: {
+                            if (root.visibleNav.length > 0) root.select(root.visibleNav[0].page);
+                        }
                     }
                 }
 
@@ -128,6 +218,15 @@ PopupPanel {
                                 color: navRow.active ? Theme.colors.text
                                                      : Theme.withAlpha(Theme.colors.text, 0.75)
                                 elide: Text.ElideRight
+                            }
+
+                            Label {
+                                visible: root.query.length > 0 && navRow.modelData.match !== ""
+                                text: navRow.modelData.match
+                                font.pixelSize: Theme.px(11)
+                                color: Theme.accentFor("settings")
+                                elide: Text.ElideRight
+                                Layout.maximumWidth: 110
                             }
                         }
 
@@ -222,12 +321,17 @@ PopupPanel {
                         width: contentFlick.width
                         spacing: 12
 
-                        BarIslandPage   { Layout.fillWidth: true; visible: root.current === 0 }
-                        ClockDatePage   { Layout.fillWidth: true; visible: root.current === 1 }
-                        AppearancePage  { Layout.fillWidth: true; visible: root.current === 2 }
-                        MotionPage      { Layout.fillWidth: true; visible: root.current === 3 }
-                        NotificationsPage { Layout.fillWidth: true; visible: root.current === 4 }
-                        SystemPage      { Layout.fillWidth: true; visible: root.current === 5 }
+                        BarIslandPage   { id: barIslandPage; Layout.fillWidth: true; visible: root.current === 0 }
+                        ClockDatePage   { id: clockPage; Layout.fillWidth: true; visible: root.current === 1 }
+                        AppearancePage  { id: appearancePage; Layout.fillWidth: true; visible: root.current === 2 }
+                        MotionPage      { id: motionPage; Layout.fillWidth: true; visible: root.current === 3 }
+                        NotificationsPage { id: notifPage; Layout.fillWidth: true; visible: root.current === 4 }
+                        SystemPage      { id: systemPage; Layout.fillWidth: true; visible: root.current === 5 }
+                        SoundPage       { id: soundPage; Layout.fillWidth: true; visible: root.current === 6 }
+                        DisplayPage     { id: displayPage; Layout.fillWidth: true; visible: root.current === 7 }
+                        NetworkPage     { id: networkPage; Layout.fillWidth: true; visible: root.current === 8 }
+                        BluetoothPage   { id: btPage; Layout.fillWidth: true; visible: root.current === 9 }
+                        PowerPage       { id: powerPage; Layout.fillWidth: true; visible: root.current === 10 }
                     }
                 }
             }

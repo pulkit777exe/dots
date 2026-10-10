@@ -7,6 +7,9 @@ ColumnLayout {
     id: root
     spacing: 12
 
+    readonly property var searchKeys: ["motion", "animation", "animate",
+        "reduce", "speed", "movement", "fade", "hover", "bounce", "spring"]
+
     SettingsHeader {
         icon: "sensors"
         title: "Motion"

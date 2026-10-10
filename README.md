@@ -13,6 +13,7 @@ Fresh Fedora machine — packages first, then configs:
 ```bash
 git clone https://github.com/pulkit777exe/dots.git ~/dots
 ~/dots/scripts/setup.sh --all    # dnf packages, drivers, shell tooling, then links configs
+~/dots/install-software          # brave + flatpak apps (needs a terminal for sudo)
 ```
 
 `setup.sh` provisions per group (`--desktop`, `--shell`, `--nvidia`, `--dev`;

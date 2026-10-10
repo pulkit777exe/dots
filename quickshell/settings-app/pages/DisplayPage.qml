@@ -1,0 +1,87 @@
+import QtQuick
+import QtQuick.Layouts
+import "../../components"
+import "../../services"
+import "../../surfaces/cc"
+
+ColumnLayout {
+    id: root
+    spacing: 12
+
+    readonly property var searchKeys: ["display", "monitor", "screen",
+        "brightness", "scale", "resolution", "night light", "temperature"]
+
+    SettingsHeader {
+        icon: "monitor"
+        title: "Display"
+        subtitle: "Brightness, scale, and night light per monitor."
+    }
+
+    Repeater {
+        model: Brightness.monitorList
+
+        CcMonitorCard {
+            required property var modelData
+            Layout.fillWidth: true
+            monitor: modelData
+        }
+    }
+
+    SettingsCard {
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: 10
+
+            Rectangle {
+                Layout.preferredWidth: 30
+                Layout.preferredHeight: 30
+                radius: 15
+                color: NightLight.enabled ? Theme.accentFor("settings")
+                    : Theme.withAlpha(Theme.colors.text, 0.20)
+                Behavior on color { ColorAnimation { duration: Config.hover() } }
+
+                Icon {
+                    anchors.centerIn: parent
+                    icon: "nightlight"
+                    size: 15
+                    iconColor: NightLight.enabled ? Theme.colors.accentText
+                        : Theme.withAlpha(Theme.colors.text, 0.85)
+                }
+            }
+
+            ColumnLayout {
+                Layout.fillWidth: true
+                spacing: 1
+                Label {
+                    text: "Night Light"
+                    font.pixelSize: Theme.px(13)
+                    font.weight: Font.Medium
+                    color: Theme.colors.text
+                }
+                Label {
+                    text: NightLight.enabled ? NightLight.temperature + " K" : "Off"
+                    font.pixelSize: Theme.px(12)
+                    color: Theme.withAlpha(Theme.colors.text, 0.48)
+                }
+            }
+
+            Toggle {
+                accent: Theme.accentFor("settings")
+                checked: NightLight.enabled
+                onToggled: NightLight.toggle()
+            }
+        }
+
+        CcDeviceSlider {
+            Layout.fillWidth: true
+            Layout.topMargin: 10
+            visible: NightLight.enabled
+            icon: "nightlight"
+            value: Math.max(0, Math.min(1, (NightLight.temperature - 1000) / 5500))
+            onMoved: f => NightLight.setTemperature(Math.round(1000 + f * 5500))
+        }
+    }
+
+    Component.onCompleted: Brightness.refreshMonitors()
+    onVisibleChanged: if (visible) Brightness.refreshMonitors()
+}

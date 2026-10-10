@@ -7,6 +7,9 @@ ColumnLayout {
     id: root
     spacing: 12
 
+    readonly property var searchKeys: ["appearance", "theme", "wallpaper",
+        "accent", "colour", "color", "font", "size", "type", "burst"]
+
     readonly property var accentSwatches: ["", "#3ed0af", "#eb6f65", "#a7c080",
                                            "#e5c07b", "#7aa2f7", "#d38aea", "#7dcfff"]
     readonly property color baseAccent: (Theme.current && Theme.current.colors && Theme.current.colors.accent)

@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+# install-software: apps that live outside dnf (third-party installers,
+# flatpaks). Idempotent -- rerunning installs nothing twice.
+# Needs an interactive terminal: the installers below call sudo/dnf.
+set -euo pipefail
+
+if ! sudo -n true 2>/dev/null; then
+    if [ ! -t 0 ]; then
+        echo "install-software: needs an interactive terminal (sudo asks for a password)" >&2
+        exit 1
+    fi
+    sudo -v || exit 1
+fi
+
+have() { command -v "$1" >/dev/null 2>&1; }
+have_flatpak() { flatpak info "$1" >/dev/null 2>&1; }
+
+install_brave() {
+    if have brave-browser || have brave || have brave-origin; then
+        echo "brave: already installed"
+        return 0
+    fi
+    echo "brave: installing (origin flavour)..."
+    curl -fsS https://dl.brave.com/install.sh | FLAVOR=origin sh
+}
+
+install_flathub() {
+    if flatpak remotes 2>/dev/null | grep -q Flathub; then
+        echo "flathub: already added"
+        return 0
+    fi
+    echo "flathub: adding remote..."
+    sudo flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+}
+
+install_flatpak_app() {
+    if have_flatpak "$1"; then
+        echo "$2: already installed"
+        return 0
+    fi
+    echo "$2: installing from flathub..."
+    sudo flatpak install -y flathub "$1"
+}
+
+install_brave
+install_flathub
+install_flatpak_app app.zen_browser.zen "zen browser"
+install_flatpak_app com.obsproject.Studio "obs studio"
+
+echo "install-software: done"

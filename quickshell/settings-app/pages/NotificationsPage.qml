@@ -7,6 +7,10 @@ ColumnLayout {
     id: root
     spacing: 12
 
+    readonly property var searchKeys: ["notifications", "notificaitons",
+        "popup", "timeout", "urgent", "width", "body", "history", "osd",
+        "on-screen", "thickness", "banner", "toast"]
+
     SettingsHeader {
         icon: "notifications"
         title: "Notifications"

@@ -7,6 +7,9 @@ ColumnLayout {
     id: root
     spacing: 12
 
+    readonly property var searchKeys: ["clock", "date", "time", "24-hour",
+        "24 hour", "seconds", "format", "calendar"]
+
     property date now: new Date()
 
     Timer {
