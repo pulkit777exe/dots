@@ -426,6 +426,12 @@ check_session() {
 
     check_boot_session || fail=1
 
+    if [ -s "$HOME/.local/state/hypr/config-errors.log" ]; then
+        warn "hypr config errors logged (tail):"
+        warn "$(tail -3 "$HOME/.local/state/hypr/config-errors.log")"
+        warn "inspect + delete the log after fixing; a reload re-creates it on new failures"
+    fi
+
     echo
     if [ "$fail" -eq 0 ]; then
         log "check passed"
