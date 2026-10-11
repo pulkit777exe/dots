@@ -229,6 +229,65 @@ check_font() {
     return 0
 }
 
+check_boot_session() {
+    local rc=0
+    if [ ! -d /run/systemd/system ] || ! command -v systemctl >/dev/null 2>&1; then
+        warn "no systemd — skipping login-session checks"
+        return 0
+    fi
+
+    echo
+    log "verifying login session (DM, target, uwsm)"
+
+    if [ "$(systemctl get-default 2>/dev/null)" = "graphical.target" ]; then
+        log "systemd default target: graphical.target"
+    else
+        err "default target is $(systemctl get-default 2>/dev/null) — graphical login needs graphical.target (scripts/setup.sh --session)"
+        rc=1
+    fi
+
+    local dm_ok=0 dm=""
+    for dm in sddm gdm ly greetd; do
+        if systemctl is-enabled --quiet "$dm" 2>/dev/null; then dm_ok=1; break; fi
+    done
+    if [ "$dm_ok" -eq 1 ]; then
+        log "display manager enabled: $dm"
+    else
+        err "no display manager enabled (sddm/gdm/ly/greetd) — install + enable one (scripts/setup.sh --session)"
+        rc=1
+    fi
+
+    if ls /usr/share/wayland-sessions/*.desktop >/dev/null 2>&1; then
+        log "wayland session file(s) present"
+    else
+        err "no .desktop in /usr/share/wayland-sessions — nothing to pick at login"
+        rc=1
+    fi
+
+    if command -v uwsm >/dev/null 2>&1; then
+        if uwsm check may-start >/dev/null 2>&1; then
+            log "uwsm check may-start: OK"
+        elif [ -n "${WAYLAND_DISPLAY:-}" ] || [ "${XDG_SESSION_TYPE:-}" = "wayland" ]; then
+            warn "uwsm check may-start refuses inside a live graphical session — expected here, not a login problem"
+        else
+            err "uwsm check may-start failed — the session will not start (missing python3-pyxdg is the usual cause)"
+            rc=1
+        fi
+    else
+        err "uwsm not found — sudo dnf install uwsm (or run scripts/setup.sh --session)"
+        rc=1
+    fi
+
+    if python3 -c 'import xdg' 2>/dev/null; then
+        log "python3 xdg module: OK"
+    else
+        err "python3 -c 'import xdg' failed — sudo dnf install python3-pyxdg"
+        rc=1
+    fi
+
+    return "$rc"
+}
+
 check_session() {
     local fail=0
 
@@ -364,6 +423,8 @@ check_session() {
     if [ "${#MISSING_REQ_BIN[@]}" -gt 0 ]; then
         fail=1
     fi
+
+    check_boot_session || fail=1
 
     echo
     if [ "$fail" -eq 0 ]; then

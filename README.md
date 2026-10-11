@@ -16,12 +16,20 @@ git clone https://github.com/pulkit777exe/dots.git ~/dots
 ~/dots/install-software          # brave + flatpak apps (needs a terminal for sudo)
 ```
 
-`setup.sh` provisions per group (`--desktop`, `--shell`, `--nvidia`, `--dev`;
-default is desktop + shell, `--all` is everything) and finishes by running
+`setup.sh` provisions per group (`--desktop`, `--shell`, `--session`, `--nvidia`, `--dev`;
+default is desktop + shell + session, `--all` is everything) and finishes by running
 `install.sh`. It never runs as root — `sudo` is used per `dnf` command only —
 and it skips anything already present. NVIDIA (`--nvidia`) needs a reboot
 afterwards, and Secure Boot needs the akmods key enrolled once (the script
 prints the exact command when it applies).
+
+On Fedora Server (or any install without a login screen): the default
+`multi-user` target boots to a TTY, so there is no Hyprland session to pick.
+The `--session` group (on by default) installs `sddm` + `uwsm`, sets the
+`graphical` target and enables `sddm`, so a reboot lands on a login screen.
+`install.sh --check` verifies all of it: default target, an enabled display
+manager, a wayland-session file, `uwsm check may-start`, and the `python3`
+`xdg` module uwsm needs.
 
 Configs only (packages already handled):
 
