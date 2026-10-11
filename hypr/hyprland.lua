@@ -1,7 +1,6 @@
 require("modules.environment")
 require("modules.startup")
 
-pcall(require, (os.getenv("XDG_CONFIG_HOME") or (os.getenv("HOME") .. "/.config")) .. "/hypr/hypridle.lua")
 pcall(require, (os.getenv("XDG_CONFIG_HOME") or (os.getenv("HOME") .. "/.config")) .. "/hypr/hyprlock.lua")
 
 require("modules.monitors")

@@ -99,16 +99,21 @@ case "${1:-status}" in
             hyprctl reload
         fi
         # Daemons are ensured, never restarted: a blind restart kills the
-        # wallpaper and the idle timers for no reason. pgrep-guarded start
-        # is the same idempotent pattern as hypr/hypridle.lua.
+        # wallpaper and the idle timers for no reason. They ship systemd
+        # user units (same ones modules/startup.lua enables), so ensure
+        # them through systemctl rather than pgrep/setsid.
         for daemon in hyprpaper hypridle; do
-            if pgrep -x "$daemon" >/dev/null 2>&1; then
+            if ! command -v "$daemon" >/dev/null 2>&1; then
+                echo "  $daemon not installed, skipping" >&2
+            elif command -v systemctl >/dev/null 2>&1 && [ -d /run/systemd/system ]; then
+                systemctl --user enable --now "$daemon.service" \
+                    && echo "  $daemon ensured via user unit" \
+                    || echo "  $daemon unit failed, skipping" >&2
+            elif pgrep -x "$daemon" >/dev/null 2>&1; then
                 echo "  $daemon already running"
-            elif command -v "$daemon" >/dev/null 2>&1; then
+            else
                 setsid "$daemon" >/dev/null 2>&1 < /dev/null &
                 echo "  started missing $daemon"
-            else
-                echo "  $daemon not installed, skipping" >&2
             fi
         done
         # Quickshell goes last: restarting it drops the global shortcuts

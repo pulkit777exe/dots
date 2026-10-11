@@ -1,0 +1,23 @@
+{
+  "default": "ariadne",
+  "themes": {
+    "ariadne": {
+      "name": "ariadne"
+    },
+    "catppuccin": {
+      "name": "catppuccin"
+    },
+    "everforest": {
+      "name": "everforest"
+    },
+    "gruvbox": {
+      "name": "gruvbox"
+    },
+    "horizon": {
+      "name": "horizon"
+    },
+    "monochrome": {
+      "name": "monochrome"
+    }
+  }
+}

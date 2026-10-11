@@ -512,6 +512,7 @@ main() {
         echo
         log "generating derived state (palette outputs + hyprlock.conf)"
         if command -v python3 >/dev/null 2>&1; then
+            run python3 "$CONFIG_DIR/quickshell/scripts/list-themes.py" >/dev/null || warn "list-themes.py failed — run it by hand"
             run python3 "$CONFIG_DIR/quickshell/scripts/publish-colors.py" || warn "publish-colors.py failed — run it by hand"
         fi
         if command -v lua >/dev/null 2>&1; then

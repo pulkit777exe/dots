@@ -88,7 +88,7 @@ except `zsh/`, whose `.zshrc` is symlinked directly to `~/.zshrc`.
 
 | Unit | What it is |
 | --- | --- |
-| `hypr/` | Hyprland config in Lua. `hyprland.lua` requires `modules/*` in order, then `hypridle.lua`, which writes `hypridle.conf` and starts the daemon once per session. |
+| `hypr/` | Hyprland config in Lua. `hyprland.lua` requires `modules/*` in order; `hypridle.conf` is a static file and the idle/wallpaper/night-light daemons start via systemd user units from `modules/startup.lua`. |
 | `quickshell/` | The shell. `shell.qml` is the entrypoint; `services/` are singletons, `surfaces/` are windows, `modules/Keybinds.qml` is the shortcut hub. |
 | `colors/` | Palettes and the *generated* per-app colour files (`current.json`, `hyprland.conf`, `kitty.conf`, `gtk.css`, `colors.css`, `colors.sh`). |
 | `kitty/` | Terminal config. `kitty.conf` includes the generated `../colors/kitty.conf`, so the terminal follows the palette; open instances are repainted live over the remote-control socket. |
