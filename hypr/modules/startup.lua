@@ -11,7 +11,10 @@ hl.on("hyprland.start", function()
 
     hl.exec_cmd("wl-paste --watch cliphist store")
 
-    hl.exec_cmd("pidof polkitd || /usr/lib/polkit-1/polkitd --no-debug &")
+    -- Polkit: polkitd is the system authority (already started by
+    -- systemd) — what a desktop session needs is an *agent* to ask for
+    -- the password, which is hyprpolkitagent. Never launch polkitd here.
+    hl.exec_cmd("command -v hyprpolkitagent >/dev/null && hyprpolkitagent &")
 
     hl.exec_cmd("quickshell -p " .. home .. "/.config/quickshell")
 end)

@@ -92,9 +92,10 @@ Wallpapers are **not** committed — they are large binaries, and
 
 Two components sit on a trust boundary and are worth understanding:
 
-- **`quickshell/services/Auth.qml`** is a polkit authentication agent. It
-  forwards the password you type to the requesting application's agent flow;
-  it does not grant anything itself. It is the *agent*, not the authority —
+- **`hyprpolkitagent`** is the polkit authentication agent. It runs in the
+  user session (started from `hypr/modules/startup.lua`), shows the password
+  prompt, and forwards your answer through the agent flow; it does not grant
+  anything itself. It is the *agent*, not the authority —
   polkitd and the application's `.policy` files decide.
 - **`hypr/hyprlock.lua`** is the lock screen. It gates access to the session
   and talks to `pam` for authentication. Keep it present and do not weaken
