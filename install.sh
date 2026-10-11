@@ -483,6 +483,7 @@ main() {
     check_bin hyprlock "sudo dnf install hyprlock — without it SUPER+L does nothing"
     check_bin hypridle "sudo dnf install hypridle — without it idleDPMS/idle actions never fire"
     check_bin polkitd "sudo dnf install polkit" required /usr/lib/polkit-1/polkitd /usr/libexec/polkitd
+    check_bin hyprpolkitagent "sudo dnf install hyprpolkitagent (from the hyprland COPR) — without it pkexec/Thunar-mount prompts have no one to ask"
 
     echo
     log "optional (features degrade without them)"

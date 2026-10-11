@@ -54,6 +54,7 @@ DESKTOP_PKGS=(
     xdg-desktop-portal-hyprland xdg-desktop-portal-gtk
     grim slurp wl-clipboard cliphist
     polkit upower bluez NetworkManager wireplumber pipewire
+    hyprpolkitagent
     brightnessctl playerctl ddcutil pciutils
     python3 python3-pillow fontconfig jq libnotify
     git curl

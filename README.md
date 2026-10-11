@@ -124,6 +124,10 @@ Fedora-first. `install.sh --check` reports what's missing.
 - `polkitd` — the auth daemon. Note it is **not on `PATH`**; it lives at
   `/usr/lib/polkit-1/polkitd`. `install.sh` looks there explicitly, because a
   plain `command -v polkit` check reports a working system as broken.
+- `hyprpolkitagent` — the authentication **agent** (from the hyprland COPR).
+  polkitd is the authority and is started by systemd; the agent runs in the
+  user session (`modules/startup.lua`) and is what actually prompts for a
+  password.
 
 **Optional** — the desktop runs without these, but the matching feature is degraded
 
