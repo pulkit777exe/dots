@@ -56,7 +56,8 @@ backup_and_link() {
     fi
 
     if [ -e "$dst" ] || [ -L "$dst" ]; then
-        local backup="$dst.pre-install.$(date +%Y%m%d-%H%M%S)"
+        local backup
+        backup="$dst.pre-install.$(date +%Y%m%d-%H%M%S)"
 
         if [ "${DRY_RUN:-0}" -eq 1 ]; then
             warn "$dst exists and isn't our symlink — would move it to $backup"
