@@ -45,5 +45,10 @@ colors/gtk.css
 colors/hyprland.conf
 colors/kitty.conf
 
+# Runtime discovery cache. quickshell/scripts/list-themes.py and
+# publish-colors.py rewrite wallpaperDir/current with $HOME-specific paths
+# on every run; the portable template is colors/index.json.example.
+colors/index.json
+
 images
 todos.md
