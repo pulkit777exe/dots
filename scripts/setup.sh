@@ -6,7 +6,7 @@
 # install.sh. Idempotent: anything already present is skipped.
 #
 # Usage: ./scripts/setup.sh [--dry-run] [--yes] [--all] [--desktop]
-#                            [--shell] [--session] [--nvidia] [--dev] [--list] [--help]
+#                            [--shell] [--session] [--nvidia] [--dev] [--no-link] [--list] [--help]
 #
 # With no group flag it installs desktop + shell + session. --nvidia reboots nothing
 # itself but the driver needs one; it says so at the end.
@@ -22,11 +22,12 @@ WANT_SESSION=0
 WANT_NVIDIA=0
 WANT_DEV=0
 GROUPS_GIVEN=0
+NO_LINK=0
 
-log()  { printf '\033[1;32m==>\033[0m %s\n' "$1"; }
-warn() { printf '\033[1;33m!!\033[0m %s\n' "$1" >&2; }
-err()  { printf '\033[1;31mxx\033[0m %s\n' "$1" >&2; }
-die()  { err "$1"; exit 1; }
+# shellcheck disable=SC1091
+. "$REPO_DIR/scripts/lib.sh"
+
+# log/warn/err/die/run/confirm come from scripts/lib.sh (sourced above).
 
 usage() {
     cat <<'USAGE'
@@ -41,6 +42,7 @@ usage: scripts/setup.sh [--dry-run] [--yes] [--all] [--desktop] [--shell]
   --session   login session: sddm, uwsm, graphical target, session checks
   --nvidia    RPM Fusion + akmod driver, CUDA, VA-API, envycontrol
   --dev       docker, kubectl, neovim, qmllint, lint tooling
+  --no-link   packages only; skip the install.sh link step at the end
   --list      show the package groups and exit
   --help      show this message
 
@@ -97,6 +99,7 @@ while [ $# -gt 0 ]; do
         --session) WANT_SESSION=1; GROUPS_GIVEN=1 ;;
         --nvidia)  WANT_NVIDIA=1; GROUPS_GIVEN=1 ;;
         --dev)     WANT_DEV=1; GROUPS_GIVEN=1 ;;
+        --no-link) NO_LINK=1 ;;
         --list)    list_groups; exit 0 ;;
         -h|--help) usage; exit 0 ;;
         *)         err "unknown argument: $1"; usage >&2; exit 2 ;;
@@ -336,13 +339,11 @@ if [ "$WANT_SHELL" -eq 1 ]; then
         log "would run: chsh -s $(command -v zsh) (asks first)"
     else
         need_tty
-        printf '   Make zsh your login shell? [y/N] '
-        zsh_reply=""
-        read -r zsh_reply || zsh_reply=""
-        case "$zsh_reply" in
-            [yY]|[yY][eE][sS]) chsh -s "$(command -v zsh)" && log "login shell is now zsh (takes effect on next login)" ;;
-            *) warn "left the login shell as ${SHELL:-unknown}" ;;
-        esac
+        if confirm "Make zsh your login shell?"; then
+            chsh -s "$(command -v zsh)" && log "login shell is now zsh (takes effect on next login)"
+        else
+            warn "left the login shell as ${SHELL:-unknown}"
+        fi
     fi
 fi
 
@@ -398,8 +399,9 @@ if [ "$WANT_DEV" -eq 1 ]; then
 fi
 
 echo
-log "linking dotfiles"
-if [ "$DRY_RUN" -eq 1 ]; then
+if [ "$NO_LINK" -eq 1 ]; then
+    log "skipping the link step (--no-link)"
+elif [ "$DRY_RUN" -eq 1 ]; then
     bash "$REPO_DIR/install.sh" --dry-run
 elif [ "$ASSUME_YES" -eq 1 ]; then
     bash "$REPO_DIR/install.sh" --yes

@@ -27,15 +27,18 @@ DRY_RUN=0
 CHECK_ONLY=0
 ASSUME_YES=0
 
+# shellcheck disable=SC1091
+. "$REPO_DIR/scripts/lib.sh" 2>/dev/null || {
+    printf 'xx install.sh: cannot load scripts/lib.sh\n' >&2
+    exit 1
+}
+
 UNITS=(colors hypr kitty quickshell vlc Thunar)
 
 # Repo-rel-source:home-rel-dest pairs for files linked into $HOME, not ~/.config.
 HOME_FILES=(zsh/.zshrc:.zshrc)
 
-log()  { printf '\033[1;32m==>\033[0m %s\n' "$1"; }
-warn() { printf '\033[1;33m!!\033[0m %s\n' "$1" >&2; }
-err()  { printf '\033[1;31mxx\033[0m %s\n' "$1" >&2; }
-run()  { if [ "$DRY_RUN" -eq 1 ]; then printf '   would run: %s\n' "$*"; else "$@"; fi; }
+# log/warn/err/run/confirm/backup_and_link come from scripts/lib.sh (sourced above).
 
 usage() {
     cat <<'USAGE'
@@ -64,111 +67,6 @@ while [ $# -gt 0 ]; do
     esac
     shift
 done
-
-link_unit() {
-    local name="$1"
-    local src="$REPO_DIR/$name"
-    local dst="$CONFIG_DIR/$name"
-
-    if [ ! -d "$src" ]; then
-        warn "skipping $name — not present in the repo"
-        return
-    fi
-
-    if [ -z "$(ls -A "$src" 2>/dev/null)" ]; then
-        err "skipping $name — $src exists but is empty"
-        return 1
-    fi
-
-    if [ -L "$dst" ] && [ "$(readlink -f "$dst")" = "$(readlink -f "$src")" ]; then
-        log "$name already linked"
-        return 0
-    fi
-
-    if [ -e "$dst" ] || [ -L "$dst" ]; then
-        local backup="$dst.pre-install.$(date +%Y%m%d-%H%M%S)"
-
-        if [ "$DRY_RUN" -eq 1 ]; then
-            warn "$dst exists and isn't our symlink — would move it to $backup"
-        elif [ "$ASSUME_YES" -eq 0 ]; then
-            if [ ! -t 0 ]; then
-                err "$dst exists and isn't our symlink, and there is no terminal to confirm on."
-                err "Re-run with --yes to allow moving it to $backup, or move it yourself first."
-                return 1
-            fi
-            warn "$dst exists and isn't our symlink."
-            printf '   Move it to %s ? [y/N] ' "$backup"
-            local reply=""
-            read -r reply || reply=""
-            case "$reply" in
-                [yY]|[yY][eE][sS]) ;;
-                *) warn "left $dst alone"; return 0 ;;
-            esac
-            mv "$dst" "$backup"
-        else
-            warn "$dst exists and isn't our symlink — moving it to $backup"
-            mv "$dst" "$backup"
-        fi
-    fi
-
-    if [ "$DRY_RUN" -eq 1 ]; then
-        log "$name would be linked -> $dst"
-    else
-        mkdir -p "$(dirname "$dst")"
-        ln -s "$(readlink -f "$src")" "$dst"
-        log "linked $name -> $dst"
-    fi
-}
-
-link_home_file() {
-    local src_rel="$1" dst_rel="$2"
-    local src="$REPO_DIR/$src_rel"
-    local dst="$HOME/$dst_rel"
-
-    if [ ! -f "$src" ]; then
-        warn "skipping $dst_rel — $src_rel not present in the repo"
-        return
-    fi
-
-    if [ -L "$dst" ] && [ "$(readlink -f "$dst")" = "$(readlink -f "$src")" ]; then
-        log "$dst_rel already linked"
-        return 0
-    fi
-
-    if [ -e "$dst" ] || [ -L "$dst" ]; then
-        local backup="$dst.pre-install.$(date +%Y%m%d-%H%M%S)"
-
-        if [ "$DRY_RUN" -eq 1 ]; then
-            warn "$dst exists and isn't our symlink — would move it to $backup"
-        elif [ "$ASSUME_YES" -eq 0 ]; then
-            if [ ! -t 0 ]; then
-                err "$dst exists and isn't our symlink, and there is no terminal to confirm on."
-                err "Re-run with --yes to allow moving it to $backup, or move it yourself first."
-                return 1
-            fi
-            warn "$dst exists and isn't our symlink."
-            printf '   Move it to %s ? [y/N] ' "$backup"
-            local reply=""
-            read -r reply || reply=""
-            case "$reply" in
-                [yY]|[yY][eE][sS]) ;;
-                *) warn "left $dst alone"; return 0 ;;
-            esac
-            mv "$dst" "$backup"
-        else
-            warn "$dst exists and isn't our symlink — moving it to $backup"
-            mv "$dst" "$backup"
-        fi
-    fi
-
-    if [ "$DRY_RUN" -eq 1 ]; then
-        log "$dst_rel would be linked -> $dst"
-    else
-        mkdir -p "$(dirname "$dst")"
-        ln -s "$(readlink -f "$src")" "$dst"
-        log "linked $dst_rel -> $dst"
-    fi
-}
 
 check_bin() {
     local bin="$1" pkg_hint="$2" kind="${3:-required}"
@@ -471,12 +369,12 @@ main() {
         echo
         log "linking configs"
         for u in "${UNITS[@]}"; do
-            link_unit "$u" || true
+            backup_and_link "$REPO_DIR/$u" "$CONFIG_DIR/$u" || true
         done
         echo
         log "linking home files"
         for pair in ${HOME_FILES+"${HOME_FILES[@]}"}; do
-            link_home_file "${pair%%:*}" "${pair##*:}" || true
+            backup_and_link "$REPO_DIR/${pair%%:*}" "$HOME/${pair##*:}" || true
         done
     fi
 

@@ -1,0 +1,68 @@
+#!/usr/bin/env bash
+# dots — one entry point for this repo. Provision, link, verify, update.
+#
+#   ./dots packages [--all|--desktop|--shell|--session|--nvidia|--dev] [--yes] [--dry-run]
+#   ./dots session [--yes] [--dry-run]   login session only (sddm, uwsm, graphical target)
+#   ./dots link [--yes] [--dry-run]      symlink configs into ~/.config + ~/.zshrc
+#   ./dots fonts [font-file ...]         install vendored (+ given) fonts
+#   ./dots apps                          third-party apps (brave, flatpaks; needs a terminal)
+#   ./dots check                         verify install + session; make no changes
+#   ./dots update [args]                 update the clone and re-link (via bootstrap.sh)
+#
+# The older per-task scripts still work (scripts/setup.sh, install.sh,
+# scripts/install-fonts.sh, install-software, bootstrap.sh); this is the
+# documented front end. It never runs as root — sudo stays per-command
+# inside the scripts below.
+set -euo pipefail
+
+REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# shellcheck disable=SC1091
+. "$REPO_DIR/scripts/lib.sh"
+
+usage() {
+    sed -n '2,17p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+}
+
+[ "$(id -u)" -eq 0 ] && die "Refusing to run as root. Run as your normal user; sudo is used per-command."
+
+# Global flags may precede or follow the subcommand; re-emit them for the
+# sub-script. Everything else passes through untouched.
+EXTRA=()
+POS=()
+for arg in "$@"; do
+    case "$arg" in
+        --dry-run) EXTRA+=(--dry-run) ;;
+        -y|--yes)  EXTRA+=(--yes) ;;
+        *)         POS+=("$arg") ;;
+    esac
+done
+
+CMD="${POS[0]:---help}"
+REST=("${POS[@]:1}")
+
+case "$CMD" in
+    packages)
+        if [ "${#REST[@]}" -eq 0 ]; then
+            REST=(--desktop --shell --session)
+        fi
+        bash "$REPO_DIR/scripts/setup.sh" "${REST[@]}" --no-link "${EXTRA[@]}" ;;
+    session)
+        bash "$REPO_DIR/scripts/setup.sh" --session --no-link "${EXTRA[@]}" "${REST[@]}" ;;
+    link)
+        bash "$REPO_DIR/install.sh" "${EXTRA[@]}" "${REST[@]}" ;;
+    fonts)
+        bash "$REPO_DIR/scripts/install-fonts.sh" "${REST[@]}" ;;
+    apps)
+        bash "$REPO_DIR/install-software" ;;
+    check)
+        bash "$REPO_DIR/install.sh" --check ;;
+    update)
+        bash "$REPO_DIR/bootstrap.sh" "${EXTRA[@]}" "${REST[@]}" ;;
+    -h|--help|help)
+        usage ;;
+    *)
+        err "unknown command: $CMD"
+        usage >&2
+        exit 2 ;;
+esac

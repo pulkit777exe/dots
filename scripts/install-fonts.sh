@@ -6,8 +6,8 @@ REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 FONT_SRC="$REPO_DIR/fonts"
 FONT_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/fonts"
 
-log()  { printf '\033[1;32m==>\033[0m %s\n' "$1"; }
-warn() { printf '\033[1;33m!!\033[0m %s\n' "$1" >&2; }
+# shellcheck disable=SC1091
+. "$REPO_DIR/scripts/lib.sh"
 
 have_font() { [ "$(fc-list 2>/dev/null | grep -ci "$1")" -gt 0 ]; }
 

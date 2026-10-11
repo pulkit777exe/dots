@@ -12,16 +12,18 @@ Fresh Fedora machine — packages first, then configs:
 
 ```bash
 git clone https://github.com/pulkit777exe/dots.git ~/dots
-~/dots/scripts/setup.sh --all    # dnf packages, drivers, shell tooling, then links configs
-~/dots/install-software          # brave + flatpak apps (needs a terminal for sudo)
+~/dots/dots packages --all    # dnf packages, drivers, shell tooling (no link yet)
+~/dots/dots link              # symlink configs into ~/.config + ~/.zshrc
+~/dots/dots apps              # brave + flatpak apps (needs a terminal for sudo)
 ```
 
-`setup.sh` provisions per group (`--desktop`, `--shell`, `--session`, `--nvidia`, `--dev`;
-default is desktop + shell + session, `--all` is everything) and finishes by running
-`install.sh`. It never runs as root — `sudo` is used per `dnf` command only —
-and it skips anything already present. NVIDIA (`--nvidia`) needs a reboot
-afterwards, and Secure Boot needs the akmods key enrolled once (the script
-prints the exact command when it applies).
+`dots packages` provisions per group (`--desktop`, `--shell`, `--session`,
+`--nvidia`, `--dev`; default is desktop + shell + session, `--all` is
+everything). `dots link` / `dots check` / `dots fonts` / `dots session` /
+`dots update` run the matching step. It never runs as root — `sudo` is used
+per `dnf` command only — and it skips anything already present. NVIDIA
+(`--nvidia`) needs a reboot afterwards, and Secure Boot needs the akmods key
+enrolled once (the script prints the exact command when it applies).
 
 On Fedora Server (or any install without a login screen): the default
 `multi-user` target boots to a TTY, so there is no Hyprland session to pick.
@@ -54,12 +56,14 @@ Then log out, pick the Hyprland session, and log back in.
 
 | Command | What it does |
 | --- | --- |
-| `./install.sh --dry-run` | Print the plan, change nothing |
-| `./install.sh --check` | Verify the live session; make no changes |
-| `./install.sh --yes` | Relocate existing configs without prompting |
-| `./bootstrap.sh` | Re-run clone/update + install (this is the update flow) |
+| `./dots packages` | Install system packages (no linking) |
+| `./dots link` | Symlink configs (dry-run with `--dry-run`) |
+| `./dots check` | Verify the live session; make no changes |
+| `./dots update` | Re-run clone/update + install (this is the update flow) |
+| `./dots --help` | All subcommands |
 
-`install.sh` is idempotent — run it whenever you pull. It never uses `sudo`
+The per-task scripts behind them (`scripts/setup.sh`, `install.sh`,
+`bootstrap.sh`, …) still work directly. `install.sh` is idempotent — run it whenever you pull. It never uses `sudo`
 and never deletes: an existing `~/.config/<unit>` is renamed to
 `<unit>.pre-install.<timestamp>`, and it asks before doing that unless you
 pass `--yes`.

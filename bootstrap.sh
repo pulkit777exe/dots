@@ -45,6 +45,9 @@ log()  { printf '\033[1;32m==>\033[0m %s\n' "$1"; }
 warn() { printf '\033[1;33m!!\033[0m %s\n' "$1" >&2; }
 err()  { printf '\033[1;31mxx\033[0m %s\n' "$1" >&2; }
 die()  { err "$1"; exit 1; }
+# NOTE: these four duplicate scripts/lib.sh on purpose — this file is
+# executed straight from its download URL (curl ... | bash) before any
+# clone exists, so it cannot source the tree.
 
 need() {
     command -v "$1" >/dev/null 2>&1 || die "$1 is required but not installed"
