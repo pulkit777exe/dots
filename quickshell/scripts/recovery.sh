@@ -1,12 +1,9 @@
 #!/usr/bin/env bash
 # Quickshell / Hyprland Recovery Utility
-# Usage: ./recovery.sh [backup|restore|reset|stop|reload]
+# Usage: ./recovery.sh [stop|reload]
 
 STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/quickshell"
 CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/quickshell"
-BACKUP_DIR="$STATE_DIR/backups"
-
-mkdir -p "$BACKUP_DIR"
 
 # Stop the shell without leaking its watchers.
 #
@@ -70,26 +67,6 @@ stop_shell() {
 }
 
 case "${1:-status}" in
-    backup)
-        TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-        DEST="$BACKUP_DIR/backup_$TIMESTAMP"
-        mkdir -p "$DEST"
-        cp -rf "$STATE_DIR"/*.json "$DEST/" 2>/dev/null || true
-        echo "State backed up to: $DEST"
-        ;;
-    restore)
-        LATEST=$(ls -td "$BACKUP_DIR"/backup_* 2>/dev/null | head -n 1)
-        if [ -n "$LATEST" ]; then
-            cp -rf "$LATEST"/*.json "$STATE_DIR/" 2>/dev/null || true
-            echo "State restored from: $LATEST"
-        else
-            echo "No backup found in $BACKUP_DIR"
-        fi
-        ;;
-    reset)
-        rm -f "$STATE_DIR"/*.json 2>/dev/null || true
-        echo "Reset state files to defaults."
-        ;;
     stop)
         stop_shell
         ;;
@@ -143,6 +120,6 @@ case "${1:-status}" in
         ;;
     *)
         echo "Quickshell Recovery Tool"
-        echo "Usage: $0 {backup|restore|reset|stop|reload}"
+        echo "Usage: $0 {stop|reload}"
         ;;
 esac
