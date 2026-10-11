@@ -136,14 +136,15 @@ Fedora-first. `install.sh --check` reports what's missing.
 - `openwhispr` — only if you use `hypr/openwhispr-binds.lua`
 - `starship`, `zoxide` — prompt and directory jumper in `zsh/.zshrc`; the config guards their absence
 
-**Fonts** — the desktop names three families, vendored in `fonts/` so a fresh
-clone needs no network. `install.sh` installs them automatically and keeps the
-check red until all three are present.
+**Fonts** — the desktop names three families, two vendored in `fonts/` so a fresh
+clone needs no network. `install.sh` installs them automatically.
 
 - `SF Pro Display` — all UI text: shell, settings, lock screen. The one manual
   step: Apple's license forbids vendoring it in a public repo, so copy
   `SF Pro Display Regular.otf` and `SF Pro Display Bold.otf` into
-  `~/.local/share/fonts` once (the installer prints these steps).
+  `~/.local/share/fonts` once (or pass them to the installer:
+  `scripts/install-fonts.sh ~/Downloads/*.otf`). Until then Qt substitutes
+  automatically, so `--check` treats it as optional, not red.
 - `JetBrainsMonoNL Nerd Font Mono` — kitty's terminal font and the lock screen's
   wifi glyph. Vendored: Regular/Bold/Italic/BoldItalic, nerd-fonts v3.5.1 (OFL).
 - `Material Symbols Rounded` — every icon glyph in the shell. Vendored: Google's

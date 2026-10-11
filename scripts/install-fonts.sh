@@ -18,6 +18,23 @@ fi
 
 mkdir -p "$FONT_DIR"
 
+# Extra font files may be passed as arguments (e.g. SF Pro Display .otf
+# files from Apple, which cannot be vendored): they are copied into the
+# font dir before the checks run.
+for f in "$@"; do
+    if [ -f "$f" ]; then
+        case "$f" in
+            *.otf|*.OTF|*.ttf|*.TTF)
+                cp "$f" "$FONT_DIR/"
+                log "installed $(basename "$f") from argument"
+                ;;
+            *) warn "ignoring $f — not a font file" ;;
+        esac
+    else
+        warn "ignoring $f — no such file"
+    fi
+done
+
 changed=0
 for src in "$FONT_SRC"/*/*.ttf; do
     dst="$FONT_DIR/$(basename "$src")"
@@ -49,8 +66,10 @@ if have_font "SF Pro Display"; then
     log "font: SF Pro Display"
 else
     warn "SF Pro Display cannot be vendored (Apple's license forbids redistribution)."
-    warn "Once: download 'SF Pro' from https://developer.apple.com/fonts/, then copy"
-    warn "  'SF Pro Display Regular.otf' and 'SF Pro Display Bold.otf' into $FONT_DIR"
+    warn "Once: download 'SF Pro' from https://developer.apple.com/fonts/, then either"
+    warn "  copy 'SF Pro Display Regular.otf' and 'SF Pro Display Bold.otf' into $FONT_DIR,"
+    warn "  or pass them directly: scripts/install-fonts.sh ~/Downloads/*.otf"
+    warn "Until then the shell renders with fontconfig substitution (--check treats it as optional)."
     missing=1
 fi
 
