@@ -27,7 +27,6 @@ Item {
         Repeater {
             model: Tray.items
             delegate: TrayIcon {
-                item: modelData
                 iconSize: root.iconSize
             }
         }
