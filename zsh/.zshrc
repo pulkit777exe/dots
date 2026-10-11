@@ -182,7 +182,9 @@ extract() {
             7z x "$1"
             ;;
         *.rar)
-            unrar x "$1"
+            # 7z extracts rar; unrar lives in RPM Fusion nonfree, which this
+            # repo never requires, so it is not a dependency.
+            7z x "$1"
             ;;
         *)
             echo "Unsupported archive: $1"
