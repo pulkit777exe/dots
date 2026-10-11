@@ -503,6 +503,10 @@ main() {
         warn "oh-my-zsh not found at ~/.oh-my-zsh — zsh/.zshrc prints a notice and continues; install from https://ohmyz.sh"
     fi
 
+    if command -v zsh >/dev/null 2>&1 && [ "${SHELL:-}" != "$(command -v zsh)" ]; then
+        warn "login shell is ${SHELL:-unknown}, not zsh — the managed ~/.zshrc only applies to zsh sessions (scripts/setup.sh --shell offers chsh)"
+    fi
+
     if [ "$CHECK_ONLY" -eq 0 ]; then
         echo
         log "installing vendored fonts"

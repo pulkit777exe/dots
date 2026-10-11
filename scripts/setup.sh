@@ -328,6 +328,22 @@ if [ "$WANT_SHELL" -eq 1 ]; then
         git clone https://github.com/nvm-sh/nvm.git "$HOME/.nvm"
         (cd "$HOME/.nvm" && git checkout "$(git describe --abbrev=0 --tags)")
     fi
+    if ! command -v zsh >/dev/null 2>&1; then
+        warn "zsh not installed — skipping the login-shell change"
+    elif [ "${SHELL:-}" = "$(command -v zsh)" ]; then
+        log "login shell is already zsh"
+    elif [ "$DRY_RUN" -eq 1 ]; then
+        log "would run: chsh -s $(command -v zsh) (asks first)"
+    else
+        need_tty
+        printf '   Make zsh your login shell? [y/N] '
+        zsh_reply=""
+        read -r zsh_reply || zsh_reply=""
+        case "$zsh_reply" in
+            [yY]|[yY][eE][sS]) chsh -s "$(command -v zsh)" && log "login shell is now zsh (takes effect on next login)" ;;
+            *) warn "left the login shell as ${SHELL:-unknown}" ;;
+        esac
+    fi
 fi
 
 if [ "$WANT_NVIDIA" -eq 1 ]; then
