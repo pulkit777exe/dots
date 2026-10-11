@@ -210,7 +210,7 @@ MISSING_OPTIONAL=()
 MISSING_REQ_BIN=()
 
 check_font() {
-    local family="$1" what="$2"
+    local family="$1" what="$2" kind="${3:-required}"
 
     if ! command -v fc-list >/dev/null 2>&1; then
         warn "fc-list not found — sudo dnf install fontconfig (font checks skipped)"
@@ -219,6 +219,12 @@ check_font() {
 
     if [ "$(fc-list 2>/dev/null | grep -ci "$family")" -gt 0 ]; then
         log "font: $family — $what"
+        return 0
+    fi
+
+    if [ "$kind" = "optional" ]; then
+        warn "font missing: $family (optional) — $what"
+        MISSING_OPTIONAL+=("font:$family")
         return 0
     fi
 
@@ -515,7 +521,7 @@ main() {
 
     echo
     log "checking fonts"
-    check_font "SF Pro Display" "shell + settings + lock screen text"
+    check_font "SF Pro Display" "UI text; until installed Qt falls back to fontconfig substitution" optional
     check_font "JetBrainsMonoNL Nerd Font Mono" "kitty + lock-screen wifi glyph"
     check_font "Material Symbols Rounded" "shell icon glyphs"
 
