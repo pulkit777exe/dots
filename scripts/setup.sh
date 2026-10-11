@@ -55,10 +55,17 @@ DESKTOP_PKGS=(
     grim slurp wl-clipboard cliphist
     polkit upower bluez NetworkManager wireplumber pipewire
     hyprpolkitagent
+    polkit upower bluez NetworkManager wireplumber pipewire
     brightnessctl playerctl ddcutil pciutils
-    python3 python3-pillow fontconfig jq libnotify
+    lua power-profiles-daemon unzip p7zip
+    python3 python3-pillow fontconfig libnotify
     git curl
 )
+# NOTE: upower stays — Battery.qml binds Quickshell.Services.UPower, which
+# talks to the UPower system daemon over D-Bus. jq is gone (nothing used
+# it). libnotify stays: the hypr config-error path notifies via
+# notify-send when present. unrar is deliberately absent (RPM Fusion
+# nonfree); extract() uses 7z for .rar instead.
 SHELL_PKGS=(zsh zoxide eza bat btop fastfetch)
 # Login session. sddm + python3-pyxdg are in the official repos; uwsm and
 # hyprland-guiutils ride on the hyprland COPR enabled by the desktop group,
@@ -99,6 +106,12 @@ done
 
 [ "$GROUPS_GIVEN" -eq 0 ] && { WANT_DESKTOP=1; WANT_SHELL=1; WANT_SESSION=1; }
 
+# --yes was silently always-on: ${ASSUME_YES:+-y} expands whenever the
+# variable is set, even to 0 (it is initialised to 0 above). Build the flag
+# once, honestly.
+DNF_YES=()
+[ "$ASSUME_YES" -eq 1 ] && DNF_YES=(-y)
+
 [ "$(id -u)" -eq 0 ] && die "Refusing to run as root. Run as your normal user; sudo is used per-command."
 [ -f /etc/fedora-release ] || die "This provisions Fedora (dnf). Detected: $(uname -s)."
 
@@ -115,7 +128,7 @@ if ! command -v curl >/dev/null 2>&1; then
         log "would run: sudo dnf install curl"
     else
         need_tty
-        sudo dnf install ${ASSUME_YES:+-y} curl
+        sudo dnf install "${DNF_YES[@]}" curl
     fi
 fi
 
@@ -134,7 +147,7 @@ dnf_install() {
     fi
     need_tty
     log "installing: ${missing[*]}"
-    sudo dnf install ${ASSUME_YES:+-y} "${missing[@]}"
+    sudo dnf install "${DNF_YES[@]}" "${missing[@]}"
 }
 
 ensure_copr() {
@@ -147,7 +160,7 @@ ensure_copr() {
     fi
     need_tty
     log "enabling copr $1"
-    sudo dnf copr enable ${ASSUME_YES:+-y} "$1"
+    sudo dnf copr enable "${DNF_YES[@]}" "$1"
 }
 
 ensure_rpmfusion() {
@@ -162,18 +175,41 @@ ensure_rpmfusion() {
     fi
     need_tty
     log "enabling RPM Fusion free + nonfree"
-    sudo dnf install ${ASSUME_YES:+-y} \
+    sudo dnf install "${DNF_YES[@]}" \
         "https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-$ver.noarch.rpm" \
         "https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-$ver.noarch.rpm"
 }
 
 github_raw() {
+    # Trust posture, stated plainly: this fetches unpinned upstream code
+    # (floating branch) and installs it as root. The only post-condition is
+    # the caller's own check afterwards (grimblast check). Prefer a distro
+    # package whenever one exists — see the grimblast/starship branches below.
     if [ "$DRY_RUN" -eq 1 ]; then
         log "would run: curl -fsSL $1 -> $2 (chmod +x)"
     else
         log "fetching $(basename "$2") from upstream"
         sudo curl -fsSL "$1" -o "$2"
         sudo chmod +x "$2"
+    fi
+}
+
+ensure_docker_repo() {
+    # docker-ce is not in Fedora's repos; without this --dev fails on a
+    # clean machine asking dnf for packages no enabled repo carries.
+    if dnf repolist --enabled 2>/dev/null | grep -qi "docker-ce"; then
+        return 0
+    fi
+    if [ "$DRY_RUN" -eq 1 ]; then
+        log "would run: add Docker CE repo from download.docker.com"
+        return 0
+    fi
+    need_tty
+    log "adding Docker CE repo"
+    if dnf config-manager --help 2>/dev/null | grep -q "from-repofile"; then
+        sudo dnf config-manager addrepo --from-repofile=https://download.docker.com/linux/fedora/docker-ce.repo
+    else
+        sudo dnf config-manager --add-repo https://download.docker.com/linux/fedora/docker-ce.repo
     fi
 }
 
@@ -250,6 +286,8 @@ if [ "$WANT_SHELL" -eq 1 ]; then
         dnf_install starship
     else
         warn "starship is in no enabled repo — using the upstream installer to /usr/local/bin"
+        # Unpinned upstream code piped to root sh; no versioned URL exists
+        # for this installer. Documented, not fixed: prefer distro package.
         if [ "$DRY_RUN" -eq 1 ]; then
             log "would run: curl -sS https://starship.rs/install.sh | sudo sh -s -- --yes --bin-dir /usr/local/bin"
         else
@@ -264,6 +302,9 @@ if [ "$WANT_SHELL" -eq 1 ]; then
     else
         need_tty
         log "installing oh-my-zsh (unattended, keeps .zshrc)"
+        # Unpinned master installer + master clone. Mitigation: KEEP_ZSHRC
+        # preserves your config, RUNZSH/CHSH disable surprises; review the
+        # login-shell step (S3) separately — this installer is told not to.
         KEEP_ZSHRC=yes RUNZSH=no CHSH=no \
             sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
     fi
@@ -325,6 +366,7 @@ fi
 if [ "$WANT_DEV" -eq 1 ]; then
     echo
     log "group: dev"
+    ensure_docker_repo
     dnf_install "${DEV_PKGS[@]}"
     if [ "$DRY_RUN" -eq 1 ]; then
         log "would run: sudo systemctl enable --now docker.service; sudo usermod -aG docker $USER"

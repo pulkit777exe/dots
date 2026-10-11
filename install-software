@@ -21,6 +21,10 @@ install_brave() {
         return 0
     fi
     echo "brave: installing (origin flavour)..."
+    # Vendor installer, unpinned by nature (dl.brave.com serves latest).
+    # Runs as your user here, but escalates internally for repo setup —
+    # inspect https://dl.brave.com/install.sh before running on a machine
+    # you care about.
     curl -fsS https://dl.brave.com/install.sh | FLAVOR=origin sh
 }
 
