@@ -6,9 +6,9 @@
 # install.sh. Idempotent: anything already present is skipped.
 #
 # Usage: ./scripts/setup.sh [--dry-run] [--yes] [--all] [--desktop]
-#                            [--shell] [--nvidia] [--dev] [--list] [--help]
+#                            [--shell] [--session] [--nvidia] [--dev] [--list] [--help]
 #
-# With no group flag it installs desktop + shell. --nvidia reboots nothing
+# With no group flag it installs desktop + shell + session. --nvidia reboots nothing
 # itself but the driver needs one; it says so at the end.
 
 set -euo pipefail
@@ -18,6 +18,7 @@ DRY_RUN=0
 ASSUME_YES=0
 WANT_DESKTOP=0
 WANT_SHELL=0
+WANT_SESSION=0
 WANT_NVIDIA=0
 WANT_DEV=0
 GROUPS_GIVEN=0
@@ -30,19 +31,20 @@ die()  { err "$1"; exit 1; }
 usage() {
     cat <<'USAGE'
 usage: scripts/setup.sh [--dry-run] [--yes] [--all] [--desktop] [--shell]
-                        [--nvidia] [--dev] [--list] [--help]
+                        [--session] [--nvidia] [--dev] [--list] [--help]
 
   --dry-run   print the plan without touching anything
   --yes       pass -y to dnf / copr and skip confirmations
   --all       install every group below
   --desktop   compositor, shell runtime, apps, screenshot + media tools
   --shell     zsh, prompt, jumpers, oh-my-zsh, plugins, nvm
+  --session   login session: sddm, uwsm, graphical target, session checks
   --nvidia    RPM Fusion + akmod driver, CUDA, VA-API, envycontrol
   --dev       docker, kubectl, neovim, qmllint, lint tooling
   --list      show the package groups and exit
   --help      show this message
 
-With no group flag: --desktop --shell.
+With no group flag: --desktop --shell --session.
 USAGE
 }
 
@@ -57,6 +59,10 @@ DESKTOP_PKGS=(
     git curl
 )
 SHELL_PKGS=(zsh zoxide eza bat btop fastfetch)
+# Login session. sddm + python3-pyxdg are in the official repos; uwsm and
+# hyprland-guiutils ride on the hyprland COPR enabled by the desktop group,
+# so --session must run after --desktop (it does: blocks run in file order).
+SESSION_PKGS=(sddm uwsm python3-pyxdg hyprland-guiutils)
 NVIDIA_PKGS=(akmod-nvidia xorg-x11-drv-nvidia-cuda libva-nvidia-driver mokutil)
 DEV_PKGS=(docker-ce docker-ce-cli containerd.io docker-buildx-plugin
     docker-compose-plugin kubectl neovim python3-pip
@@ -68,6 +74,7 @@ COPR_ENVY="sunwire/envycontrol"
 list_groups() {
     echo "desktop: ${DESKTOP_PKGS[*]} (+ grimblast, see below)"
     echo "shell:   ${SHELL_PKGS[*]} (+ starship, oh-my-zsh, plugins, nvm)"
+    echo "session: ${SESSION_PKGS[*]} (+ graphical target, sddm enable, session checks)"
     echo "nvidia:  ${NVIDIA_PKGS[*]} (+ envycontrol)"
     echo "dev:     ${DEV_PKGS[*]}"
 }
@@ -76,9 +83,10 @@ while [ $# -gt 0 ]; do
     case "$1" in
         --dry-run) DRY_RUN=1 ;;
         -y|--yes)  ASSUME_YES=1 ;;
-        --all)     WANT_DESKTOP=1; WANT_SHELL=1; WANT_NVIDIA=1; WANT_DEV=1; GROUPS_GIVEN=1 ;;
+        --all)     WANT_DESKTOP=1; WANT_SHELL=1; WANT_SESSION=1; WANT_NVIDIA=1; WANT_DEV=1; GROUPS_GIVEN=1 ;;
         --desktop) WANT_DESKTOP=1; GROUPS_GIVEN=1 ;;
         --shell)   WANT_SHELL=1; GROUPS_GIVEN=1 ;;
+        --session) WANT_SESSION=1; GROUPS_GIVEN=1 ;;
         --nvidia)  WANT_NVIDIA=1; GROUPS_GIVEN=1 ;;
         --dev)     WANT_DEV=1; GROUPS_GIVEN=1 ;;
         --list)    list_groups; exit 0 ;;
@@ -88,7 +96,7 @@ while [ $# -gt 0 ]; do
     shift
 done
 
-[ "$GROUPS_GIVEN" -eq 0 ] && { WANT_DESKTOP=1; WANT_SHELL=1; }
+[ "$GROUPS_GIVEN" -eq 0 ] && { WANT_DESKTOP=1; WANT_SHELL=1; WANT_SESSION=1; }
 
 [ "$(id -u)" -eq 0 ] && die "Refusing to run as root. Run as your normal user; sudo is used per-command."
 [ -f /etc/fedora-release ] || die "This provisions Fedora (dnf). Detected: $(uname -s)."
@@ -182,6 +190,52 @@ if [ "$WANT_DESKTOP" -eq 1 ]; then
         github_raw "https://raw.githubusercontent.com/hyprwm/contrib/main/grimblast/grimblast" \
             "/usr/local/bin/grimblast"
         [ "$DRY_RUN" -eq 1 ] || grimblast check
+    fi
+fi
+
+if [ "$WANT_SESSION" -eq 1 ]; then
+    echo
+    log "group: session"
+    dnf_install "${SESSION_PKGS[@]}"
+    if [ "$DRY_RUN" -eq 1 ]; then
+        log "would run: sudo systemctl set-default graphical.target (if not already)"
+        log "would run: sudo systemctl enable sddm (if not already)"
+        log "would run: uwsm check may-start; python3 -c 'import xdg'"
+    elif ! command -v systemctl >/dev/null 2>&1 || [ ! -d /run/systemd/system ]; then
+        warn "no systemd — skipping target/DM enablement (container or non-systemd host?)"
+    else
+        need_tty
+        if [ "$(systemctl get-default)" != "graphical.target" ]; then
+            log "setting default target to graphical.target (Fedora Server boots multi-user)"
+            sudo systemctl set-default graphical.target
+        else
+            log "default target is already graphical.target"
+        fi
+        if systemctl is-enabled --quiet sddm 2>/dev/null; then
+            log "sddm already enabled"
+        else
+            log "enabling sddm"
+            sudo systemctl enable sddm
+        fi
+        if ls /usr/share/wayland-sessions/*.desktop >/dev/null 2>&1; then
+            log "wayland session file(s) present"
+        else
+            warn "no .desktop in /usr/share/wayland-sessions — no session to pick at login"
+        fi
+        if command -v uwsm >/dev/null 2>&1; then
+            if uwsm check may-start; then
+                log "uwsm check may-start: OK"
+            elif [ -n "${WAYLAND_DISPLAY:-}" ] || [ "${XDG_SESSION_TYPE:-}" = "wayland" ]; then
+                log "uwsm check may-start refuses inside a live session (expected — it gates fresh logins)"
+            else
+                warn "uwsm check may-start failed — check python3-pyxdg and seat state, see README"
+            fi
+        fi
+        if python3 -c 'import xdg' 2>/dev/null; then
+            log "python3 xdg module: OK"
+        else
+            warn "python3 -c 'import xdg' failed — uwsm sessions need python3-pyxdg"
+        fi
     fi
 fi
 
