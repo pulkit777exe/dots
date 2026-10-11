@@ -46,7 +46,14 @@ fi
 
 export NVM_DIR="$HOME/.nvm"
 
-[ -s "$NVM_DIR/nvm.sh" ] && source "$NVM_DIR/nvm.sh"
+# Lazy-load nvm: sourcing it eagerly costs hundreds of ms on every shell
+# start. The stubs load the real thing on first use of nvm/node/npm/npx.
+if [ -s "$NVM_DIR/nvm.sh" ]; then
+    nvm() { unset -f nvm node npm npx; source "$NVM_DIR/nvm.sh"; nvm "$@"; }
+    node() { unset -f nvm node npm npx; source "$NVM_DIR/nvm.sh"; node "$@"; }
+    npm() { unset -f nvm node npm npx; source "$NVM_DIR/nvm.sh"; npm "$@"; }
+    npx() { unset -f nvm node npm npx; source "$NVM_DIR/nvm.sh"; npx "$@"; }
+fi
 [ -s "$HOME/.bun/_bun" ] && source "$HOME/.bun/_bun"
 
 if command -v zoxide >/dev/null 2>&1; then
@@ -84,11 +91,12 @@ auu() {
     echo "==> System update complete."
 }
 
-alias gpu-off='sudo envycontrol -s integrated'
-alias gpu-on='sudo envycontrol -s hyprid'
+if command -v envycontrol >/dev/null 2>&1; then
+    alias gpu-off='sudo envycontrol -s integrated'
+    alias gpu-on='sudo envycontrol -s hyprid'
+fi
 
 alias dnfup='sudo dnf upgrade --refresh'
-alias install='sudo dnf install'
 alias remove='sudo dnf remove'
 alias search='dnf search'
 alias orphans='sudo dnf autoremove'
@@ -98,16 +106,11 @@ alias fpup='flatpak update'
 alias fpsearch='flatpak search'
 alias fpinstalled='flatpak list'
 
-alias sd='shutdown now'
-alias re='reboot'
-
 alias c='clear'
 
 alias ll='ls -lah'
 alias la='ls -A'
 alias l='ls -CF'
-
-alias mkdir='mkdir -p'
 
 mkcd() {
     mkdir -p "$1" && cd "$1"
@@ -124,26 +127,30 @@ alias gsw='git switch'
 alias gb='git branch'
 alias glog='git log --oneline --graph --decorate'
 
-alias dps='docker ps'
-alias dpsa='docker ps -a'
-alias di='docker images'
-alias dex='docker exec -it'
-alias dlogs='docker logs -f'
-alias dclean='docker system prune'
+if command -v docker >/dev/null 2>&1; then
+    alias dps='docker ps'
+    alias dpsa='docker ps -a'
+    alias di='docker images'
+    alias dex='docker exec -it'
+    alias dlogs='docker logs -f'
+    alias dclean='docker system prune'
 
-alias k='kubectl'
+    dcu() {
+        docker compose up -d "$@"
+    }
 
-dcu() {
-    docker compose up -d "$@"
-}
+    dcd() {
+        docker compose down "$@"
+    }
 
-dcd() {
-    docker compose down "$@"
-}
+    dcl() {
+        docker compose logs -f "$@"
+    }
+fi
 
-dcl() {
-    docker compose logs -f "$@"
-}
+if command -v kubectl >/dev/null 2>&1; then
+    alias k='kubectl'
+fi
 
 alias hreload='hyprctl reload'
 alias hmon='hyprctl monitors'
@@ -210,12 +217,7 @@ if command -v eza >/dev/null 2>&1; then
     alias lt='eza --tree --level=2 --icons'
 fi
 
-if command -v bat >/dev/null 2>&1; then
-    alias cat='bat'
-fi
-
 if command -v btop >/dev/null 2>&1; then
-    alias top='btop'
     alias bt='btop'
 fi
 
