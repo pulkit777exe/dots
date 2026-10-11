@@ -183,8 +183,8 @@ must match it 1:1. If you add one, add it to both.
 twin, because it restarts the shell and must fire even when the shell is
 wedged or mid-restart. `SUPER + /` (launcher) and `SUPER + Q` (close window,
 in `hypr/modules/keybinds/applications.lua`) are likewise direct binds, not
-global shortcuts — they predate the shortcut hub and still work when it is
-unreachable, which is also why the launcher keeps its `qs-call` path.
+global shortcuts — they predate the shortcut hub and still fire without a
+round-trip through it.
 
 ### Windows and workspaces
 

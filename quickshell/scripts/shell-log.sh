@@ -84,9 +84,8 @@ is_pid()        { [[ $1 =~ ^[1-9][0-9]*$ ]]; }
 is_timestamp()  { [[ $1 =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}\ [0-9]{2}:[0-9]{2}:[0-9]{2}$ ]]; }
 
 # Quickshell's own runtime dir, which is where every by-pid/by-id view lives.
-# XDG_RUNTIME_DIR is honoured for the same reason hypr/scripts/qs-call honours
-# it, and it is what makes this script testable against a scratch root without
-# touching the live shell.
+# XDG_RUNTIME_DIR is honoured so this script stays testable against a
+# scratch root without touching the live shell.
 RUNTIME_ROOT="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
 FORCE_PID=""
 

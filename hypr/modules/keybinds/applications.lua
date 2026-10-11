@@ -7,7 +7,7 @@ hl.bind(
 
 hl.bind(
     mod .. " + slash",
-    hl.dsp.exec_cmd("~/.config/hypr/scripts/qs-call shell toggleLauncher")
+    hl.dsp.global("quickshell:toggleLauncher")
 )
 
 hl.bind(

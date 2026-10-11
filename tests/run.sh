@@ -197,9 +197,7 @@ fi
 
 section "IPC contract"
 
-if [ ! -x "$REPO/hypr/scripts/qs-call" ]; then
-    sk "every advertised IPC function is callable" "qs-call not found"
-elif ! quickshell ipc show >/dev/null 2>&1; then
+if ! quickshell ipc show >/dev/null 2>&1; then
     sk "every advertised IPC function is callable" "no quickshell instance"
 else
     read_only() {
@@ -288,34 +286,6 @@ else
     fi
 fi
 
-section "qs-call parity"
-
-QSCALL="$REPO/hypr/scripts/qs-call"
-if [ ! -x "$QSCALL" ]; then
-    sk "qs-call matches the real client" "not found"
-elif ! quickshell ipc show >/dev/null 2>&1; then
-    sk "qs-call matches the real client" "no quickshell instance"
-else
-    mismatches=0
-    checked=0
-    for pair in "uis:isSettingsOpen" "audio:getVolume" "brightness:get" \
-                "wifi:status" "theme:get" "theme:list" "powerprofile:get" \
-                "nightlight:isEnabled" "notifs:count" "shell:closeAll"; do
-        tgt="${pair%%:*}"; fn="${pair##*:}"
-        qs quickshell ipc call "$tgt" "$fn"; real=$QS_OUT
-        qs "$QSCALL" "$tgt" "$fn"; mine=$QS_OUT
-        checked=$((checked+1))
-        if [ "$QS_STALLED" -eq 1 ]; then
-            no "qs-call $tgt.$fn" "$(qs_why $QS_WAIT)"
-            mismatches=$((mismatches+1))
-        elif [ "$real" != "$mine" ]; then
-            no "qs-call $tgt.$fn" "real: '${real:0:60}'  qs-call: '${mine:0:60}'"
-            mismatches=$((mismatches+1))
-        fi
-    done
-    [ "$mismatches" -eq 0 ] && ok "qs-call matches the real client on $checked call shapes"
-fi
-
 section "static checks"
 
 if [ -x "$REPO/scripts/lint.sh" ]; then
@@ -330,7 +300,7 @@ fi
 
 section "surfaces (needs a live shell)"
 
-if [ ! -x "$QSCALL" ] || ! quickshell ipc show >/dev/null 2>&1; then
+if ! quickshell ipc show >/dev/null 2>&1; then
     sk "every surface opens and closes" "no quickshell instance"
 else
     bad=""
@@ -342,18 +312,18 @@ else
                 "toggleWallpaperPicker:isWallpaperPickerOpen" \
                 "toggleClipboard:isClipboardOpen"; do
         t="${pair%%:*}"; p="${pair##*:}"
-        qs "$QSCALL" shell closeAll
+        qs quickshell ipc call shell closeAll
         sleep 2.5
-        qs "$QSCALL" shell "$t"
+        qs quickshell ipc call shell "$t"
         opened=""
         for _ in 1 2 3 4 5; do
             sleep 1
-            qs "$QSCALL" uis "$p"
+            qs quickshell ipc call uis "$p"
             [ "$QS_OUT" = "true" ] && { opened=1; break; }
         done
         [ -n "$opened" ] || bad="$bad $t"
     done
-    qs "$QSCALL" shell closeAll
+    qs quickshell ipc call shell closeAll
     if [ -z "$bad" ]; then
         ok "all seven surfaces open and close"
     else

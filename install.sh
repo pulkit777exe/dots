@@ -213,7 +213,6 @@ check_session() {
 
     for f in "$CONFIG_DIR/quickshell/shell.qml" "$CONFIG_DIR/quickshell/modules/Keybinds.qml" \
              "$CONFIG_DIR/quickshell/modules/qmldir" "$CONFIG_DIR/hypr/hyprland.lua" \
-             "$CONFIG_DIR/hypr/scripts/qs-call" \
              "$CONFIG_DIR/colors/index.json" "$CONFIG_DIR/kitty/kitty.conf"; do
         if [ -e "$f" ]; then
             log "present: ${f#"$CONFIG_DIR"/}"
@@ -240,12 +239,6 @@ check_session() {
         warn "home: .zshrc.local not present — secrets stay out of the repo; copy zsh/.zshrc.local.example there if you need API keys"
     fi
 
-    for f in "$CONFIG_DIR/hypr/scripts/qs-call"; do
-        if [ -e "$f" ] && [ ! -x "$f" ]; then
-            err "not executable: ${f#"$CONFIG_DIR"/}  (chmod +x, or the keybind that runs it is dead)"
-            fail=1
-        fi
-    done
 
     if [ -e "$CONFIG_DIR/colors/index.json" ]; then
         if command -v python3 >/dev/null 2>&1; then
