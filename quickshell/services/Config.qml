@@ -16,6 +16,7 @@ Singleton {
     readonly property int expandedRadius: data.expandedRadius
     readonly property bool statusEnabled: data.statusEnabled
     readonly property bool cardEnabled: data.cardEnabled
+    readonly property bool trayEnabled: data.trayEnabled
 
     readonly property bool time24h: data.time24h
     readonly property bool showSeconds: data.showSeconds
@@ -78,6 +79,7 @@ Singleton {
             property int expandedRadius: 27
             property bool statusEnabled: true
             property bool cardEnabled: true
+            property bool trayEnabled: true
             property bool time24h: true
             property bool showSeconds: false
             property bool reduceMotion: false

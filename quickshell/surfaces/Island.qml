@@ -5,9 +5,10 @@ import "../services"
 Item {
     id: island
 
-    readonly property bool rich: hover.containsMouse
+    readonly property bool rich: hover.containsMouse || trayStrip.hovered
     readonly property bool showStatus: Config.statusEnabled
     readonly property bool showCard: Config.cardEnabled
+    readonly property bool showTray: Config.trayEnabled && Tray.hasItems
 
     readonly property bool hidden: Compositor.activeWindowFullscreen && Notifications.toasts.length === 0
 
@@ -26,13 +27,15 @@ Item {
 
     readonly property real leftWidth: Math.max(nameZone.implicitWidth, bars.implicitWidth)
     readonly property real statusWidth: showStatus ? statusRow.implicitWidth : 0
+    readonly property real trayWidth: showTray ? trayStrip.implicitWidth : 0
+    readonly property real rightWidth: statusWidth + trayWidth + ((showStatus && showTray) ? 10 : 0)
 
     readonly property real restWidth:
-        2 * pad + bars.implicitWidth + 2 * restGap + clock.implicitWidth + statusWidth
+        2 * pad + bars.implicitWidth + 2 * restGap + clock.implicitWidth + rightWidth
 
     readonly property real richWidth: Math.max(restWidth,
         2 * pad + (showCard ? cardW : 0) + 2 * (showCard ? richGap : restGap)
-        + 2 * Math.max(leftWidth, statusWidth))
+        + 2 * Math.max(leftWidth, rightWidth))
 
     width: rich ? richWidth : Math.max(restWidth, Config.collapsedWidth)
     height: rich ? richHeight : Config.barHeight
@@ -278,7 +281,8 @@ Item {
         cursorShape: Qt.PointingHandCursor
 
         onClicked: (mouse) => {
-            if (island.showStatus && island.inside(statusRow, mouse.x, mouse.y)) {
+            if (island.showTray && island.inside(trayStrip, mouse.x, mouse.y)) {
+            } else if (island.showStatus && island.inside(statusRow, mouse.x, mouse.y)) {
                 UiState.toggleControlCenter();
             } else if (island.rich && island.showCard && island.inside(card, mouse.x, mouse.y)) {
                 Media.togglePlay();
@@ -287,5 +291,12 @@ Item {
                 if (i >= 0) bars.focusSlot(i);
             }
         }
+    }
+
+    TrayStrip {
+        id: trayStrip
+        iconSize: 16
+        x: island.width - island.pad - island.statusWidth - (island.showTray ? implicitWidth + (island.showStatus ? 10 : 0) : 0)
+        y: (island.height - height) / 2
     }
 }

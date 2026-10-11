@@ -39,6 +39,7 @@ against the live shell, so it cannot drift.
 | `powerprofile` | `set`, `isAvailable`, `get` |
 | `shell` | `toggleLauncher`, `mediaPrev`, `mediaNext`, `togglePowerMenu`, `toggleControlCenter`, `mediaStop`, `closeAll`, `mediaToggle`, `brightnessUp`, `toggleThemePicker`, `toggleSettings`, `brightnessDown`, `toggleWallpaperPicker`, `bluetoothToggle`, `nightLightToggle`, `clearNotifs`, `toggleClipboard` |
 | `theme` | `set`, `publish`, `cycleWallpaper`, `list`, `cycle`, `getWallpaper`, `get` |
+| `tray` | `count`, `list` |
 | `uis` | `isPowerMenuOpen`, `isThemePickerOpen`, `isSettingsOpen`, `isLauncherOpen`, `isControlCenterOpen`, `isWallpaperPickerOpen`, `isClipboardOpen` |
 | `wifi` | `connect`, `status`, `disconnect`, `toggle`, `scan` |
 
