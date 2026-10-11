@@ -28,9 +28,14 @@ less ~/dots/install.sh                     # read it
 ```
 
 That removes the mutable-branch problem entirely. Everything in this repo is
-plain config — there is no build step, no package to compile, and no code that
-fetches anything at runtime (see "No network access" below), so reading it is
-a complete audit.
+plain config — there is no build step and no package to compile. Note the
+scope: that statement covers `install.sh` and `bootstrap.sh`, which only
+write inside `$HOME` and never touch the network. `scripts/setup.sh` and
+`install-software` are provision-time fetchers, not pure config — they
+download and execute upstream code (grimblast script, starship installer,
+oh-my-zsh installer, brave installer; one pipe runs under `sudo`). Each
+fetch site carries a comment stating this; read those before running them
+on a machine you care about.
 
 ## What the installer will and will not do
 
@@ -58,13 +63,18 @@ a complete audit.
 - Refuses to run if your checkout has uncommitted local changes, so you never
   execute a tree that differs from what the repo says.
 
-## No network access
+## No network access at runtime
 
-Nothing in this repo reaches the network at runtime. The Python helpers
+Once installed, nothing in this repo reaches the network. The Python helpers
 (`list-themes.py`, `publish-colors.py`, `inotify-watch.py`, `list-apps.py`)
 read and write local files and shell out to local tools. `generate-theme-wallpapers.py` synthesises wallpapers locally
-with PIL. There is no `curl`/`wget`/`urllib` in any script, so installing this
-cannot phone home, and there is no update check that runs on its own.
+with PIL. There is no `wget`/`urllib` anywhere, and no `curl` in the runtime
+path, so the installed desktop cannot phone home, and there is no update
+check that runs on its own.
+
+Provisioning is the exception: `scripts/setup.sh` and `install-software`
+fetch upstream installers at setup time (see the trust-model note above).
+That happens once, interactively, never on its own afterwards.
 
 ## No secrets in the repository
 
@@ -84,9 +94,11 @@ Shell secrets (`zsh/`) follow the same rule: `zsh/.zshrc` is tracked and must
 stay free of keys or tokens; anything secret goes in untracked
 `~/.zshrc.local` (see `zsh/.zshrc.local.example`).
 
-Wallpapers are **not** committed — they are large binaries, and
-`colors/index.json` deliberately contains no absolute paths, so
-`list-themes.py` discovers wallpaper directories on each machine at runtime.
+Wallpapers are **not** committed — they are large binaries, and the shipped
+`colors/index.json.example` deliberately contains no absolute paths, so
+`list-themes.py` discovers wallpaper directories under `$HOME` at runtime.
+The live `colors/index.json` (gitignored) does contain `$HOME` paths by
+design.
 
 ## Privilege boundaries
 

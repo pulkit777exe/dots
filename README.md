@@ -160,6 +160,7 @@ clone needs no network. `install.sh` installs them automatically.
 | --- | --- |
 | `SUPER` alone (tap L or R) | Toggle launcher |
 | `SUPER + D` | Toggle launcher |
+| `SUPER + /` | Toggle launcher (direct exec bind, see below) |
 | `SUPER + N` | Control centre |
 | `SUPER + S` | Settings |
 | `SUPER + T` | Theme picker |
@@ -176,7 +177,10 @@ must match it 1:1. If you add one, add it to both.
 
 `SUPER + R` is the exception: it is a direct exec bind with no `Keybinds.qml`
 twin, because it restarts the shell and must fire even when the shell is
-wedged or mid-restart.
+wedged or mid-restart. `SUPER + /` (launcher) and `SUPER + Q` (close window,
+in `hypr/modules/keybinds/applications.lua`) are likewise direct binds, not
+global shortcuts — they predate the shortcut hub and still work when it is
+unreachable, which is also why the launcher keeps its `qs-call` path.
 
 ### Windows and workspaces
 
@@ -194,6 +198,7 @@ wedged or mid-restart.
 | `SUPER + CTRL + arrows` | Resize |
 | `SUPER + Return` | Open kitty |
 | `SUPER + L` | Lock screen |
+| `SUPER + Q` | Close window |
 
 ### Media and screen
 
