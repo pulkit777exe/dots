@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=Sequoia
+Author=dots
+Version=1.0
+License=MIT
+Description=macOS Sequoia-style login — date/time on top, avatar + password at bottom
+Type=sddm-theme
+MainScript=Main.qml
+ConfigFile=theme.conf
+QtVersion=6
