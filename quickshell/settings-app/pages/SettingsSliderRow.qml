@@ -12,6 +12,8 @@ Item {
     property real to: 100
     property string suffix: ""
     property int decimals: 0
+    // Optional human rendering ("Off", "5 min") replacing "300 s".
+    property string textOverride: ""
 
     signal moved(real value)
 
@@ -40,7 +42,8 @@ Item {
             }
 
             Label {
-                text: root.value.toFixed(root.decimals) + root.suffix
+                text: root.textOverride.length > 0 ? root.textOverride
+                    : root.value.toFixed(root.decimals) + root.suffix
                 font.pixelSize: Theme.px(12)
                 color: Theme.withAlpha(Theme.colors.text, 0.5)
             }

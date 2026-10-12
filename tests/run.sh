@@ -129,6 +129,45 @@ else
     rm -rf "$SCRATCH"
 fi
 
+section "hypridle generator"
+
+if ! have python3; then
+    sk "hypridle conf is deterministic" "no python3"
+else
+    SCRATCH="$(mktemp -d)"
+    mkdir -p "$SCRATCH/state/quickshell" "$SCRATCH/config"
+    cat > "$SCRATCH/state/quickshell/settings.json" <<'EOF'
+{"lockTimeoutSec": 90, "displayTimeoutSec": 200, "suspendTimeoutSec": 0,
+ "idleSeparateCharging": true, "cLockTimeoutSec": 60,
+ "cDisplayTimeoutSec": 120, "cSuspendTimeoutSec": 1800}
+EOF
+    gen() {
+        XDG_STATE_HOME="$SCRATCH/state" XDG_CONFIG_HOME="$SCRATCH/config" \
+            HYPRIDLE_AC_ONLINE="$1" python3 "$REPO/quickshell/scripts/generate-hypridle-conf.py" >/dev/null 2>&1
+    }
+    gen 0; a=$(md5sum "$SCRATCH/config/hypr/hypridle.conf" 2>/dev/null | awk '{print $1}')
+    gen 0; b=$(md5sum "$SCRATCH/config/hypr/hypridle.conf" 2>/dev/null | awk '{print $1}')
+    if [ -z "$a" ] || [ "$a" != "$b" ]; then
+        no "hypridle conf is deterministic" "differed between runs, or produced nothing"
+    else
+        ok "hypridle conf is deterministic"
+    fi
+    if grep -q "timeout = 90" "$SCRATCH/config/hypr/hypridle.conf" \
+        && ! grep -q "systemctl suspend" "$SCRATCH/config/hypr/hypridle.conf"; then
+        ok "battery profile uses battery timeouts, suspend omitted at 0"
+    else
+        no "battery profile uses battery timeouts, suspend omitted at 0" "see generator"
+    fi
+    gen 1
+    if grep -q "timeout = 60" "$SCRATCH/config/hypr/hypridle.conf" \
+        && grep -q "timeout = 1800" "$SCRATCH/config/hypr/hypridle.conf"; then
+        ok "charging profile switches on AC"
+    else
+        no "charging profile switches on AC" "see generator"
+    fi
+    rm -rf "$SCRATCH"
+fi
+
 if ! have python3; then
     sk "the live theme matches what the shell reports" "no python3"
 else

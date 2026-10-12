@@ -4,8 +4,10 @@ hl.on("hyprland.start", function()
     -- Idle, wallpaper and night-light daemons ship systemd user units
     -- (hypridle/hyprpaper/hyprsunset.service); enable --now is idempotent
     -- and self-healing, unlike the old pgrep/setsid spawns. quickshell has
-    -- no unit, so it is still exec'd here. hypridle.conf is a static tracked
-    -- file (it has no dynamic parts), read directly by the daemon.
+    -- no unit, so it is still exec'd here. hypridle.conf is rendered from
+    -- the settings store first (it is ignored runtime state, see the
+    -- .example template), so user timeouts apply from the first start.
+    hl.exec_cmd("python3 " .. home .. "/.config/quickshell/scripts/generate-hypridle-conf.py")
     hl.exec_cmd("systemctl --user enable --now hypridle.service hyprpaper.service")
     hl.exec_cmd("command -v hyprsunset >/dev/null && systemctl --user enable --now hyprsunset.service || true")
 

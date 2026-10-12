@@ -45,6 +45,13 @@ Singleton {
     readonly property bool colorBurst: data.colorBurst
     readonly property int fontSize: data.fontSize
     readonly property int chargeLimit: data.chargeLimit
+    readonly property int lockTimeoutSec: data.lockTimeoutSec
+    readonly property int displayTimeoutSec: data.displayTimeoutSec
+    readonly property int suspendTimeoutSec: data.suspendTimeoutSec
+    readonly property bool idleSeparateCharging: data.idleSeparateCharging
+    readonly property int cLockTimeoutSec: data.cLockTimeoutSec
+    readonly property int cDisplayTimeoutSec: data.cDisplayTimeoutSec
+    readonly property int cSuspendTimeoutSec: data.cSuspendTimeoutSec
 
     readonly property int currentPage: data.currentPage
 
@@ -98,6 +105,13 @@ Singleton {
             property bool colorBurst: false
             property int fontSize: 15
             property int chargeLimit: 100
+            property int lockTimeoutSec: 120
+            property int displayTimeoutSec: 300
+            property int suspendTimeoutSec: 600
+            property bool idleSeparateCharging: false
+            property int cLockTimeoutSec: 300
+            property int cDisplayTimeoutSec: 600
+            property int cSuspendTimeoutSec: 1800
             property int currentPage: 0
         }
     }

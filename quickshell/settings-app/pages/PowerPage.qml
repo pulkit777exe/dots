@@ -10,7 +10,8 @@ ColumnLayout {
     readonly property var searchKeys: ["power", "battery", "charging",
         "profile", "performance", "balanced", "saver", "game mode",
         "lock", "suspend", "sleep", "lid", "charge limit", "threshold",
-        "battery health", "wear"]
+        "battery health", "wear", "idle", "screen timeout", "lock screen",
+        "dim", "display off", "never", "while charging", "on ac"]
 
     SettingsHeader {
         icon: "power_settings_new"
@@ -144,6 +145,91 @@ ColumnLayout {
                     onClicked: PowerProfile.setProfile(modelData)
                 }
             }
+        }
+    }
+
+    SettingsCard {
+        SettingsLabelRow { label: "Screen idle" }
+
+        Label {
+            Layout.fillWidth: true
+            text: "Lock, blank and suspend after inactivity. Off means never."
+            font.pixelSize: Theme.px(11)
+            color: Theme.withAlpha(Theme.colors.text, 0.48)
+            wrapMode: Text.WordWrap
+        }
+
+        SettingsSliderRow {
+            label: "Lock screen"
+            value: Config.lockTimeoutSec
+            from: 0
+            to: 1800
+            textOverride: Idle.formatTimeout(Config.lockTimeoutSec)
+            onMoved: (v) => { Config.set("lockTimeoutSec", Math.round(v)); Idle.apply(); }
+        }
+
+        SettingsSliderRow {
+            label: "Display off"
+            value: Config.displayTimeoutSec
+            from: 0
+            to: 1800
+            textOverride: Idle.formatTimeout(Config.displayTimeoutSec)
+            onMoved: (v) => { Config.set("displayTimeoutSec", Math.round(v)); Idle.apply(); }
+        }
+
+        SettingsSliderRow {
+            label: "Suspend"
+            value: Config.suspendTimeoutSec
+            from: 0
+            to: 1800
+            textOverride: Idle.formatTimeout(Config.suspendTimeoutSec)
+            onMoved: (v) => { Config.set("suspendTimeoutSec", Math.round(v)); Idle.apply(); }
+        }
+
+        SettingsToggleRow {
+            label: "Different timers while charging"
+            checked: Config.idleSeparateCharging
+            onToggled: (v) => { Config.set("idleSeparateCharging", v); Idle.apply(); }
+        }
+
+        SettingsSliderRow {
+            visible: Config.idleSeparateCharging
+            label: "Lock screen (charging)"
+            value: Config.cLockTimeoutSec
+            from: 0
+            to: 1800
+            textOverride: Idle.formatTimeout(Config.cLockTimeoutSec)
+            onMoved: (v) => { Config.set("cLockTimeoutSec", Math.round(v)); Idle.apply(); }
+        }
+
+        SettingsSliderRow {
+            visible: Config.idleSeparateCharging
+            label: "Display off (charging)"
+            value: Config.cDisplayTimeoutSec
+            from: 0
+            to: 1800
+            textOverride: Idle.formatTimeout(Config.cDisplayTimeoutSec)
+            onMoved: (v) => { Config.set("cDisplayTimeoutSec", Math.round(v)); Idle.apply(); }
+        }
+
+        SettingsSliderRow {
+            visible: Config.idleSeparateCharging
+            label: "Suspend (charging)"
+            value: Config.cSuspendTimeoutSec
+            from: 0
+            to: 1800
+            textOverride: Idle.formatTimeout(Config.cSuspendTimeoutSec)
+            onMoved: (v) => { Config.set("cSuspendTimeoutSec", Math.round(v)); Idle.apply(); }
+        }
+
+        Label {
+            visible: Config.idleSeparateCharging
+            Layout.fillWidth: true
+            text: Battery.charging ? "On the charging timers now — unplug to switch back."
+                : "On battery timers now — plug in to switch."
+            font.pixelSize: Theme.px(11)
+            color: Theme.withAlpha(Theme.colors.text, 0.48)
+            wrapMode: Text.WordWrap
         }
     }
 
