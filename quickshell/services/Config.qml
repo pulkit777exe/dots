@@ -44,6 +44,7 @@ Singleton {
     readonly property string accentOverride: data.accentOverride
     readonly property bool colorBurst: data.colorBurst
     readonly property int fontSize: data.fontSize
+    readonly property int chargeLimit: data.chargeLimit
 
     readonly property int currentPage: data.currentPage
 
@@ -96,6 +97,7 @@ Singleton {
             property string accentOverride: ""
             property bool colorBurst: false
             property int fontSize: 15
+            property int chargeLimit: 100
             property int currentPage: 0
         }
     }

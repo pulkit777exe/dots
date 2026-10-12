@@ -9,7 +9,8 @@ ColumnLayout {
 
     readonly property var searchKeys: ["power", "battery", "charging",
         "profile", "performance", "balanced", "saver", "game mode",
-        "lock", "suspend", "sleep", "lid"]
+        "lock", "suspend", "sleep", "lid", "charge limit", "threshold",
+        "battery health", "wear"]
 
     SettingsHeader {
         icon: "power_settings_new"
@@ -53,6 +54,44 @@ ColumnLayout {
                     color: Theme.withAlpha(Theme.colors.text, 0.48)
                 }
             }
+        }
+    }
+
+    SettingsCard {
+        SettingsLabelRow { label: "Charge limit" }
+
+        Label {
+            Layout.fillWidth: true
+            text: "Stop charging at the limit to slow battery wear. 100% means no limit; some firmware forgets it on reboot."
+            font.pixelSize: Theme.px(11)
+            color: Theme.withAlpha(Theme.colors.text, 0.48)
+            wrapMode: Text.WordWrap
+        }
+
+        SettingsSliderRow {
+            value: ChargeLimit.limit
+            from: 50
+            to: 100
+            suffix: "%"
+            onMoved: (v) => ChargeLimit.setLimit(v)
+        }
+
+        Label {
+            visible: !ChargeLimit.available
+            Layout.fillWidth: true
+            text: "Not supported on this battery — no charge-control node."
+            font.pixelSize: Theme.px(11)
+            color: Theme.withAlpha(Theme.colors.text, 0.48)
+            wrapMode: Text.WordWrap
+        }
+
+        Label {
+            visible: ChargeLimit.error.length > 0
+            Layout.fillWidth: true
+            text: ChargeLimit.error
+            font.pixelSize: Theme.px(11)
+            color: Theme.colors.warning
+            wrapMode: Text.WordWrap
         }
     }
 
