@@ -103,6 +103,7 @@ ShellRoot {
 
             mask: Region {
                 Region { item: island.visible ? island : null }
+                Region { item: trayPill.visible ? trayPill : null }
                 Region { item: cc.visible ? cc : null }
                 Region { item: themePicker.visible ? themePicker : null }
                 Region { item: wallpaperPicker.visible ? wallpaperPicker : null }
@@ -116,6 +117,13 @@ ShellRoot {
             Island {
                 id: island
                 anchors.horizontalCenter: parent.horizontalCenter
+                y: barWindow.topY
+            }
+
+            TrayPill {
+                id: trayPill
+                anchors.right: parent.right
+                anchors.rightMargin: Config.gapFromEdge
                 y: barWindow.topY
             }
 
