@@ -8,13 +8,18 @@ generated from a single palette per theme.
 
 ## Install
 
-Fresh Fedora machine — packages first, then configs:
+One command for a fresh Fedora machine — packages, configs, login theme,
+and apps (needs a terminal for the sudo prompts, then a reboot):
 
 ```bash
 git clone https://github.com/pulkit777exe/dots.git ~/dots
-~/dots/scripts/setup.sh --all    # dnf packages, drivers, shell tooling, then links configs
-~/dots/install-software          # brave + flatpak apps (needs a terminal for sudo)
+~/dots/scripts/setup.sh --all
 ```
+
+Everything is idempotent: re-run the same command after pulling to update.
+The pieces still work standalone: `./install.sh` (configs only, no sudo),
+`./install-software` (brave + flatpaks), `./scripts/install-sddm.sh`
+(login theme).
 
 `setup.sh` provisions per group (`--desktop`, `--shell`, `--session`, `--nvidia`, `--dev`;
 default is desktop + shell + session, `--all` is everything) and finishes by running

@@ -35,10 +35,10 @@ usage: scripts/setup.sh [--dry-run] [--yes] [--all] [--desktop] [--shell]
 
   --dry-run   print the plan without touching anything
   --yes       pass -y to dnf / copr and skip confirmations
-  --all       install every group below
-  --desktop   compositor, shell runtime, apps, screenshot + media tools
+  --all       install every group below — the one shot for a fresh machine
+  --desktop   compositor, shell runtime, apps (incl. brave + flathub via install-software), screenshot + media tools
   --shell     zsh, prompt, jumpers, oh-my-zsh, plugins, nvm
-  --session   login session: sddm, uwsm, graphical target, session checks
+  --session   login session: sddm + sequoia theme, uwsm, graphical target, session checks
   --nvidia    RPM Fusion + akmod driver, CUDA, VA-API, envycontrol
   --dev       docker, kubectl, neovim, qmllint, lint tooling
   --list      show the package groups and exit
@@ -59,7 +59,7 @@ DESKTOP_PKGS=(
     brightnessctl playerctl ddcutil pciutils
     lua power-profiles-daemon unzip p7zip
     python3 python3-pillow fontconfig libnotify
-    git curl
+    git curl flatpak
 )
 # NOTE: upower stays — Battery.qml binds Quickshell.Services.UPower, which
 # talks to the UPower system daemon over D-Bus. jq is gone (nothing used
@@ -80,9 +80,9 @@ COPR_HYPRLAND="nett00n/hyprland"
 COPR_ENVY="sunwire/envycontrol"
 
 list_groups() {
-    echo "desktop: ${DESKTOP_PKGS[*]} (+ grimblast, see below)"
+    echo "desktop: ${DESKTOP_PKGS[*]} (+ grimblast, brave, flathub apps, see below)"
     echo "shell:   ${SHELL_PKGS[*]} (+ starship, oh-my-zsh, plugins, nvm)"
-    echo "session: ${SESSION_PKGS[*]} (+ graphical target, sddm enable, session checks)"
+    echo "session: ${SESSION_PKGS[*]} (+ sequoia login theme, graphical target, sddm enable, session checks)"
     echo "nvidia:  ${NVIDIA_PKGS[*]} (+ envycontrol)"
     echo "dev:     ${DEV_PKGS[*]}"
 }
@@ -368,7 +368,8 @@ if [ "$WANT_NVIDIA" -eq 1 ]; then
                     log "would run: sudo python3 -m pip install envycontrol"
                 else
                     need_tty
-                    sudo python3 -m pip install envycontrol
+                    sudo python3 -m pip install envycontrol \
+                        || warn "envycontrol pip install failed — optional GPU switcher, skipping (see github.com/bayasdev/envycontrol)"
                 fi
             fi
         fi
@@ -406,6 +407,52 @@ elif [ "$ASSUME_YES" -eq 1 ]; then
 else
     bash "$REPO_DIR/install.sh"
 fi
+
+# One shot, continued: the login theme rides the session group (it needs
+# sddm from SESSION_PKGS), third-party apps ride the desktop group. Both
+# sub-scripts are idempotent, so re-running setup never installs twice.
+# install.sh above stays sudo-free configs-only; the sudo steps live here.
+
+if [ "$WANT_SESSION" -eq 1 ]; then
+    echo
+    log "login theme (sequoia)"
+    if [ "$DRY_RUN" -eq 1 ]; then
+        log "would run: scripts/sync-login-wallpaper.sh (skipped with no live session)"
+        if [ "$ASSUME_YES" -eq 1 ]; then
+            log "would run: scripts/install-sddm.sh --yes"
+        else
+            log "would run: scripts/install-sddm.sh (asks first)"
+        fi
+    else
+        if ls "$HOME"/.local/state/quickshell/by-shell/*/theme-state.json >/dev/null 2>&1; then
+            bash "$REPO_DIR/scripts/sync-login-wallpaper.sh" || warn "wallpaper sync failed — the theme keeps its bundled photo"
+        else
+            log "no live session — the theme keeps its bundled photo (run scripts/sync-login-wallpaper.sh after first login)"
+        fi
+        if [ "$ASSUME_YES" -eq 1 ]; then
+            bash "$REPO_DIR/scripts/install-sddm.sh" --yes || warn "login theme failed — run scripts/install-sddm.sh by hand"
+        elif [ -t 0 ]; then
+            bash "$REPO_DIR/scripts/install-sddm.sh" || warn "login theme failed — run scripts/install-sddm.sh by hand"
+        else
+            warn "no terminal to confirm on — skipping the login theme (run scripts/install-sddm.sh once interactively)"
+        fi
+    fi
+fi
+
+if [ "$WANT_DESKTOP" -eq 1 ]; then
+    echo
+    log "third-party apps (brave + flathub)"
+    if [ "$DRY_RUN" -eq 1 ]; then
+        log "would run: ./install-software (needs a terminal for sudo)"
+    elif [ -t 0 ] || sudo -n true 2>/dev/null; then
+        bash "$REPO_DIR/install-software" || warn "install-software failed — run it by hand when convenient"
+    else
+        warn "no terminal for sudo — skipping third-party apps (run ./install-software once interactively)"
+    fi
+fi
+
+echo
+log "one-shot done — reboot, then verify with ./install.sh --check and ./scripts/install-sddm.sh --check"
 
 if [ "$WANT_NVIDIA" -eq 1 ] && [ "$DRY_RUN" -eq 0 ] \
     && lspci 2>/dev/null | grep -qi "nvidia"; then
