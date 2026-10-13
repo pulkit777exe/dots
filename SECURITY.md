@@ -35,7 +35,13 @@ write inside `$HOME` and never touch the network. `scripts/setup.sh` and
 download and execute upstream code (grimblast script, starship installer,
 oh-my-zsh installer, brave installer; one pipe runs under `sudo`). Each
 fetch site carries a comment stating this; read those before running them
-on a machine you care about.
+on a machine you care about. `scripts/install-sddm.sh` is the other
+exception: it `sudo`-copies the login theme to
+`/usr/share/sddm/themes/sequoia`, writes
+`/etc/sddm.conf.d/10-sequoia.conf`, installs the user avatar under
+`/usr/share/sddm/faces/`, and publishes the greeter fonts to
+`/usr/local/share/fonts/dots`. It touches no network and asks first
+unless passed `--yes`.
 
 ## What the installer will and will not do
 
@@ -97,6 +103,11 @@ stay free of keys or tokens; anything secret goes in untracked
 Wallpapers are **not** committed — they are large binaries, and the shipped
 `colors/index.json.example` deliberately contains no absolute paths, so
 `list-themes.py` discovers wallpaper directories under `$HOME` at runtime.
+The two exceptions are the login theme's bundled assets
+(`sddm/sequoia/wallpaper.jpg` + `avatar.jpg`): SDDM runs as its own user
+and cannot read a 700 `$HOME`, so the theme ships its own photo and
+`scripts/sync-login-wallpaper.sh` refreshes it from the live desktop
+wallpaper.
 The live `colors/index.json` (gitignored) does contain `$HOME` paths by
 design.
 

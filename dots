@@ -2,7 +2,7 @@
 # dots — one entry point for this repo. Provision, link, verify, update.
 #
 #   ./dots packages [--all|--desktop|--shell|--session|--nvidia|--dev] [--yes] [--dry-run]
-#   ./dots session [--yes] [--dry-run]   login session only (sddm, uwsm, graphical target)
+#   ./dots session [--yes] [--dry-run]   login session only (sddm + sequoia theme, uwsm, graphical target)
 #   ./dots link [--yes] [--dry-run]      symlink configs into ~/.config + ~/.zshrc
 #   ./dots fonts [font-file ...]         install vendored (+ given) fonts
 #   ./dots apps                          third-party apps (brave, flatpaks; needs a terminal)
