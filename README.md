@@ -8,22 +8,39 @@ generated from a single palette per theme.
 
 ## Install
 
-Fresh Fedora machine — packages first, then configs:
+Three commands for a fresh Fedora machine — packages, configs, login theme,
+and apps (needs a terminal for the sudo prompts, then a reboot):
 
 ```bash
 git clone https://github.com/pulkit777exe/dots.git ~/dots
-~/dots/dots packages --all    # dnf packages, drivers, shell tooling (no link yet)
+~/dots/dots packages --all    # dnf packages, drivers, shell tooling, sequoia login theme (no link yet)
 ~/dots/dots link              # symlink configs into ~/.config + ~/.zshrc
 ~/dots/dots apps              # brave + flatpak apps (needs a terminal for sudo)
 ```
 
+Everything is idempotent: re-run the same sequence after pulling to update.
+The login theme rides the `--session` group (on by default), so it installs
+with `--all` and refreshes from the live desktop wallpaper when one is
+present — otherwise it keeps its bundled photo.
+
 `dots packages` provisions per group (`--desktop`, `--shell`, `--session`,
 `--nvidia`, `--dev`; default is desktop + shell + session, `--all` is
 everything). `dots link` / `dots check` / `dots fonts` / `dots session` /
-`dots update` run the matching step. It never runs as root — `sudo` is used
+`dots update` run the matching step. The older per-task scripts still work
+standalone (`./scripts/setup.sh`, `./install.sh` for configs only,
+`./install-software` for brave + flatpaks, `./scripts/install-sddm.sh`
+for the login theme). It never runs as root — `sudo` is used
 per `dnf` command only — and it skips anything already present. NVIDIA
 (`--nvidia`) needs a reboot afterwards, and Secure Boot needs the akmods key
 enrolled once (the script prints the exact command when it applies).
+
+On Fedora Server (or any install without a login screen): the default
+`multi-user` target boots to a TTY, so there is no Hyprland session to pick.
+The `--session` group (on by default) installs `sddm` + `uwsm`, sets the
+`graphical` target and enables `sddm`, so a reboot lands on a login screen.
+`install.sh --check` verifies all of it: default target, an enabled display
+manager, a wayland-session file, `uwsm check may-start`, and the `python3`
+`xdg` module uwsm needs.
 
 On Fedora Server (or any install without a login screen): the default
 `multi-user` target boots to a TTY, so there is no Hyprland session to pick.
@@ -92,6 +109,7 @@ except `zsh/`, whose `.zshrc` is symlinked directly to `~/.zshrc`.
 
 | Unit | What it is |
 | --- | --- |
+| `hypr/` | Hyprland config in Lua. `hyprland.lua` requires `modules/*` in order; `hypridle.conf` is rendered from the settings store (see the `.example` template) and the idle/wallpaper/night-light daemons start via systemd user units from `modules/startup.lua`. |
 | `hypr/` | Hyprland config in Lua. `hyprland.lua` requires `modules/*` in order; `hypridle.conf` is rendered from the settings store (see the `.example` template) and the idle/wallpaper/night-light daemons start via systemd user units from `modules/startup.lua`. |
 | `quickshell/` | The shell. `shell.qml` is the entrypoint; `services/` are singletons, `surfaces/` are windows, `modules/Keybinds.qml` is the shortcut hub. |
 | `colors/` | Palettes and the *generated* per-app colour files (`current.json`, `hyprland.conf`, `kitty.conf`, `gtk.css`, `colors.css`, `colors.sh`). |
@@ -183,8 +201,6 @@ must match it 1:1. If you add one, add it to both.
 twin, because it restarts the shell and must fire even when the shell is
 wedged or mid-restart. `SUPER + /` (launcher) and `SUPER + Q` (close window,
 in `hypr/modules/keybinds/applications.lua`) are likewise direct binds, not
-global shortcuts — they predate the shortcut hub and still fire without a
-round-trip through it.
 
 ### Windows and workspaces
 

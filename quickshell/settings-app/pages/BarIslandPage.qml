@@ -8,7 +8,7 @@ ColumnLayout {
     spacing: 12
 
     readonly property var searchKeys: ["bar", "island", "notch", "height",
-        "width", "gap", "radius", "status", "now playing", "card"]
+        "width", "gap", "radius", "status", "now playing", "card", "tray"]
 
     SettingsHeader {
         icon: "crop_landscape"
@@ -33,6 +33,12 @@ ColumnLayout {
             label: "Now-playing card"
             checked: Config.cardEnabled
             onToggled: (v) => Config.set("cardEnabled", v)
+        }
+        SettingsDivider {}
+        SettingsToggleRow {
+            label: "System tray icons"
+            checked: Config.trayEnabled
+            onToggled: (v) => Config.set("trayEnabled", v)
         }
     }
 

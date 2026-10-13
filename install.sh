@@ -33,7 +33,7 @@ ASSUME_YES=0
     exit 1
 }
 
-UNITS=(colors hypr kitty quickshell vlc Thunar)
+UNITS=(colors hypr kitty quickshell sddm vlc Thunar)
 
 # Repo-rel-source:home-rel-dest pairs for files linked into $HOME, not ~/.config.
 HOME_FILES=(zsh/.zshrc:.zshrc)
@@ -386,7 +386,7 @@ main() {
     check_bin hyprlock "sudo dnf install hyprlock — without it SUPER+L does nothing"
     check_bin hypridle "sudo dnf install hypridle — without it idleDPMS/idle actions never fire"
     check_bin polkitd "sudo dnf install polkit" required /usr/lib/polkit-1/polkitd /usr/libexec/polkitd
-    check_bin hyprpolkitagent "sudo dnf install hyprpolkitagent (from the hyprland COPR) — without it pkexec/Thunar-mount prompts have no one to ask"
+    check_bin hyprpolkitagent "sudo dnf install hyprpolkitagent (from the hyprland COPR) — without it pkexec/Thunar-mount prompts have no one to ask" required /usr/libexec/hyprpolkitagent
 
     echo
     log "optional (features degrade without them)"

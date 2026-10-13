@@ -50,9 +50,13 @@ local colours = {
 }
 
 local config = [[
+# Wallpaper is shared with the SDDM login theme (sddm/sequoia/wallpaper.jpg,
+# linked at ~/.config/sddm/...). Kept blurred like the old screenshot
+# background; refresh it with scripts/sync-login-wallpaper.sh after
+# changing the desktop wallpaper.
 background {
     monitor =
-    path = screenshot
+    path = ~/.config/sddm/sequoia/wallpaper.jpg
     color = {{bg}}
     blur_passes = 3
     contrast = 0.8916
@@ -160,19 +164,19 @@ label {
     valign = center
 }
 
-# The hint sits at the same spot as the field: the field is transparent at
-# rest (the hint shows), and typing draws the dots over the hint -- the
-# reference's mid-typing state. placeholder_text must be set explicitly
-# empty: absent means hyprlock's default "Input Password...", and 0.9.6
-# keeps rendering the placeholder while you type instead of clearing it,
-# which garbles the dots.
+# The pill behind the dots is white-tinted like the SDDM login, so the
+# dots are dark ink (a literal, not a palette token: the pill is always
+# light, so the dots must always be dark regardless of palette). The
+# hint moved below the pill, mirroring SDDM's msgLine, so typing never
+# draws dots over it.
 
-label {
+shape {
     monitor =
-    text = Press any Key to Enter Password
-    color = {{text55}}
-    font_size = 13
-    font_family = SF Pro Display
+    size = 220, 38
+    color = rgba(ffffff40)
+    rounding = 19
+    border_size = 1
+    border_color = rgba(ffffff8c)
     position = 0, -432
     halign = center
     valign = center
@@ -180,18 +184,29 @@ label {
 
 input-field {
     monitor =
-    size = 260, 34
+    size = 200, 32
     outline_thickness = 0
     dots_size = 0.22
     dots_spacing = 0.28
     dots_center = true
     outer_color = {{clear}}
     inner_color = {{clear}}
-    font_color = {{text90}}
+    font_color = rgba(26292fff)
     fade_on_empty = false
     font_family = SF Pro Display
     placeholder_text =
     position = 0, -432
+    halign = center
+    valign = center
+}
+
+label {
+    monitor =
+    text = Press any Key to Enter Password
+    color = {{text55}}
+    font_size = 13
+    font_family = SF Pro Display
+    position = 0, -472
     halign = center
     valign = center
 }

@@ -17,3 +17,4 @@ singleton Notifications 1.0 Notifications.qml
 singleton AppLauncher 1.0 AppLauncher.qml
 singleton ChargeLimit 1.0 ChargeLimit.qml
 singleton Idle 1.0 Idle.qml
+singleton Tray 1.0 Tray.qml
