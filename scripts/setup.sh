@@ -431,7 +431,9 @@ if [ "$WANT_NVIDIA" -eq 1 ]; then
             log "found envycontrol"
         else
             ensure_copr "$COPR_ENVY"
-            if dnf list --available envycontrol 2>/dev/null | grep -q "^envycontrol"; then
+            if dnf list --available python3-envycontrol 2>/dev/null | grep -q "^python3-envycontrol"; then
+                dnf_install python3-envycontrol
+            elif dnf list --available envycontrol 2>/dev/null | grep -q "^envycontrol"; then
                 dnf_install envycontrol
             else
                 warn "envycontrol is in no enabled repo — pip-installing to /usr/local/bin"
