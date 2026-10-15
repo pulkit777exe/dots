@@ -13,6 +13,14 @@ hl.on("hyprland.start", function()
 
     hl.exec_cmd("wl-paste --watch cliphist store")
 
+    -- Secrets: one keyring daemon for the session, so apps never
+    -- D-Bus-activate a second, locked one behind our back. Unlock itself
+    -- still comes from PAM (see setup.sh ensure_pam_keyring) plus a Login
+    -- keyring whose password matches the login password; without that pair
+    -- Brave keeps asking every boot. The eval captures the daemon's env
+    -- for the activation bus; `|| true` keeps a missing daemon non-fatal.
+    hl.exec_cmd("eval $(gnome-keyring-daemon --start --components=secrets,ssh 2>/dev/null) 2>/dev/null; dbus-update-activation-environment --systemd GNOME_KEYRING_CONTROL SSH_AUTH_SOCK 2>/dev/null || true")
+
     -- Polkit: polkitd is the system authority (already started by
     -- systemd) — what a desktop session needs is an *agent* to ask for
     -- the password, which is hyprpolkitagent. Never launch polkitd here.

@@ -42,13 +42,14 @@ The `--session` group (on by default) installs `sddm` + `uwsm`, sets the
 manager, a wayland-session file, `uwsm check may-start`, and the `python3`
 `xdg` module uwsm needs.
 
-On Fedora Server (or any install without a login screen): the default
-`multi-user` target boots to a TTY, so there is no Hyprland session to pick.
-The `--session` group (on by default) installs `sddm` + `uwsm`, sets the
-`graphical` target and enables `sddm`, so a reboot lands on a login screen.
-`install.sh --check` verifies all of it: default target, an enabled display
-manager, a wayland-session file, `uwsm check may-start`, and the `python3`
-`xdg` module uwsm needs.
+Brave asking for a keyring password on every boot means the Login keyring
+isn't auto-unlocking: SDDM unlocks it via `pam_gnome_keyring` (wired by
+`setup.sh`), but only if a Login keyring exists whose password matches your
+login password. One-time fix in Seahorse ("Passwords and Keys"): create a
+`Login` keyring with your login password (or change its password to match),
+right-click → Set as default, move your saved items over from `Default`,
+then relog. If you change your login password later, update the Login
+keyring password to match or the prompt comes back.
 
 Configs only (packages already handled):
 

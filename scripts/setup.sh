@@ -57,6 +57,7 @@ DESKTOP_PKGS=(
     grim slurp wl-clipboard cliphist
     polkit upower bluez NetworkManager wireplumber pipewire
     hyprpolkitagent
+    gnome-keyring seahorse
     polkit upower bluez NetworkManager wireplumber pipewire
     brightnessctl playerctl ddcutil pciutils
     lua power-profiles-daemon unzip p7zip
@@ -216,6 +217,33 @@ ensure_docker_repo() {
     fi
 }
 
+ensure_pam_keyring() {
+    # SDDM unlocks the Login keyring at graphical login via
+    # pam_gnome_keyring; without these lines Brave prompts for the keyring
+    # password on every boot. Appended late in each section to match the
+    # distro layout (auth after the password substack, session at the end).
+    # A backup is kept next to the file; the lines are `optional`, so a
+    # bad edit can never lock anyone out.
+    local pam=/etc/pam.d/sddm
+    if [ ! -f "$pam" ]; then
+        warn "no $pam — skipping keyring PAM setup"
+        return 0
+    fi
+    if grep -q "pam_gnome_keyring\.so" "$pam"; then
+        log "sddm PAM already unlocks the keyring"
+        return 0
+    fi
+    if [ "$DRY_RUN" -eq 1 ]; then
+        log "would run: add pam_gnome_keyring auth+session lines to $pam (with backup)"
+        return 0
+    fi
+    need_tty
+    log "enabling keyring unlock in $pam"
+    sudo cp "$pam" "$pam.pre-dots-$(date +%Y%m%d-%H%M%S)"
+    echo "-auth      optional      pam_gnome_keyring.so" | sudo tee -a "$pam" >/dev/null
+    echo "-session   optional      pam_gnome_keyring.so auto_start" | sudo tee -a "$pam" >/dev/null
+}
+
 if [ "$WANT_DESKTOP" -eq 1 ]; then
     echo
     log "group: desktop"
@@ -231,6 +259,7 @@ if [ "$WANT_DESKTOP" -eq 1 ]; then
             "/usr/local/bin/grimblast"
         [ "$DRY_RUN" -eq 1 ] || grimblast check
     fi
+    ensure_pam_keyring
 fi
 
 if [ "$WANT_SESSION" -eq 1 ]; then
