@@ -103,7 +103,8 @@ if [ -d "$CLONE_DIR/.git" ]; then
     fi
 
     log "updating existing clone at $CLONE_DIR"
-    git -C "$CLONE_DIR" pull --ff-only
+    git -C "$CLONE_DIR" pull --ff-only || die "pull is not fast-forward — $CLONE_DIR has local commits.
+     Rebase them onto origin yourself (git -C $CLONE_DIR pull --rebase), then re-run."
 else
     if [ -e "$CLONE_DIR" ]; then
         die "$CLONE_DIR already exists and is not a git clone.
