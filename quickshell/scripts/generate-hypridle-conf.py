@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 """Generate hypr/hypridle.conf from the desktop settings and power state.
 
-Reads timeouts from the Quickshell settings store
-($XDG_STATE_HOME/quickshell/settings.json, tolerant of missing/corrupt
-files) and picks the battery or charging profile from the AC state
+Reads timeouts from the Quickshell settings store — the shell writes
+per-instance state, so the newest by-shell/*/settings.json wins, with the
+flat $XDG_STATE_HOME/quickshell/settings.json as a fallback — and picks
+the battery or charging profile from the AC state
 (/sys/class/power_supply/AC*/online, overridable with HYPRIDLE_AC_ONLINE
-for tests). A timeout of 0 omits that listener (never).
+for tests). A timeout of 0 omits that listener (never). Tolerant of
+missing/corrupt files.
 
 Pure function of (settings, ac-state) -> file bytes: run it twice, get the
 same conf. The shell regenerates on settings change and plug/unplug;
@@ -21,11 +23,7 @@ import sys
 from pathlib import Path
 
 HOME = Path.home()
-STATE_JSON = (
-    Path(os.environ.get("XDG_STATE_HOME", HOME / ".local" / "state"))
-    / "quickshell"
-    / "settings.json"
-)
+STATE_HOME = Path(os.environ.get("XDG_STATE_HOME", HOME / ".local" / "state"))
 CONF = (
     Path(os.environ.get("XDG_CONFIG_HOME", HOME / ".config"))
     / "hypr"
@@ -43,12 +41,28 @@ DEFAULTS = {
 }
 
 
+def candidate_settings_paths() -> list[Path]:
+    root = STATE_HOME / "quickshell"
+    # The shell writes per-instance state (Quickshell.statePath resolves
+    # under by-shell/<id>/), so take the most recently modified copy. The
+    # flat path stays as a fallback for fresh checkouts and tests.
+    by_shell = sorted(
+        root.glob("by-shell/*/settings.json"),
+        key=lambda p: p.stat().st_mtime,
+        reverse=True,
+    )
+    return [*by_shell, root / "settings.json"]
+
+
 def load_settings() -> dict:
-    try:
-        data = json.loads(STATE_JSON.read_text())
-    except Exception:
-        return {}
-    return data if isinstance(data, dict) else {}
+    for path in candidate_settings_paths():
+        try:
+            data = json.loads(path.read_text())
+        except Exception:
+            continue
+        if isinstance(data, dict):
+            return data
+    return {}
 
 
 def timeout_of(settings: dict, key: str) -> int:
