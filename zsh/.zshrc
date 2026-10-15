@@ -162,6 +162,8 @@ alias mem='free -h'
 alias disk='df -h'
 alias sysfailed='systemctl --failed'
 alias syslogs='journalctl -p 3 -xb'
+alias sd='sudo shutdown now'
+alias re='sudo reboot'
 
 extract() {
     if [[ -z "$1" ]]; then
