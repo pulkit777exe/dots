@@ -157,6 +157,7 @@ Fedora-first. `install.sh --check` reports what's missing.
 
 - `brightnessctl` — `XF86MonBrightness*`
 - `playerctl` — `XF86Audio*` media keys
+- `hyprsunset` — blue-light filter for the control centre's Night Light toggle
 - `openwhispr` — only if you use `hypr/openwhispr-binds.lua`
 - `starship`, `zoxide` — prompt and directory jumper in `zsh/.zshrc`; the config guards their absence
 

@@ -380,6 +380,12 @@ main() {
     check_bin hyprpaper "sudo dnf install hyprpaper — without it the wallpaper daemon never starts"
     check_bin hyprlock "sudo dnf install hyprlock — without it SUPER+L does nothing"
     check_bin hypridle "sudo dnf install hypridle — without it idleDPMS/idle actions never fire"
+    check_bin grim "sudo dnf install grim — screenshot pipeline needs it"
+    check_bin slurp "sudo dnf install slurp — region screenshots need it"
+    check_bin thunar "sudo dnf install Thunar — file manager"
+    check_bin gvfsd "sudo dnf install gvfs" required /usr/libexec/gvfsd
+    check_bin xdg-desktop-portal-hyprland "sudo dnf install xdg-desktop-portal-hyprland — screen-share portal" required /usr/libexec/xdg-desktop-portal-hyprland
+    check_bin xdg-desktop-portal-gtk "sudo dnf install xdg-desktop-portal-gtk — file-chooser portal" required /usr/libexec/xdg-desktop-portal-gtk
     check_bin polkitd "sudo dnf install polkit" required /usr/lib/polkit-1/polkitd /usr/libexec/polkitd
     check_bin hyprpolkitagent "sudo dnf install hyprpolkitagent (from the hyprland COPR) — without it pkexec/Thunar-mount prompts have no one to ask" required /usr/libexec/hyprpolkitagent
 
