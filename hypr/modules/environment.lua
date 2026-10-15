@@ -18,7 +18,7 @@ if mode == nil then
 end
 
 if want_nvidia then
-    hl.env("LIBVA_DRIVER_NAME", "nvidia")
+    hl.env("LIBVA_DRIVER_NAME", "iHD")
     hl.env("__GLX_VENDOR_LIBRARY_NAME", "nvidia")
 end
 -- NOTE: NVIDIA_DRM_MODESET was set here before; it is a kernel parameter

@@ -255,7 +255,7 @@ check_session() {
     if command -v qs >/dev/null 2>&1; then
         if ipc_show="$(qs -p "$CONFIG_DIR/quickshell" ipc show 2>/dev/null)" && [ -n "$ipc_show" ]; then
             missing_targets=""
-            for t in shell uis; do
+            for t in shell uis auth; do
                 if ! printf '%s\n' "$ipc_show" | grep -qx "target $t"; then
                     missing_targets="$missing_targets $t"
                 fi

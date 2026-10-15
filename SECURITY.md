@@ -115,11 +115,30 @@ design.
 
 Two components sit on a trust boundary and are worth understanding:
 
-- **`hyprpolkitagent`** is the polkit authentication agent. It runs in the
-  user session (started from `hypr/modules/startup.lua`), shows the password
-  prompt, and forwards your answer through the agent flow; it does not grant
-  anything itself. It is the *agent*, not the authority —
-  polkitd and the application's `.policy` files decide.
+- **`quickshell/scripts/polkit-agent.py` + `services/Auth.qml`** are the
+  polkit authentication agent, split in two: the daemon speaks the polkit
+  protocol (register, sessions, retries) and the island dialog collects the
+  password. They meet over one IPC call plus a per-request response file in
+  `$XDG_RUNTIME_DIR/dots-auth` (tmpfs, 0600, unlinked on first read — the
+  password is never logged and never touches disk). The agent does not grant
+  anything itself; polkitd and the application's `.policy` files decide.
+  `hyprpolkitagent` stays installed as a manual fallback but never
+  autostarts — two agents race for the same session.
+- **Status (2026-10-15): the agent cannot register yet.** polkitd rejects
+  registration because no desktop process belongs to a logind session
+  (`uwsm` runs the compositor as user units outside `session-2.scope`;
+  verified: the reference agent dies the same way). Until session tracking
+  is repaired, no polkit prompt of any kind can appear — this is systemic,
+  not a dialog bug. The daemon fails loud (exit 2 + log) and self-heals
+  the day sessions work, with zero code changes.
+- **`/usr/local/bin/dots-set-charge-limit` + `/etc/sudoers.d/dots-charge-limit`**
+  are the pragmatic privilege path while polkit is unreachable: a
+  root-owned, immutable helper that only writes one sysfs node after
+  validating 40-100, plus a NOPASSWD entry scoped to that path and range.
+  No prompt appears because the slider gesture already is consent; the
+  blast radius is one validated integer into one file. Revisit (agent
+  prompts) once sessions are repaired. The settings gesture itself is
+  the consent — no prompt appears by design.
 - **`hypr/hyprlock.lua`** is the lock screen. It gates access to the session
   and talks to `pam` for authentication. Keep it present and do not weaken
   its `auth` path; treat any change to it as security-relevant.

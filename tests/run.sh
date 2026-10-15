@@ -194,6 +194,38 @@ else
     fi
 fi
 
+section "polkit agent"
+
+if ! have python3; then
+    sk "polkit agent self-test" "no python3"
+elif ! python3 -c "import gi" 2>/dev/null; then
+    sk "polkit agent self-test" "no pygobject"
+elif out=$(python3 "$QS_DIR/scripts/polkit-agent.py" --self-test 2>&1); then
+    n=$(printf '%s\n' "$out" | grep -c "^ok -")
+    ok "polkit agent self-test ($n checks)"
+else
+    no "polkit agent self-test" "$(printf '%s\n' "$out" | grep "^FAIL" | head -3 | tr '\n' ';')"
+fi
+
+section "charge helper"
+
+HELPER="$QS_DIR/scripts/set-charge-limit.sh"
+if [ ! -x "$HELPER" ]; then
+    sk "charge helper rejects bad input" "not found"
+else
+    bad=""
+    for v in 5 39 101 abc "" "-1" "8 0"; do
+        if "$HELPER" "$v" >/dev/null 2>&1; then
+            bad="$bad '$v'"
+        fi
+    done
+    if [ -z "$bad" ]; then
+        ok "charge helper rejects bad input (7 cases)"
+    else
+        no "charge helper rejects bad input" "accepted:$bad"
+    fi
+fi
+
 section "installer"
 
 if [ ! -x "$REPO/install.sh" ]; then
@@ -243,7 +275,7 @@ else
         case "$1:$2" in
             uis:isSettingsOpen|uis:isLauncherOpen|uis:isControlCenterOpen|\
             uis:isPowerMenuOpen|uis:isThemePickerOpen|uis:isWallpaperPickerOpen|\
-            uis:isClipboardOpen|\
+            uis:isClipboardOpen|uis:isAuthOpen|\
             brightness:get|wifi:status|theme:get|theme:list|theme:getWallpaper|\
             powerprofile:get|powerprofile:isAvailable|nightlight:isEnabled|\
             audio:getVolume|notifs:count|notifs:isDndEnabled)
@@ -257,7 +289,7 @@ else
     checked=0
     for pair in "uis:isSettingsOpen" "uis:isLauncherOpen" "uis:isControlCenterOpen" \
                 "uis:isPowerMenuOpen" "uis:isThemePickerOpen" \
-                "uis:isWallpaperPickerOpen" "uis:isClipboardOpen" \
+                "uis:isWallpaperPickerOpen" "uis:isClipboardOpen" "uis:isAuthOpen" \
                 "brightness:get" "wifi:status" \
                 "theme:get" "theme:list" "theme:getWallpaper" "powerprofile:get" \
                 "powerprofile:isAvailable" "nightlight:isEnabled" \

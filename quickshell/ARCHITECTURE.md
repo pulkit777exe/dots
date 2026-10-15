@@ -32,6 +32,7 @@ against the live shell, so it cannot drift.
 | Target | Functions |
 | --- | --- |
 | `audio` | `getVolume`, `toggleMute`, `setVolume` |
+| `auth` | `show`, `dismiss` |
 | `brightness` | `set`, `get` |
 | `mpris` | `play`, `previous`, `next`, `stop`, `toggle` |
 | `nightlight` | `setTemp`, `isEnabled`, `toggle` |
@@ -40,7 +41,7 @@ against the live shell, so it cannot drift.
 | `shell` | `toggleLauncher`, `mediaPrev`, `mediaNext`, `togglePowerMenu`, `toggleControlCenter`, `mediaStop`, `closeAll`, `mediaToggle`, `brightnessUp`, `toggleThemePicker`, `toggleSettings`, `brightnessDown`, `toggleWallpaperPicker`, `bluetoothToggle`, `nightLightToggle`, `clearNotifs`, `toggleClipboard` |
 | `theme` | `set`, `publish`, `cycleWallpaper`, `list`, `cycle`, `getWallpaper`, `get` |
 | `tray` | `count`, `list`, `adopt` |
-| `uis` | `isPowerMenuOpen`, `isThemePickerOpen`, `isSettingsOpen`, `isLauncherOpen`, `isControlCenterOpen`, `isWallpaperPickerOpen`, `isClipboardOpen` |
+| `uis` | `isPowerMenuOpen`, `isThemePickerOpen`, `isSettingsOpen`, `isLauncherOpen`, `isControlCenterOpen`, `isWallpaperPickerOpen`, `isClipboardOpen`, `isAuthOpen` |
 | `wifi` | `connect`, `status`, `disconnect`, `toggle`, `scan` |
 
 A recurring bug class worth knowing

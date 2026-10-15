@@ -23,8 +23,10 @@ hl.on("hyprland.start", function()
 
     -- Polkit: polkitd is the system authority (already started by
     -- systemd) — what a desktop session needs is an *agent* to ask for
-    -- the password, which is hyprpolkitagent. Never launch polkitd here.
-    hl.exec_cmd("command -v hyprpolkitagent >/dev/null && hyprpolkitagent &")
+    -- the password. Ours speaks the protocol (scripts/polkit-agent.py)
+    -- and shows the island dialog; hyprpolkitagent stays installed as a
+    -- manual fallback but never autostarts (two agents race).
+    hl.exec_cmd("python3 " .. home .. "/.config/quickshell/scripts/polkit-agent.py &")
 
     hl.exec_cmd("quickshell -p " .. home .. "/.config/quickshell")
 end)

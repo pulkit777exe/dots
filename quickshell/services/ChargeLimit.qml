@@ -5,9 +5,12 @@ import Quickshell
 import Quickshell.Io
 
 // Battery charge limit. Reads the firmware's charge_control_end_threshold
-// when the hardware exposes one; writes go through pkexec because the
-// sysfs node is root-owned (the password prompt needs the polkit agent).
-// Slider gestures debounce into a single privileged write.
+// when the hardware exposes one; writes go through a root-owned helper
+// installed by setup.sh (/usr/local/bin/dots-set-charge-limit, NOPASSWD
+// sudoers scoped to that path, helper validates 40-100 itself). No prompt
+// by design: interactive polkit cannot work until desktop processes join
+// a logind session (see SECURITY.md), and the settings gesture already is
+// the user's consent. Edits debounce into a single write.
 Singleton {
     id: root
 
@@ -55,7 +58,7 @@ Singleton {
                 Config.set("chargeLimit", root.pending);
                 reader.running = true;
             } else {
-                root.error = "Not applied — authentication needed (code " + code + ")";
+                root.error = "Not applied (code " + code + ") — run ./dots packages to install the helper, then retry";
             }
             root.pending = -1;
         }
@@ -67,7 +70,7 @@ Singleton {
         onTriggered: {
             if (setter.running) { debounce.restart(); return; }
             if (root.pending < 0 || !root.available) return;
-            setter.command = ["pkexec", Quickshell.shellDir + "/scripts/set-charge-limit.sh", String(root.pending)];
+            setter.command = ["sudo", "-n", "/usr/local/bin/dots-set-charge-limit", String(root.pending)];
             setter.running = true;
         }
     }

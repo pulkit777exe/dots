@@ -6,7 +6,7 @@ import Quickshell
 Singleton {
     id: root
 
-    enum Mode { Closed, ControlCenter, Settings, ThemePicker, WallpaperPicker, PowerMenu, Launcher, Clipboard }
+    enum Mode { Closed, ControlCenter, Settings, ThemePicker, WallpaperPicker, PowerMenu, Launcher, Clipboard, Auth }
 
     property int mode: UiState.Mode.Closed
 
@@ -23,6 +23,7 @@ Singleton {
     readonly property bool powerMenuOpen: mode === UiState.Mode.PowerMenu
     readonly property bool launcherOpen: mode === UiState.Mode.Launcher
     readonly property bool clipboardOpen: mode === UiState.Mode.Clipboard
+    readonly property bool authOpen: mode === UiState.Mode.Auth
 
     function close() {
         mode = UiState.Mode.Closed;
@@ -45,6 +46,7 @@ Singleton {
     function togglePowerMenu() { toggle(UiState.Mode.PowerMenu); }
     function toggleLauncher() { toggle(UiState.Mode.Launcher); }
     function toggleClipboard() { toggle(UiState.Mode.Clipboard); }
+    function openAuth() { mode = UiState.Mode.Auth; }
 
     function back() {
         if (mode === UiState.Mode.ControlCenter && ccView !== "home") ccView = "home";

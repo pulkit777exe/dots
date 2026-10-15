@@ -61,7 +61,7 @@ DESKTOP_PKGS=(
     polkit upower bluez NetworkManager wireplumber pipewire
     brightnessctl playerctl ddcutil pciutils
     lua power-profiles-daemon unzip p7zip
-    python3 python3-pillow fontconfig libnotify
+    python3 python3-pillow python3-gobject fontconfig libnotify
     git curl flatpak
 )
 # NOTE: upower stays — Battery.qml binds Quickshell.Services.UPower, which
@@ -244,6 +244,47 @@ ensure_pam_keyring() {
     echo "-session   optional      pam_gnome_keyring.so auto_start" | sudo tee -a "$pam" >/dev/null
 }
 
+ensure_charge_helper() {
+    # Battery charge limit without a polkit round-trip: interactive polkit
+    # cannot work until desktop processes join a logind session (see
+    # SECURITY.md), so the slider uses a root-owned, validated helper plus
+    # a NOPASSWD sudoers entry scoped to that one path. The helper keeps
+    # validating 40-100 itself, so the sudoers line grants nothing broader.
+    local node
+    node="$(ls /sys/class/power_supply/BAT*/charge_control_end_threshold 2>/dev/null | head -n 1)"
+    if [ -z "$node" ]; then
+        log "no charge-control node — skipping the charge-limit helper"
+        return 0
+    fi
+    local src="$REPO_DIR/quickshell/scripts/set-charge-limit.sh"
+    local dst=/usr/local/bin/dots-set-charge-limit
+    local rules=/etc/sudoers.d/dots-charge-limit
+    if [ "$DRY_RUN" -eq 1 ]; then
+        log "would run: install $dst (root-owned) + $rules for $USER"
+        return 0
+    fi
+    need_tty
+    if [ -f "$dst" ] && cmp -s "$src" "$dst"; then
+        log "charge-limit helper already installed"
+    else
+        log "installing charge-limit helper to $dst"
+        sudo install -o root -g root -m 0755 "$src" "$dst"
+    fi
+    local want1="$USER ALL=(root) NOPASSWD: $dst [4-9][0-9]"
+    local want2="$USER ALL=(root) NOPASSWD: $dst 100"
+    if [ -f "$rules" ] && grep -qxF "$want1" "$rules" && grep -qxF "$want2" "$rules"; then
+        log "charge-limit sudoers already in place"
+    else
+        log "granting $USER passwordless $dst (validated 40-100 only)"
+        local tmp
+        tmp="$(mktemp)"
+        printf '%s\n%s\n' "$want1" "$want2" > "$tmp"
+        sudo visudo -c -f "$tmp" >/dev/null
+        sudo install -o root -g root -m 0440 "$tmp" "$rules"
+        rm -f "$tmp"
+    fi
+}
+
 if [ "$WANT_DESKTOP" -eq 1 ]; then
     echo
     log "group: desktop"
@@ -260,6 +301,7 @@ if [ "$WANT_DESKTOP" -eq 1 ]; then
         [ "$DRY_RUN" -eq 1 ] || grimblast check
     fi
     ensure_pam_keyring
+    ensure_charge_helper
 fi
 
 if [ "$WANT_SESSION" -eq 1 ]; then

@@ -32,6 +32,12 @@ Singleton {
     }
 
     IpcHandler {
+        target: "auth"
+        function show(payload: string): void { Auth.show(payload); }
+        function dismiss(cookie: string): void { Auth.dismiss(cookie); }
+    }
+
+    IpcHandler {
         target: "uis"
         function isControlCenterOpen(): bool { return UiState.controlCenterOpen; }
         function isSettingsOpen(): bool { return UiState.settingsOpen; }
@@ -40,6 +46,7 @@ Singleton {
         function isWallpaperPickerOpen(): bool { return UiState.wallpaperPickerOpen; }
         function isPowerMenuOpen(): bool { return UiState.powerMenuOpen; }
         function isClipboardOpen(): bool { return UiState.clipboardOpen; }
+        function isAuthOpen(): bool { return UiState.authOpen; }
     }
 
     GlobalShortcut { name: "toggleControlCenter"; description: "Toggle control center"; onPressed: UiState.toggleControlCenter() }
