@@ -93,7 +93,7 @@ SCRATCH=""
 
 if ! have python3; then
     sk "publish-colors is deterministic" "no python3"
-elif [ -z "$(ls "$THEME_DIR" 2>/dev/null)" ]; then
+elif ! compgen -G "$THEME_DIR/*" >/dev/null; then
     sk "publish-colors is deterministic" "no colors/themes"
 else
     SCRATCH="$(mktemp -d)"
@@ -103,7 +103,8 @@ else
 
     all_ok=1
     count=0
-    for t in $(ls "$THEME_DIR" 2>/dev/null); do
+    for t in "$THEME_DIR"/*/; do
+        t="${t%/}"; t="${t##*/}"
         [ -f "$THEME_DIR/$t/colors.json" ] || continue
         count=$((count+1))
         XDG_CONFIG_HOME="$SCRATCH" python3 "$QS_DIR/scripts/publish-colors.py" "$t" >/dev/null 2>&1
@@ -118,7 +119,8 @@ else
     [ "$all_ok" -eq 1 ] && ok "publish-colors is deterministic ($count themes)"
 
     bad=""
-    for t in $(ls "$THEME_DIR" 2>/dev/null); do
+    for t in "$THEME_DIR"/*/; do
+        t="${t%/}"; t="${t##*/}"
         [ -f "$THEME_DIR/$t/colors.json" ] || continue
         XDG_CONFIG_HOME="$SCRATCH" python3 "$QS_DIR/scripts/publish-colors.py" "$t" >/dev/null 2>&1
         python3 -c 'import json,sys; json.load(open(sys.argv[1]))' "$SCRATCH/colors/current.json" 2>/dev/null \
@@ -424,7 +426,7 @@ fi
 
 section "theme tokens"
 
-if [ -z "$(ls "$THEME_DIR"/*/colors.json 2>/dev/null)" ]; then
+if ! compgen -G "$THEME_DIR/*/colors.json" >/dev/null; then
     sk "every Theme.colors key exists in every palette" "no colors/themes/*/colors.json"
 elif ! have python3; then
     sk "every Theme.colors key exists in every palette" "no python3"

@@ -61,7 +61,7 @@ DESKTOP_PKGS=(
     polkit upower bluez NetworkManager wireplumber pipewire
     brightnessctl playerctl ddcutil pciutils
     lua power-profiles-daemon unzip p7zip
-    python3 python3-pillow python3-gobject fontconfig libnotify
+    python3 python3-pillow python3-gobject python3-dbus fontconfig libnotify
     git curl flatpak
 )
 # NOTE: upower stays — Battery.qml binds Quickshell.Services.UPower, which
@@ -250,8 +250,10 @@ ensure_charge_helper() {
     # SECURITY.md), so the slider uses a root-owned, validated helper plus
     # a NOPASSWD sudoers entry scoped to that one path. The helper keeps
     # validating 40-100 itself, so the sudoers line grants nothing broader.
-    local node
-    node="$(ls /sys/class/power_supply/BAT*/charge_control_end_threshold 2>/dev/null | head -n 1)"
+    local node=""
+    for f in /sys/class/power_supply/BAT*/charge_control_end_threshold; do
+        [ -e "$f" ] && { node="$f"; break; }
+    done
     if [ -z "$node" ]; then
         log "no charge-control node — skipping the charge-limit helper"
         return 0

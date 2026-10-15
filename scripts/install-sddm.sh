@@ -87,6 +87,10 @@ fi
 if [ "$ASSUME_YES" -eq 0 ]; then
     echo
     warn "This will sudo-copy $SRC -> $DST and write $CONF."
+    if [ ! -t 0 ]; then
+        warn "no terminal to confirm on — re-run with --yes"
+        exit 0
+    fi
     printf '   Continue? [y/N] '
     reply=""; read -r reply || reply=""
     case "$reply" in [yY]|[yY][eE][sS]) ;; *) warn "aborted"; exit 0 ;; esac

@@ -266,7 +266,7 @@ check_session() {
                 err "  grep -n 'Keybinds' $CONFIG_DIR/quickshell/shell.qml"
                 fail=1
             else
-                n=$(printf '%s\n' "$ipc_show" | grep -c '^target ')
+                n=$(printf '%s\n' "$ipc_show" | grep -c '^target ' || true)
                 log "qs ipc show: shell + uis present ($n targets)"
             fi
         else
@@ -278,7 +278,7 @@ check_session() {
 
     if command -v hyprctl >/dev/null 2>&1; then
         if binds="$(hyprctl globalshortcuts 2>/dev/null)"; then
-            n=$(printf '%s\n' "$binds" | grep -c 'quickshell:')
+            n=$(printf '%s\n' "$binds" | grep -c 'quickshell:' || true)
             if [ "$n" -eq 0 ]; then
                 err "hyprctl globalshortcuts: no quickshell:* bindings -- the keybinds will not be loaded"
                 fail=1
@@ -293,7 +293,7 @@ check_session() {
     fi
 
     if qs_bin="$(command -v quickshell)" && [ -n "$qs_bin" ]; then
-        qtlib="$(ldd "$qs_bin" 2>/dev/null | grep -oE '/[^ ]*libQt6Core\.so\.[0-9]+' | head -1)"
+        qtlib="$(ldd "$qs_bin" 2>/dev/null | grep -oE '/[^ ]*libQt6Core\.so\.[0-9]+' | head -1 || true)"
         if [ -n "$qtlib" ]; then
             case "$qtlib" in
                 /usr/lib*|/lib*|/usr/bin/../lib*)

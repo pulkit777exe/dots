@@ -10,7 +10,10 @@ if ! [[ "$v" =~ ^[0-9]+$ ]] || [ "$v" -lt 40 ] || [ "$v" -gt 100 ]; then
     exit 2
 fi
 
-node="$(ls /sys/class/power_supply/BAT*/charge_control_end_threshold 2>/dev/null | head -n 1)"
+node=""
+for f in /sys/class/power_supply/BAT*/charge_control_end_threshold; do
+    [ -e "$f" ] && { node="$f"; break; }
+done
 if [ -z "$node" ]; then
     echo "set-charge-limit: no charge-control node on this machine" >&2
     exit 3

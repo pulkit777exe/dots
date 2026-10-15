@@ -21,7 +21,7 @@ log()  { printf '\033[1;32m==>\033[0m %s\n' "$1"; }
 warn() { printf '\033[1;33m!!\033[0m %s\n' "$1" >&2; }
 err()  { printf '\033[1;31mxx\033[0m %s\n' "$1" >&2; }
 
-STATE="$(ls -t "$HOME"/.local/state/quickshell/by-shell/*/theme-state.json 2>/dev/null | head -1 || true)"
+STATE="$(find "$HOME"/.local/state/quickshell/by-shell -maxdepth 2 -name theme-state.json -printf '%T@ %p\n' 2>/dev/null | sort -n | tail -1 | cut -d' ' -f2-)"
 [ -n "$STATE" ] || { err "no quickshell theme-state.json — is the shell running?"; exit 1; }
 
 WALL="$(python3 - "$STATE" <<'EOF'

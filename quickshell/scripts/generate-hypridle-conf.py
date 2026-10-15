@@ -29,6 +29,14 @@ CONF = (
     / "hypr"
     / "hypridle.conf"
 )
+# lock_cmd must point at the same tree this file lands in (hypridle.conf
+# itself may live under a custom XDG_CONFIG_HOME, and hyprlock expands ~).
+CONFIG_HOME = Path(os.environ.get("XDG_CONFIG_HOME", HOME / ".config"))
+LOCK_CMD = (
+    "pidof hyprlock || "
+    + str(CONFIG_HOME / "hypr" / "hyprlock" / "scripts" / "lock.sh")
+    + "   # don't spawn a second lock; lock.sh scrubs the fallback on exit"
+)
 
 DEFAULTS = {
     "lockTimeoutSec": 120,
@@ -97,12 +105,12 @@ def listener(comment: str, timeout: int, on_timeout: str, on_resume: str = "") -
 
 def render(lock: int, display: int, suspend: int) -> str:
     conf = """
-general {
-    lock_cmd = pidof hyprlock || ~/.config/hypr/hyprlock/scripts/lock.sh   # don't spawn a second lock; lock.sh scrubs the fallback on exit
+general {{
+    lock_cmd = {lock_cmd}
     before_sleep_cmd = loginctl lock-session
-    after_sleep_cmd = hyprctl dispatch 'hl.dsp.dpms({ action = "enable" })'
-}
-"""
+    after_sleep_cmd = hyprctl dispatch 'hl.dsp.dpms({{ action = "enable" }})'
+}}
+""".format(lock_cmd=LOCK_CMD)
     if display > 0:
         conf += listener(
             "Display power management — wake/blank on activity",

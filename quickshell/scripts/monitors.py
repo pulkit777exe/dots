@@ -11,7 +11,8 @@ BRIGHTNESS_VCP = "10"
 def run(cmd, timeout=8):
     try:
         return subprocess.run(cmd, capture_output=True, text=True, timeout=timeout).stdout
-    except Exception:
+    except Exception as e:
+        print(f"monitors.py: {cmd[0]} failed: {e}", file=sys.stderr)
         return ""
 
 def hyprctl_json(cmd):

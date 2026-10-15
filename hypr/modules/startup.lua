@@ -8,10 +8,15 @@ hl.on("hyprland.start", function()
     -- the settings store first (it is ignored runtime state, see the
     -- .example template), so user timeouts apply from the first start.
     hl.exec_cmd("python3 " .. home .. "/.config/quickshell/scripts/generate-hypridle-conf.py")
-    hl.exec_cmd("systemctl --user enable --now hypridle.service hyprpaper.service")
+    hl.exec_cmd("command -v hypridle >/dev/null && systemctl --user enable --now hypridle.service || true")
+    hl.exec_cmd("command -v hyprpaper >/dev/null && systemctl --user enable --now hyprpaper.service || true")
     hl.exec_cmd("command -v hyprsunset >/dev/null && systemctl --user enable --now hyprsunset.service || true")
 
-    hl.exec_cmd("wl-paste --watch cliphist store")
+    -- Singleton spawns: hyprland.start re-fires on `hyprctl reload`, so
+    -- long-lived children guard on their own name first. pgrep -x matches
+    -- the exact binary; the -f pattern uses a [c]lass trick so pgrep never
+    -- matches its own command line.
+    hl.exec_cmd("pgrep -x wl-paste >/dev/null || wl-paste --watch cliphist store")
 
     -- Secrets: one keyring daemon for the session, so apps never
     -- D-Bus-activate a second, locked one behind our back. Unlock itself
@@ -26,7 +31,7 @@ hl.on("hyprland.start", function()
     -- the password. Ours speaks the protocol (scripts/polkit-agent.py)
     -- and shows the island dialog; hyprpolkitagent stays installed as a
     -- manual fallback but never autostarts (two agents race).
-    hl.exec_cmd("python3 " .. home .. "/.config/quickshell/scripts/polkit-agent.py &")
+    hl.exec_cmd("pgrep -f '[p]olkit-agent.py' >/dev/null || python3 " .. home .. "/.config/quickshell/scripts/polkit-agent.py &")
 
     hl.exec_cmd("quickshell -p " .. home .. "/.config/quickshell")
 end)

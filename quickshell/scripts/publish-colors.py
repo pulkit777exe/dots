@@ -333,12 +333,12 @@ switch:checked {{
 def run(cmd: list[str]) -> None:
     try:
         subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=4)
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"publish-colors: {' '.join(cmd)} failed: {e}", file=sys.stderr)
 
 def apply_live(colors: dict) -> None:
     config_home = Path(os.environ.get("XDG_CONFIG_HOME", HOME / ".config"))
-    live = COLORS_DIR == HOME / ".config" / "colors"
+    live = COLORS_DIR == config_home / "colors"
 
     if live:
         run(["hyprctl", "reload"])

@@ -57,3 +57,7 @@ colors/index.json
 
 images
 todos.md
+
+# editor backups
+*.bak
+*.orig

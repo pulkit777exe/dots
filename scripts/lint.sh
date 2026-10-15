@@ -424,24 +424,26 @@ fi
 if [ -n "$QMLLINT" ]; then
     echo
     echo "${DIM}qmllint${RST}  ${DIM}($("$QMLLINT" --version 2>&1))${RST}"
-    if ( cd "$QML_DIR" && "$QMLLINT" -I . -I services -I components -I surfaces $(find . -name '*.qml' | sort) ) > /tmp/lint-qmllint.log 2>&1; then
+    QMLLINT_LOG="${XDG_RUNTIME_DIR:-/tmp}/lint-qmllint.$$.log"
+    mapfile -t QML_ALL < <(cd "$QML_DIR" && find . -name '*.qml' | sort)
+    if ( cd "$QML_DIR" && "$QMLLINT" -I . -I services -I components -I surfaces "${QML_ALL[@]}" ) > "$QMLLINT_LOG" 2>&1; then
         rc=0
     else
         rc=1
     fi
-    if [ ! -s /tmp/lint-qmllint.log ]; then
+    if [ ! -s "$QMLLINT_LOG" ]; then
         echo "${RED}  qmllint: produced an empty log -- it did not analyse the tree${RST}"
         echo "${YEL}  an unresolvable import makes qmllint exit 0 silently; check imports by hand${RST}"
         fail=1
-    elif grep -qE "^Error" /tmp/lint-qmllint.log; then
+    elif grep -qE "^Error" "$QMLLINT_LOG"; then
         echo "${RED}  qmllint: errors${RST}"
-        grep -E "^Error" /tmp/lint-qmllint.log | head -20 | sed 's/^/    /'
+        grep -E "^Error" "$QMLLINT_LOG" | head -20 | sed 's/^/    /'
         fail=1
     else
-        n=$(grep -c "^Warning" /tmp/lint-qmllint.log || true)
+        n=$(grep -c "^Warning" "$QMLLINT_LOG" || true)
         n=${n:-0}
         if [ "$n" -gt 0 ]; then
-            echo "${YEL}  qmllint: no errors, $n warning(s) (full log: /tmp/lint-qmllint.log)${RST}"
+            echo "${YEL}  qmllint: no errors, $n warning(s) (full log: ${QMLLINT_LOG})${RST}"
         else
             echo "${GRN}  qmllint: clean${RST}"
         fi

@@ -37,6 +37,7 @@ done
 
 changed=0
 for src in "$FONT_SRC"/*/*.ttf; do
+    [ -e "$src" ] || continue
     dst="$FONT_DIR/$(basename "$src")"
     if [ -f "$dst" ] && cmp -s "$src" "$dst"; then
         continue
