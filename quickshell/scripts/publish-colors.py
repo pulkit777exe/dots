@@ -381,7 +381,8 @@ def apply_live(colors: dict) -> None:
         "color-scheme", "prefer-dark" if is_dark else "default",
     ])
     kitty_conf = COLORS_DIR / "kitty.conf"
-    for sock in sorted(Path("/tmp").glob("kitty-*")):
+    tmpdir = Path(os.environ.get("TMPDIR", "/tmp"))
+    for sock in sorted(tmpdir.glob("kitty-*")):
         run(["kitty", "@", "--to", f"unix:{sock}", "set-colors", "-a", str(kitty_conf)])
 
 def resolve_theme(cli_theme: str | None) -> str:

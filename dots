@@ -54,7 +54,7 @@ case "$CMD" in
     fonts)
         bash "$REPO_DIR/scripts/install-fonts.sh" "${REST[@]}" ;;
     apps)
-        bash "$REPO_DIR/install-software" ;;
+        bash "$REPO_DIR/install-software" "${EXTRA[@]}" ;;
     check)
         bash "$REPO_DIR/install.sh" --check ;;
     update)
