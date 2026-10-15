@@ -410,7 +410,7 @@ if [ "$WANT_SHELL" -eq 1 ]; then
         log "would run: chsh -s $(command -v zsh) (asks first)"
     else
         need_tty
-        if confirm "Make zsh your login shell?"; then
+        if [ "$ASSUME_YES" -eq 1 ] || confirm "Make zsh your login shell?"; then
             chsh -s "$(command -v zsh)" && log "login shell is now zsh (takes effect on next login)"
         else
             warn "left the login shell as ${SHELL:-unknown}"
@@ -436,15 +436,7 @@ if [ "$WANT_NVIDIA" -eq 1 ]; then
             elif dnf list --available envycontrol 2>/dev/null | grep -q "^envycontrol"; then
                 dnf_install envycontrol
             else
-                warn "envycontrol is in no enabled repo — pip-installing to /usr/local/bin"
-                dnf_install python3-pip
-                if [ "$DRY_RUN" -eq 1 ]; then
-                    log "would run: sudo python3 -m pip install envycontrol"
-                else
-                    need_tty
-                    sudo python3 -m pip install envycontrol \
-                        || warn "envycontrol pip install failed — optional GPU switcher, skipping (see github.com/bayasdev/envycontrol)"
-                fi
+                warn "envycontrol is in no enabled repo — skipping (optional GPU switcher; install python3-envycontrol from the sunwire/envycontrol COPR by hand)"
             fi
         fi
         if [ "$DRY_RUN" -eq 0 ] && command -v mokutil >/dev/null 2>&1 && mokutil --sb-state 2>/dev/null | grep -qi enabled; then
