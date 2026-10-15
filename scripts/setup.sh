@@ -70,8 +70,9 @@ DESKTOP_PKGS=(
 # nonfree); extract() uses 7z for .rar instead.
 SHELL_PKGS=(zsh zoxide eza bat btop fastfetch)
 # Login session. sddm + python3-pyxdg are in the official repos; uwsm and
-# hyprland-guiutils ride on the hyprland COPR enabled by the desktop group,
-# so --session must run after --desktop (it does: blocks run in file order).
+# hyprland-guiutils ride on the hyprland COPR, which the session block
+# ensures itself so --session works standalone (file order still runs
+# desktop first, which is the common path).
 SESSION_PKGS=(sddm uwsm python3-pyxdg hyprland-guiutils)
 NVIDIA_PKGS=(akmod-nvidia xorg-x11-drv-nvidia-cuda libva-nvidia-driver mokutil)
 DEV_PKGS=(docker-ce docker-ce-cli containerd.io docker-buildx-plugin

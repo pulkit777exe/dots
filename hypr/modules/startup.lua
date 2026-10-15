@@ -12,10 +12,9 @@ hl.on("hyprland.start", function()
     hl.exec_cmd("command -v hyprpaper >/dev/null && systemctl --user enable --now hyprpaper.service || true")
     hl.exec_cmd("command -v hyprsunset >/dev/null && systemctl --user enable --now hyprsunset.service || true")
 
-    -- Singleton spawns: hyprland.start re-fires on `hyprctl reload`, so
-    -- long-lived children guard on their own name first. pgrep -x matches
-    -- the exact binary; the -f pattern uses a [c]lass trick so pgrep never
-    -- matches its own command line.
+    -- hyprland.start re-fires on `hyprctl reload`, so long-lived
+    -- children guard on their own name first ([c]lass: pgrep never
+    -- matches its own command line).
     hl.exec_cmd("pgrep -x wl-paste >/dev/null || wl-paste --watch cliphist store")
 
     -- Secrets: one keyring daemon for the session, so apps never
