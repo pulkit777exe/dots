@@ -22,9 +22,8 @@ ASSUME_YES=0
 CHECK_ONLY=0
 RUN_TEST=0
 
-log()  { printf '\033[1;32m==>\033[0m %s\n' "$1"; }
-warn() { printf '\033[1;33m!!\033[0m %s\n' "$1" >&2; }
-err()  { printf '\033[1;31mxx\033[0m %s\n' "$1" >&2; }
+# shellcheck disable=SC1091
+. "$REPO_DIR/scripts/lib.sh"
 
 for a in "$@"; do
     case "$a" in

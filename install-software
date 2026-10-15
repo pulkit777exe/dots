@@ -4,7 +4,12 @@
 # Needs an interactive terminal: the installers below call sudo/dnf.
 set -euo pipefail
 
+REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DRY_RUN=0
+
+# shellcheck disable=SC1091
+. "$REPO_DIR/scripts/lib.sh"
+
 for arg in "$@"; do
     case "$arg" in
         --dry-run) DRY_RUN=1 ;;
@@ -12,14 +17,6 @@ for arg in "$@"; do
         *) echo "install-software: unknown flag $arg" >&2; exit 2 ;;
     esac
 done
-
-run() {
-    if [ "$DRY_RUN" -eq 1 ]; then
-        echo "would run: $*"
-    else
-        "$@"
-    fi
-}
 
 if [ "$DRY_RUN" -eq 0 ] && ! sudo -n true 2>/dev/null; then
     if [ ! -t 0 ]; then
@@ -29,7 +26,6 @@ if [ "$DRY_RUN" -eq 0 ] && ! sudo -n true 2>/dev/null; then
     sudo -v || exit 1
 fi
 
-have() { command -v "$1" >/dev/null 2>&1; }
 have_flatpak() { flatpak info "$1" >/dev/null 2>&1; }
 
 install_brave() {

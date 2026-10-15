@@ -15,11 +15,10 @@ set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-IMG_EXTS="png jpg jpeg webp"
+# shellcheck disable=SC1091
+. "$REPO_DIR/scripts/lib.sh"
 
-log()  { printf '\033[1;32m==>\033[0m %s\n' "$1"; }
-warn() { printf '\033[1;33m!!\033[0m %s\n' "$1" >&2; }
-err()  { printf '\033[1;31mxx\033[0m %s\n' "$1" >&2; }
+IMG_EXTS="png jpg jpeg webp"
 
 STATE="$(find "$HOME"/.local/state/quickshell/by-shell -maxdepth 2 -name theme-state.json -printf '%T@ %p\n' 2>/dev/null | sort -n | tail -1 | cut -d' ' -f2-)"
 [ -n "$STATE" ] || { err "no quickshell theme-state.json — is the shell running?"; exit 1; }

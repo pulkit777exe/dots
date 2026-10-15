@@ -58,7 +58,6 @@ DESKTOP_PKGS=(
     polkit upower bluez NetworkManager wireplumber pipewire
     hyprpolkitagent
     gnome-keyring seahorse
-    polkit upower bluez NetworkManager wireplumber pipewire
     brightnessctl playerctl ddcutil pciutils
     lua power-profiles-daemon unzip p7zip
     python3 python3-pillow python3-gobject python3-dbus fontconfig libnotify
