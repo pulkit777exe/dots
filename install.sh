@@ -98,14 +98,12 @@ check_bin() {
     else
         err "$bin not found — $pkg_hint"
         MISSING+=("$bin")
-        MISSING_REQ_BIN+=("$bin")
     fi
     return 0
 }
 
 MISSING=()
 MISSING_OPTIONAL=()
-MISSING_REQ_BIN=()
 
 check_font() {
     local family="$1" what="$2" kind="${3:-required}"
@@ -129,7 +127,6 @@ check_font() {
     err "font missing: $family — $what"
     err "  run scripts/install-fonts.sh (SF Pro Display needs a one-time manual download; the script explains)"
     MISSING+=("font:$family")
-    MISSING_REQ_BIN+=("font:$family")
     return 0
 }
 
@@ -161,7 +158,7 @@ check_boot_session() {
         rc=1
     fi
 
-    if ls /usr/share/wayland-sessions/*.desktop >/dev/null 2>&1; then
+    if compgen -G "/usr/share/wayland-sessions/*.desktop" >/dev/null; then
         log "wayland session file(s) present"
     else
         err "no .desktop in /usr/share/wayland-sessions — nothing to pick at login"
@@ -311,21 +308,19 @@ check_session() {
         echo
         err "missing REQUIRED: ${MISSING[*]}"
         err "the desktop will not be whole until these are installed"
+        fail=1
     fi
     if [ "${#MISSING_OPTIONAL[@]}" -gt 0 ]; then
         echo
         warn "missing optional (features degrade): ${MISSING_OPTIONAL[*]}"
     fi
 
-    if [ "${#MISSING_REQ_BIN[@]}" -gt 0 ]; then
-        fail=1
-    fi
-
     check_boot_session || fail=1
 
-    if [ -s "$HOME/.local/state/hypr/config-errors.log" ]; then
+    local state_log="${XDG_STATE_HOME:-$HOME/.local/state}/hypr/config-errors.log"
+    if [ -s "$state_log" ]; then
         warn "hypr config errors logged (tail):"
-        warn "$(tail -3 "$HOME/.local/state/hypr/config-errors.log")"
+        warn "$(tail -3 "$state_log")"
         warn "inspect + delete the log after fixing; a reload re-creates it on new failures"
     fi
 
@@ -426,6 +421,8 @@ main() {
         fi
         if command -v lua >/dev/null 2>&1; then
             run lua "$CONFIG_DIR/hypr/hyprlock.lua" || warn "hyprlock.conf not generated — run it by hand"
+        else
+            warn "lua not found — hyprlock.conf not generated (sudo dnf install lua)"
         fi
     fi
 

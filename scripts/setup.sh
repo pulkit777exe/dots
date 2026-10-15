@@ -279,10 +279,10 @@ ensure_charge_helper() {
         log "granting $USER passwordless $dst (validated 40-100 only)"
         local tmp
         tmp="$(mktemp)"
+        trap 'rm -f "$tmp"' RETURN
         printf '%s\n%s\n' "$want1" "$want2" > "$tmp"
         sudo visudo -c -f "$tmp" >/dev/null
         sudo install -o root -g root -m 0440 "$tmp" "$rules"
-        rm -f "$tmp"
     fi
 }
 
@@ -308,6 +308,7 @@ fi
 if [ "$WANT_SESSION" -eq 1 ]; then
     echo
     log "group: session"
+    ensure_copr "$COPR_HYPRLAND"
     dnf_install "${SESSION_PKGS[@]}"
     if [ "$DRY_RUN" -eq 1 ]; then
         log "would run: sudo systemctl set-default graphical.target (if not already)"
@@ -329,7 +330,7 @@ if [ "$WANT_SESSION" -eq 1 ]; then
             log "enabling sddm"
             sudo systemctl enable sddm
         fi
-        if ls /usr/share/wayland-sessions/*.desktop >/dev/null 2>&1; then
+        if compgen -G "/usr/share/wayland-sessions/*.desktop" >/dev/null; then
             log "wayland session file(s) present"
         else
             warn "no .desktop in /usr/share/wayland-sessions — no session to pick at login"
@@ -401,7 +402,8 @@ if [ "$WANT_SHELL" -eq 1 ]; then
     else
         log "installing nvm"
         git clone https://github.com/nvm-sh/nvm.git "$HOME/.nvm"
-        (cd "$HOME/.nvm" && git checkout "$(git describe --abbrev=0 --tags)")
+        (cd "$HOME/.nvm" && git checkout "$(git describe --abbrev=0 --tags)") \
+            || warn "nvm tag checkout failed — nvm may be on an unexpected ref"
     fi
     if ! command -v zsh >/dev/null 2>&1; then
         warn "zsh not installed — skipping the login-shell change"
@@ -494,7 +496,7 @@ if [ "$WANT_SESSION" -eq 1 ]; then
             log "would run: scripts/install-sddm.sh (asks first)"
         fi
     else
-        if ls "$HOME"/.local/state/quickshell/by-shell/*/theme-state.json >/dev/null 2>&1; then
+        if compgen -G "$HOME/.local/state/quickshell/by-shell/*/theme-state.json" >/dev/null; then
             bash "$REPO_DIR/scripts/sync-login-wallpaper.sh" || warn "wallpaper sync failed — the theme keeps its bundled photo"
         else
             log "no live session — the theme keeps its bundled photo (run scripts/sync-login-wallpaper.sh after first login)"

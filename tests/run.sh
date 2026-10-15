@@ -170,6 +170,24 @@ EOF
     rm -rf "$SCRATCH"
 fi
 
+section "front end"
+
+if bash "$REPO/dots" apps --dry-run >/dev/null 2>&1; then
+    ok "dots apps --dry-run exits clean"
+else
+    no "dots apps --dry-run exits clean" "see dots/install-software flag forwarding"
+fi
+if bash "$REPO/dots" apps --yes --dry-run >/dev/null 2>&1; then
+    ok "dots apps --yes --dry-run exits clean"
+else
+    no "dots apps --yes --dry-run exits clean" "install-software must accept --yes"
+fi
+if bash "$REPO/scripts/setup.sh" --list 2>/dev/null | grep -q "python3-dbus"; then
+    ok "setup --list advertises python3-dbus"
+else
+    no "setup --list advertises python3-dbus" "tray re-adopt needs it declared"
+fi
+
 if ! have python3; then
     sk "the live theme matches what the shell reports" "no python3"
 else
