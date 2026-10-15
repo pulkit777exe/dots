@@ -7,6 +7,8 @@ ColumnLayout {
     id: root
     spacing: 12
 
+    property bool chargeEditing: false
+
     readonly property var searchKeys: ["power", "battery", "charging",
         "profile", "performance", "balanced", "saver", "game mode",
         "lock", "suspend", "sleep", "lid", "charge limit", "threshold",
@@ -69,12 +71,132 @@ ColumnLayout {
             wrapMode: Text.WordWrap
         }
 
-        SettingsSliderRow {
-            value: ChargeLimit.limit
-            from: 50
-            to: 100
-            suffix: "%"
-            onMoved: (v) => ChargeLimit.setLimit(v)
+        // Locked value: tap the pencil to edit.
+        RowLayout {
+            visible: !root.chargeEditing
+            Layout.fillWidth: true
+            spacing: 8
+
+            Label {
+                text: ChargeLimit.limit + "%"
+                font.pixelSize: Theme.px(20)
+                font.weight: Font.DemiBold
+                color: Theme.colors.text
+            }
+
+            Label {
+                Layout.fillWidth: true
+                text: ChargeLimit.limit >= 100 ? "no limit" : "charging stops here"
+                font.pixelSize: Theme.px(11)
+                color: Theme.withAlpha(Theme.colors.text, 0.48)
+            }
+
+            Item {
+                Layout.preferredWidth: 28
+                Layout.preferredHeight: 28
+
+                Icon {
+                    anchors.centerIn: parent
+                    icon: "edit"
+                    size: 16
+                    iconColor: Theme.withAlpha(Theme.colors.text, 0.5)
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: {
+                        chargeField.text = String(ChargeLimit.limit);
+                        root.chargeEditing = true;
+                        Qt.callLater(() => { chargeField.forceActiveFocus(); chargeField.selectAll(); });
+                    }
+                }
+            }
+        }
+
+        // Edit mode: plain numeric input, Enter/✓ commits, Esc reverts.
+        RowLayout {
+            visible: root.chargeEditing
+            Layout.fillWidth: true
+            spacing: 8
+
+            Rectangle {
+                Layout.fillWidth: true
+                Layout.preferredHeight: 36
+                radius: 10
+                color: Theme.withAlpha(Theme.colors.text, 0.07)
+                border.color: chargeField.activeFocus
+                    ? Theme.accentFor("settings")
+                    : Theme.withAlpha(Theme.colors.text, 0.12)
+                border.width: 1
+
+                TextInput {
+                    id: chargeField
+                    anchors.fill: parent
+                    anchors.leftMargin: 12
+                    anchors.rightMargin: 12
+                    verticalAlignment: TextInput.AlignVCenter
+                    font.family: "SF Pro Display"
+                    font.pixelSize: Theme.px(14)
+                    color: Theme.withAlpha(Theme.colors.text, 0.92)
+                    selectionColor: Theme.withAlpha(Theme.colors.accent, 0.35)
+                    validator: IntValidator { bottom: 40; top: 100 }
+                    inputMethodHints: Qt.ImhDigitsOnly
+                    clip: true
+
+                    function commit() {
+                        if (text.length > 0)
+                            ChargeLimit.setLimit(parseInt(text, 10));
+                        root.chargeEditing = false;
+                    }
+
+                    Keys.onReturnPressed: commit()
+                    Keys.onEnterPressed: commit()
+                    Keys.onEscapePressed: (event) => { root.chargeEditing = false; event.accepted = true; }
+                }
+            }
+
+            Label {
+                text: "%"
+                font.pixelSize: Theme.px(13)
+                color: Theme.withAlpha(Theme.colors.text, 0.5)
+            }
+
+            Item {
+                Layout.preferredWidth: 28
+                Layout.preferredHeight: 28
+
+                Icon {
+                    anchors.centerIn: parent
+                    icon: "check"
+                    size: 18
+                    iconColor: Theme.accentFor("settings")
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: chargeField.commit()
+                }
+            }
+
+            Item {
+                Layout.preferredWidth: 28
+                Layout.preferredHeight: 28
+
+                Icon {
+                    anchors.centerIn: parent
+                    icon: "close"
+                    size: 18
+                    iconColor: Theme.withAlpha(Theme.colors.text, 0.5)
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: root.chargeEditing = false;
+                }
+            }
         }
 
         Label {
