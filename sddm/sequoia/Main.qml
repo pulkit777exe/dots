@@ -3,9 +3,10 @@ import QtQuick.Layouts 1.15
 import QtQuick.Controls 2.15
 import SddmComponents 2.0
 
-// Sequoia — macOS-style SDDM greeter.
-// Reference: wallpaper fills the screen, "Saturday 12 April" + "11:44"
-// top-centre, avatar + name + password dots bottom-centre.
+// Sequoia — macOS login for SDDM. Menu bar with clock on top,
+// centred avatar + name + frosted password field with arrow button,
+// power buttons at the bottom. No session picker, no big clock —
+// the real login has neither.
 // Auth path is deliberately boring: sddm.login(user, password, sessionIndex)
 // with lastUser/lastSession defaults, failed logins clear + refocus.
 Rectangle {
@@ -16,8 +17,6 @@ Rectangle {
 
     property string fontFamily: config.stringValue("fontFamily") || "SF Pro Display"
     property string bgSource: config.stringValue("background") || "wallpaper.jpg"
-    property string hintInitial: config.stringValue("hintText") || "Enter your password to log in"
-    property string dateFmt: config.stringValue("dateFormat") || "dddd d MMMM"
     property string timeFmt: config.stringValue("timeFormat") || "HH:mm"
     property real dimOverlay: parseFloat(config.stringValue("dimOverlay")) || 0.12
 
@@ -47,16 +46,6 @@ Rectangle {
             return "avatar.jpg"
         return String(v)
     }
-    function sessionName(idx) {
-        if (!sessionModel || sessionModel.count === 0)
-            return ""
-        // SessionRole: Directory +1, File +2, Type +3, Name +4, Exec +5.
-        var v = sessionModel.data(sessionModel.index(idx, 0), Qt.UserRole + 4)
-        if (v !== undefined && v !== null && String(v) !== "")
-            return String(v)
-        return "session"
-    }
-
     function currentUserName() {
         if (userModel.count === 0)
             return userModel.lastUser || ""
@@ -160,7 +149,7 @@ Rectangle {
         }
         if (userModel && userModel.count > 0)
             userIndex = userModel.lastIndex >= 0 ? userModel.lastIndex : 0
-        msg = root.hintInitial
+        msg = ""
         msgIsError = false
         pwField.forceActiveFocus()
     }
@@ -192,53 +181,24 @@ Rectangle {
         onClicked: pwField.forceActiveFocus()
     }
 
-    // ── Clock, top centre (like the reference) ──────────────────
-    Column {
+    // ── Menu bar. The macOS login has no big clock — the time lives
+    // here, small, top right, exactly like the desktop menu bar. ──
+    Rectangle {
         anchors.top: parent.top
-        anchors.horizontalCenter: parent.horizontalCenter
-        anchors.topMargin: Math.max(36, parent.height * 0.055)
-        spacing: 2
-
-        Text {
-            anchors.horizontalCenter: parent.horizontalCenter
-            text: Qt.formatDate(root.now, root.dateFmt)
-            color: "#f2f7ff"
-            font.family: root.fontFamily
-            font.pixelSize: 22
-            font.weight: Font.Medium
-            style: Text.Raised
-            styleColor: "#60000000"
-        }
-        Text {
-            anchors.horizontalCenter: parent.horizontalCenter
-            text: Qt.formatTime(root.now, root.timeFmt)
-            color: "#eef4ff"
-            font.family: root.fontFamily
-            font.pixelSize: 104
-            font.weight: Font.DemiBold
-            style: Text.Raised
-            styleColor: "#60000000"
-        }
-    }
-
-    // ── Status row, top right ───────────────────────────────────
-    Row {
-        anchors.top: parent.top
-        anchors.right: parent.right
-        anchors.topMargin: 14
-        anchors.rightMargin: 18
-        spacing: 16
+        width: parent.width
+        height: 30
+        color: Qt.rgba(0, 0, 0, 0.28)
 
         Text {
             visible: keyboard && keyboard.enabled && keyboard.layouts && keyboard.layouts.length > 1
+            anchors.right: barClock.left
+            anchors.rightMargin: 16
+            anchors.verticalCenter: parent.verticalCenter
             text: keyboard ? keyboard.currentLayout : ""
             color: "white"
-            opacity: 0.92
+            opacity: 0.9
             font.family: root.fontFamily
             font.pixelSize: 13
-            anchors.verticalCenter: parent.verticalCenter
-            style: Text.Raised
-            styleColor: "#60000000"
             MouseArea {
                 anchors.fill: parent
                 cursorShape: Qt.PointingHandCursor
@@ -254,64 +214,26 @@ Rectangle {
         }
 
         Text {
-            id: sessionLabel
-            visible: sessionModel && sessionModel.count > 1
-            text: sessionName(root.sessionIndex)
-            color: "white"
-            opacity: 0.85
-            font.family: root.fontFamily
-            font.pixelSize: 13
+            id: barClock
+            anchors.right: parent.right
+            anchors.rightMargin: 16
             anchors.verticalCenter: parent.verticalCenter
-            style: Text.Raised
-            styleColor: "#60000000"
-            MouseArea {
-                anchors.fill: parent
-                cursorShape: Qt.PointingHandCursor
-                onClicked: cycleSession(1)
-            }
-        }
-
-        Text {
-            text: "Restart"
+            text: Qt.formatDate(root.now, "ddd d MMM") + "  " + Qt.formatTime(root.now, root.timeFmt)
             color: "white"
             opacity: 0.92
             font.family: root.fontFamily
             font.pixelSize: 13
-            anchors.verticalCenter: parent.verticalCenter
-            visible: sddm.canReboot
-            style: Text.Raised
-            styleColor: "#60000000"
-            MouseArea {
-                anchors.fill: parent
-                cursorShape: Qt.PointingHandCursor
-                onClicked: sddm.reboot()
-            }
-        }
-        Text {
-            text: "Shut Down"
-            color: "white"
-            opacity: 0.92
-            font.family: root.fontFamily
-            font.pixelSize: 13
-            anchors.verticalCenter: parent.verticalCenter
-            visible: sddm.canPowerOff
-            style: Text.Raised
-            styleColor: "#60000000"
-            MouseArea {
-                anchors.fill: parent
-                cursorShape: Qt.PointingHandCursor
-                onClicked: sddm.powerOff()
-            }
+            font.weight: Font.Medium
         }
     }
 
-    // ── User block, bottom centre ───────────────────────────────
+    // ── User block, centred like the macOS login ────────────────
     Column {
         id: userBlock
-        anchors.bottom: parent.bottom
+        anchors.verticalCenter: parent.verticalCenter
+        anchors.verticalCenterOffset: -34
         anchors.horizontalCenter: parent.horizontalCenter
-        anchors.bottomMargin: Math.max(48, parent.height * 0.07)
-        spacing: 8
+        spacing: 10
 
         Row {
             anchors.horizontalCenter: parent.horizontalCenter
@@ -331,29 +253,74 @@ Rectangle {
                 }
             }
 
-            // Circular avatar without GraphicalEffects (unavailable on a
-            // minimal install): a rounded disk clipping the photo.
-            Rectangle {
+            // Circular avatar with no extra modules: Item.clip stays square
+            // and ShaderEffect needs GL, so Canvas clips the photo to a
+            // disk in plain 2D. The hidden Image only decodes the photo
+            // and reports its natural size for the centre-crop math.
+            Item {
                 id: avatarDisk
-                width: 56
-                height: 56
-                radius: 28
-                clip: true
-                color: "#59535c6b"
-                border.color: "#8cffffff"
-                border.width: 1
+                width: 84
+                height: 84
                 anchors.verticalCenter: parent.verticalCenter
 
                 Image {
-                    anchors.fill: parent
+                    id: facePhoto
                     source: userIcon(root.userIndex)
-                    fillMode: Image.PreserveAspectCrop
-                    smooth: true
+                    visible: false
                     asynchronous: true
                     onStatusChanged: {
                         if (status === Image.Error && source != "avatar.jpg")
                             source = "avatar.jpg"
+                        else if (status === Image.Ready)
+                            faceCanvas.requestPaint()
                     }
+                }
+                Canvas {
+                    id: faceCanvas
+                    anchors.fill: parent
+                    property string faceUrl: facePhoto.source
+                    onFaceUrlChanged: {
+                        if (faceUrl !== "" && !isImageLoaded(faceUrl))
+                            loadImage(faceUrl)
+                        requestPaint()
+                    }
+                    onImageLoaded: requestPaint()
+                    Component.onCompleted: {
+                        if (faceUrl !== "" && !isImageLoaded(faceUrl))
+                            loadImage(faceUrl)
+                    }
+                    onPaint: {
+                        var ctx = getContext("2d")
+                        var r = width / 2
+                        ctx.clearRect(0, 0, width, height)
+                        ctx.beginPath()
+                        ctx.arc(r, r, r, 0, Math.PI * 2)
+                        ctx.fillStyle = "#59535c6b"
+                        ctx.fill()
+                        if (faceUrl !== "" && isImageLoaded(faceUrl)
+                                && facePhoto.status === Image.Ready
+                                && facePhoto.implicitWidth > 0
+                                && facePhoto.implicitHeight > 0) {
+                            var iw = facePhoto.implicitWidth
+                            var ih = facePhoto.implicitHeight
+                            var s = Math.max(width / iw, height / ih)
+                            var sw = width / s, sh = height / s
+                            ctx.save()
+                            ctx.beginPath()
+                            ctx.arc(r, r, r - 1, 0, Math.PI * 2)
+                            ctx.clip()
+                            ctx.drawImage(faceUrl, (iw - sw) / 2, (ih - sh) / 2,
+                                          sw, sh, 0, 0, width, height)
+                            ctx.restore()
+                        }
+                    }
+                }
+                Rectangle {
+                    anchors.fill: parent
+                    radius: 42
+                    color: "transparent"
+                    border.color: "#8cffffff"
+                    border.width: 1
                 }
             }
 
@@ -377,19 +344,19 @@ Rectangle {
             text: userModel.count > 0 ? userRealName(root.userIndex) : (userModel.lastUser || "user")
             color: "#f4f7ff"
             font.family: root.fontFamily
-            font.pixelSize: 15
-            font.weight: Font.Medium
+            font.pixelSize: 17
+            font.weight: Font.DemiBold
             style: Text.Raised
             styleColor: "#60000000"
         }
 
-        // Password pill. Frosted-glass look like the reference: a translucent
-        // white disk behind the dots, brighter rim while typing, red rim on
-        // a failed attempt. No GraphicalEffects dependency — plain alpha.
+        // Password field, macOS login style: a frosted-white pill with
+        // the prompt inside it and the round arrow button on the right.
+        // No GraphicalEffects dependency — plain alpha.
         Item {
             id: pwWrap
-            width: 220
-            height: 38
+            width: 200
+            height: 32
             anchors.horizontalCenter: parent.horizontalCenter
 
             SequentialAnimation {
@@ -404,11 +371,10 @@ Rectangle {
                 id: pwGlass
                 anchors.fill: parent
                 radius: height / 2
-                color: pwField.activeFocus ? Qt.rgba(1, 1, 1, 0.32) : Qt.rgba(1, 1, 1, 0.2)
+                color: pwField.activeFocus ? Qt.rgba(1, 1, 1, 0.72) : Qt.rgba(1, 1, 1, 0.55)
                 border.width: 1
                 border.color: root.msgIsError ? Qt.rgba(0.85, 0.3, 0.28, 0.95)
-                             : pwField.activeFocus ? Qt.rgba(1, 1, 1, 0.85)
-                             : Qt.rgba(1, 1, 1, 0.5)
+                             : Qt.rgba(0, 0, 0, 0.18)
                 Behavior on color { ColorAnimation { duration: 150 } }
                 Behavior on border.color { ColorAnimation { duration: 150 } }
             }
@@ -425,18 +391,18 @@ Rectangle {
             TextField {
                 id: pwField
                 anchors.fill: parent
-                anchors.leftMargin: 24
-                anchors.rightMargin: 24
+                anchors.leftMargin: 14
+                anchors.rightMargin: 40
                 placeholderText: ""
                 echoMode: TextInput.Password
                 passwordCharacter: "●"
                 font.family: root.fontFamily
-                font.pixelSize: 16
-                font.letterSpacing: 3
+                font.pixelSize: 15
+                font.letterSpacing: pwField.text === "" ? 0 : 3
                 horizontalAlignment: TextInput.AlignHCenter
                 verticalAlignment: TextInput.AlignVCenter
                 color: "#26292f"
-                placeholderTextColor: "#00000000"
+                placeholderTextColor: "#71767e"
                 focus: true
                 enabled: !root.busy
                 selectByMouse: false
@@ -450,22 +416,53 @@ Rectangle {
                 Component.onCompleted: forceActiveFocus()
             }
 
-            // Spinner while PAM verifies.
+            // Prompt inside the field. A plain Text, not placeholderText:
+            // under a Password echoMode the placeholder is unreliable,
+            // while this shows if and only if the field is empty.
             Text {
-                visible: root.busy
+                anchors.fill: pwField
+                anchors.leftMargin: 14
+                anchors.rightMargin: 40
+                horizontalAlignment: Text.AlignHCenter
+                verticalAlignment: Text.AlignVCenter
+                text: "Enter Password"
+                color: "#71767e"
+                font.family: root.fontFamily
+                font.pixelSize: 15
+                visible: pwField.text === "" && !root.busy
+            }
+
+            // Round arrow button, macOS style: submits on click, shows
+            // the spinner inside itself while PAM verifies.
+            Rectangle {
+                id: goButton
+                width: 24
+                height: 24
+                radius: 12
                 anchors.right: parent.right
-                anchors.rightMargin: -28
+                anchors.rightMargin: 4
                 anchors.verticalCenter: parent.verticalCenter
-                text: "◌"
-                color: "#dfe8ff"
-                opacity: 0.9
-                font.pixelSize: 18
-                RotationAnimation on rotation {
-                    running: root.busy
-                    loops: Animation.Infinite
-                    from: 0
-                    to: 360
-                    duration: 900
+                color: goMouse.containsMouse ? Qt.rgba(28, 30, 36, 0.78)
+                                             : Qt.rgba(28, 30, 36, 0.55)
+                Text {
+                    anchors.centerIn: parent
+                    text: root.busy ? "◌" : "→"
+                    color: "white"
+                    font.pixelSize: 13
+                    RotationAnimation on rotation {
+                        running: root.busy
+                        loops: Animation.Infinite
+                        from: 0
+                        to: 360
+                        duration: 900
+                    }
+                }
+                MouseArea {
+                    id: goMouse
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: doLogin()
                 }
             }
         }
@@ -498,34 +495,45 @@ Rectangle {
         }
     }
 
-    // ── Session footnote, bottom left (subtle, still reachable) ─
+    // ── Sleep/restart/shut down, bottom centre like macOS. The session
+    // picker macOS would never show is gone entirely: the session is
+    // preselected silently, Tab still cycles it for multi-boot machines.
     Row {
-        anchors.left: parent.left
         anchors.bottom: parent.bottom
-        anchors.leftMargin: 18
-        anchors.bottomMargin: 14
-        spacing: 8
-        opacity: 0.75
-        visible: sessionModel && sessionModel.count > 0
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.bottomMargin: 22
+        spacing: 30
 
         Text {
-            text: "Session:"
+            text: "Restart"
             color: "white"
+            opacity: 0.85
             font.family: root.fontFamily
-            font.pixelSize: 12
+            font.pixelSize: 13
             anchors.verticalCenter: parent.verticalCenter
-        }
-        Text {
-            text: sessionName(root.sessionIndex)
-            color: "white"
-            font.family: root.fontFamily
-            font.pixelSize: 12
-            font.underline: true
-            anchors.verticalCenter: parent.verticalCenter
+            visible: sddm.canReboot
+            style: Text.Raised
+            styleColor: "#60000000"
             MouseArea {
                 anchors.fill: parent
                 cursorShape: Qt.PointingHandCursor
-                onClicked: cycleSession(1)
+                onClicked: sddm.reboot()
+            }
+        }
+        Text {
+            text: "Shut Down"
+            color: "white"
+            opacity: 0.85
+            font.family: root.fontFamily
+            font.pixelSize: 13
+            anchors.verticalCenter: parent.verticalCenter
+            visible: sddm.canPowerOff
+            style: Text.Raised
+            styleColor: "#60000000"
+            MouseArea {
+                anchors.fill: parent
+                cursorShape: Qt.PointingHandCursor
+                onClicked: sddm.powerOff()
             }
         }
     }

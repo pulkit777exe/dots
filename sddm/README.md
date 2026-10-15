@@ -1,7 +1,9 @@
 # sddm/sequoia — macOS-style login theme
 
-Wallpaper on top, `Monday 12 October` + `10:47` top-centre, avatar + name +
-frosted-glass password pill bottom-centre. Matches `hypr/hyprlock.lua`, which
+Wallpaper full-bleed, slim menu bar with the clock top-right, avatar +
+name + frosted password field (prompt inside, arrow button) centred,
+Restart/Shut Down bottom-centre. No session picker, no big clock — like
+the macOS login. Matches `hypr/hyprlock.lua`, which
 uses the same photo for the lock screen.
 
 | File | Role |
