@@ -8,22 +8,15 @@ import subprocess
 import sys
 from pathlib import Path
 
-HOME = Path.home()
-COLORS_DIR = Path(os.environ.get("XDG_CONFIG_HOME", HOME / ".config")) / "colors"
-ICONS_DIR = Path(os.environ.get("XDG_DATA_HOME", HOME / ".local" / "share")) / "icons" / "dots"
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from lib import colors_dir, config_home, data_home, hex_to_rgb  # noqa: E402
+
+COLORS_DIR = colors_dir()
+ICONS_DIR = data_home() / "icons" / "dots"
 
 INDEX_JSON = COLORS_DIR / "index.json"
 THEME_ENV = "QUICKSHELL_THEME"
 DEFAULT_THEME = "ariadne"
-
-def hex_to_rgb(h: str):
-    h = h.lstrip("#")
-    if len(h) == 8:
-        h = h[2:]
-    if len(h) == 3:
-        h = "".join(c * 2 for c in h)
-    n = int(h, 16)
-    return (n >> 16) & 255, (n >> 8) & 255, n & 255
 
 def shade(value: str, factor: float) -> str:
     r, g, b = hex_to_rgb(value)
@@ -337,8 +330,8 @@ def run(cmd: list[str]) -> None:
         print(f"publish-colors: {' '.join(cmd)} failed: {e}", file=sys.stderr)
 
 def apply_live(colors: dict) -> None:
-    config_home = Path(os.environ.get("XDG_CONFIG_HOME", HOME / ".config"))
-    live = COLORS_DIR == config_home / "colors"
+    cfg = config_home()
+    live = COLORS_DIR == cfg / "colors"
 
     if live:
         run(["hyprctl", "reload"])
@@ -348,8 +341,8 @@ def apply_live(colors: dict) -> None:
     import_line = '@import url("colors.css");\n'
     gtk3_css = f"/* {GTK_MARKER} - do not hand-edit */\n" + gtk_defs(colors) + gtk3_rules(colors)
     gtk4_css = f"/* {GTK_MARKER} - do not hand-edit */\n" + gtk_defs(colors) + gtk4_rules(colors)
-    for d, content in ((config_home / "gtk-3.0", gtk3_css),
-                       (config_home / "gtk-4.0", gtk4_css)):
+    for d, content in ((cfg / "gtk-3.0", gtk3_css),
+                       (cfg / "gtk-4.0", gtk4_css)):
         d.mkdir(parents=True, exist_ok=True)
         write_gtk(d / "colors.css", colors)
         css = d / "gtk.css"

@@ -15,14 +15,14 @@ hl.config({
             enabled = true,
             range = 4,
             render_power = 3,
-            color = c.background and ("rgba(" .. c.background .. "ee)") or nil,
+            color = c.rgba(c.background, "ee"),
         },
 
         glow = {
             enabled = true,
             range = 10,
             render_power = 3,
-            color = c.accent and ("rgba(" .. c.accent .. "33)") or nil,
+            color = c.rgba(c.accent, "33"),
         },
 
         blur = {

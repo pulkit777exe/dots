@@ -8,9 +8,9 @@ hl.on("hyprland.start", function()
     -- the settings store first (it is ignored runtime state, see the
     -- .example template), so user timeouts apply from the first start.
     hl.exec_cmd("python3 " .. home .. "/.config/quickshell/scripts/generate-hypridle-conf.py")
-    hl.exec_cmd("command -v hypridle >/dev/null && systemctl --user enable --now hypridle.service || true")
-    hl.exec_cmd("command -v hyprpaper >/dev/null && systemctl --user enable --now hyprpaper.service || true")
-    hl.exec_cmd("command -v hyprsunset >/dev/null && systemctl --user enable --now hyprsunset.service || true")
+    for _, d in ipairs({ "hypridle", "hyprpaper", "hyprsunset" }) do
+        hl.exec_cmd("command -v " .. d .. " >/dev/null && systemctl --user enable --now " .. d .. ".service || true")
+    end
 
     -- hyprland.start re-fires on `hyprctl reload`, so long-lived
     -- children guard on their own name first ([c]lass: pgrep never

@@ -11,6 +11,30 @@ DOTS_LIB_LOADED=1
 
 have() { command -v "$1" >/dev/null 2>&1; }
 
+# repo_root [START_DIR] — print the repo root (dir containing hypr/ + colors/).
+# Used by every entry point instead of 8 copies of the same cd/dirname block.
+repo_root() {
+    local dir="${1:-}"
+    if [ -z "$dir" ] && [ -n "${BASH_SOURCE[0]:-}" ] && [ -f "${BASH_SOURCE[0]}" ]; then
+        dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+        [ "$(basename "$dir")" = "scripts" ] && dir="$(dirname "$dir")"
+    fi
+    [ -z "$dir" ] && dir="$(pwd)"
+    if [ -d "$dir/hypr" ] && [ -d "$dir/colors" ]; then
+        printf '%s\n' "$dir"
+        return 0
+    fi
+    return 1
+}
+
+# require_tty — abort when an interactive prompt would hang (pipe/cron/CI).
+# Call before any sudo/confirm when ASSUME_YES=0.
+require_tty() {
+    if [ "${ASSUME_YES:-0}" -eq 0 ] && [ ! -t 0 ]; then
+        die "No terminal to confirm on. Re-run with --yes."
+    fi
+}
+
 log()  { printf '\033[1;32m==>\033[0m %s\n' "$1"; }
 warn() { printf '\033[1;33m!!\033[0m %s\n' "$1" >&2; }
 err()  { printf '\033[1;31mxx\033[0m %s\n' "$1" >&2; }

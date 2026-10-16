@@ -8,8 +8,9 @@ local function qs_global(key, name, opts)
     )
 end
 
-hl.bind("Super_L", hl.dsp.global("quickshell:toggleLauncher"), { release = true })
-hl.bind("Super_R", hl.dsp.global("quickshell:toggleLauncher"), { release = true })
+for _, k in ipairs({ "Super_L", "Super_R" }) do
+    hl.bind(k, hl.dsp.global("quickshell:toggleLauncher"), { release = true })
+end
 qs_global("D", "toggleLauncher")
 qs_global("N", "toggleControlCenter")
 qs_global("S", "toggleSettings")

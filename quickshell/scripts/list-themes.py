@@ -5,9 +5,11 @@ import os
 import sys
 import pathlib
 
-HOME = pathlib.Path.home()
-CONFIG = pathlib.Path(os.environ.get("XDG_CONFIG_HOME", HOME / ".config"))
-COLORS_ROOT = CONFIG / "colors"
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+from lib import colors_dir, home as _home, load_json  # noqa: E402
+
+HOME = _home()
+COLORS_ROOT = colors_dir()
 INDEX = COLORS_ROOT / "index.json"
 
 KNOWN_DIRS = {
@@ -34,13 +36,9 @@ def discover_images(root: pathlib.Path):
 
 def load_colors(theme_key: str):
 
-    p = COLORS_ROOT / "themes" / theme_key / "colors.json"
-    if p.is_file():
-        try:
-            data = json.loads(p.read_text())
-            return {k: v for k, v in data.items() if isinstance(v, str)}
-        except Exception:
-            pass
+    data = load_json(COLORS_ROOT / "themes" / theme_key / "colors.json", {})
+    if isinstance(data, dict):
+        return {k: v for k, v in data.items() if isinstance(v, str)}
     return {}
 
 def guess_wallpaper_dir(key: str) -> pathlib.Path | None:

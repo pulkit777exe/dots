@@ -91,25 +91,12 @@ ColumnLayout {
                 color: Theme.withAlpha(Theme.colors.text, 0.48)
             }
 
-            Item {
-                Layout.preferredWidth: 28
-                Layout.preferredHeight: 28
-
-                Icon {
-                    anchors.centerIn: parent
-                    icon: "edit"
-                    size: 16
-                    iconColor: Theme.withAlpha(Theme.colors.text, 0.5)
-                }
-
-                MouseArea {
-                    anchors.fill: parent
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: {
-                        chargeField.text = String(ChargeLimit.limit);
-                        root.chargeEditing = true;
-                        Qt.callLater(() => { chargeField.forceActiveFocus(); chargeField.selectAll(); });
-                    }
+            IconButton {
+                icon: "edit"
+                onClicked: {
+                    chargeField.text = String(ChargeLimit.limit);
+                    root.chargeEditing = true;
+                    Qt.callLater(() => { chargeField.forceActiveFocus(); chargeField.selectAll(); });
                 }
             }
         }
@@ -162,40 +149,17 @@ ColumnLayout {
                 color: Theme.withAlpha(Theme.colors.text, 0.5)
             }
 
-            Item {
-                Layout.preferredWidth: 28
-                Layout.preferredHeight: 28
-
-                Icon {
-                    anchors.centerIn: parent
-                    icon: "check"
-                    size: 18
-                    iconColor: Theme.accentFor("settings")
-                }
-
-                MouseArea {
-                    anchors.fill: parent
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: chargeField.commit()
-                }
+            IconButton {
+                icon: "check"
+                iconSize: 18
+                iconColor: Theme.accentFor("settings")
+                onClicked: chargeField.commit()
             }
 
-            Item {
-                Layout.preferredWidth: 28
-                Layout.preferredHeight: 28
-
-                Icon {
-                    anchors.centerIn: parent
-                    icon: "close"
-                    size: 18
-                    iconColor: Theme.withAlpha(Theme.colors.text, 0.5)
-                }
-
-                MouseArea {
-                    anchors.fill: parent
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: root.chargeEditing = false;
-                }
+            IconButton {
+                icon: "close"
+                iconSize: 18
+                onClicked: root.chargeEditing = false;
             }
         }
 
@@ -281,31 +245,22 @@ ColumnLayout {
             wrapMode: Text.WordWrap
         }
 
-        SettingsSliderRow {
-            label: "Lock screen"
-            value: Config.lockTimeoutSec
-            from: 0
-            to: 1800
-            textOverride: Idle.formatTimeout(Config.lockTimeoutSec)
-            onMoved: (v) => { Config.set("lockTimeoutSec", Math.round(v)); Idle.apply(); }
-        }
+        Repeater {
+            model: [
+                { key: "lockTimeoutSec", label: "Lock screen" },
+                { key: "displayTimeoutSec", label: "Display off" },
+                { key: "suspendTimeoutSec", label: "Suspend" },
+            ]
 
-        SettingsSliderRow {
-            label: "Display off"
-            value: Config.displayTimeoutSec
-            from: 0
-            to: 1800
-            textOverride: Idle.formatTimeout(Config.displayTimeoutSec)
-            onMoved: (v) => { Config.set("displayTimeoutSec", Math.round(v)); Idle.apply(); }
-        }
-
-        SettingsSliderRow {
-            label: "Suspend"
-            value: Config.suspendTimeoutSec
-            from: 0
-            to: 1800
-            textOverride: Idle.formatTimeout(Config.suspendTimeoutSec)
-            onMoved: (v) => { Config.set("suspendTimeoutSec", Math.round(v)); Idle.apply(); }
+            delegate: SettingsSliderRow {
+                required property var modelData
+                label: modelData.label
+                value: Config[modelData.key]
+                from: 0
+                to: 1800
+                textOverride: Idle.formatTimeout(Config[modelData.key])
+                onMoved: (v) => { Config.set(modelData.key, Math.round(v)); Idle.apply(); }
+            }
         }
 
         SettingsToggleRow {
@@ -314,34 +269,23 @@ ColumnLayout {
             onToggled: (v) => { Config.set("idleSeparateCharging", v); Idle.apply(); }
         }
 
-        SettingsSliderRow {
-            visible: Config.idleSeparateCharging
-            label: "Lock screen (charging)"
-            value: Config.cLockTimeoutSec
-            from: 0
-            to: 1800
-            textOverride: Idle.formatTimeout(Config.cLockTimeoutSec)
-            onMoved: (v) => { Config.set("cLockTimeoutSec", Math.round(v)); Idle.apply(); }
-        }
+        Repeater {
+            model: [
+                { key: "cLockTimeoutSec", label: "Lock screen (charging)" },
+                { key: "cDisplayTimeoutSec", label: "Display off (charging)" },
+                { key: "cSuspendTimeoutSec", label: "Suspend (charging)" },
+            ]
 
-        SettingsSliderRow {
-            visible: Config.idleSeparateCharging
-            label: "Display off (charging)"
-            value: Config.cDisplayTimeoutSec
-            from: 0
-            to: 1800
-            textOverride: Idle.formatTimeout(Config.cDisplayTimeoutSec)
-            onMoved: (v) => { Config.set("cDisplayTimeoutSec", Math.round(v)); Idle.apply(); }
-        }
-
-        SettingsSliderRow {
-            visible: Config.idleSeparateCharging
-            label: "Suspend (charging)"
-            value: Config.cSuspendTimeoutSec
-            from: 0
-            to: 1800
-            textOverride: Idle.formatTimeout(Config.cSuspendTimeoutSec)
-            onMoved: (v) => { Config.set("cSuspendTimeoutSec", Math.round(v)); Idle.apply(); }
+            delegate: SettingsSliderRow {
+                required property var modelData
+                visible: Config.idleSeparateCharging
+                label: modelData.label
+                value: Config[modelData.key]
+                from: 0
+                to: 1800
+                textOverride: Idle.formatTimeout(Config[modelData.key])
+                onMoved: (v) => { Config.set(modelData.key, Math.round(v)); Idle.apply(); }
+            }
         }
 
         Label {
@@ -356,22 +300,6 @@ ColumnLayout {
     }
 
     SettingsCard {
-        RowLayout {
-            Layout.fillWidth: true
-            spacing: 8
-
-            StyledButton {
-                Layout.fillWidth: true
-                label: "Lock"
-                accent: Theme.accentFor("settings")
-                onClicked: Power.lock()
-            }
-            StyledButton {
-                Layout.fillWidth: true
-                label: "Suspend"
-                accent: Theme.accentFor("settings")
-                onClicked: Power.suspend()
-            }
-        }
+        SessionActions {}
     }
 }

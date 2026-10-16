@@ -72,9 +72,8 @@ unless passed `--yes`.
 ## No network access at runtime
 
 Once installed, nothing in this repo reaches the network. The Python helpers
-(`list-themes.py`, `publish-colors.py`, `inotify-watch.py`, `list-apps.py`)
-read and write local files and shell out to local tools. `generate-theme-wallpapers.py` synthesises wallpapers locally
-with PIL. There is no `wget`/`urllib` anywhere, and no `curl` in the runtime
+(`list-themes.py`, `publish-colors.py`, `inotify-watch.py`)
+read and write local files and shell out to local tools. There is no `wget`/`urllib` anywhere, and no `curl` in the runtime
 path, so the installed desktop cannot phone home, and there is no update
 check that runs on its own.
 

@@ -15,31 +15,21 @@ local function try_require(path)
     hl.exec_cmd("command -v notify-send >/dev/null && notify-send -u critical 'Hyprland config' 'Failed to load " .. path .. " (see ~/.local/state/hypr/config-errors.log)' &")
 end
 
-require("modules.environment")
-require("modules.startup")
+local conf_home = os.getenv("XDG_CONFIG_HOME") or (os.getenv("HOME") .. "/.config")
+for _, m in ipairs({
+    "modules.environment", "modules.startup",
+    "modules.monitors", "modules.input",
+    "modules.colours", "modules.general", "modules.layout", "modules.decoration",
+    "modules.animations", "modules.workspaces", "modules.rules",
+    "modules.keybinds.applications", "modules.keybinds.navigation", "modules.keybinds.resize",
+    "modules.keybinds.mouse", "modules.keybinds.window", "modules.keybinds.workspaces",
+    "modules.keybinds.screenshots", "modules.keybinds.media", "modules.keybinds.quickshell",
+}) do require(m) end
 
-try_require((os.getenv("XDG_CONFIG_HOME") or (os.getenv("HOME") .. "/.config")) .. "/hypr/hyprlock.lua")
+hl.on("hyprland.start", function()
+    hl.exec_cmd("hyprctl plugin load /home/pulkit/.local/lib/hyprglass/hyprglass.so")
+end)
 
-require("modules.monitors")
-require("modules.input")
+try_require(conf_home .. "/hypr/hyprlock.lua")
 
-require("modules.colours")
-require("modules.general")
-require("modules.layout")
-require("modules.decoration")
-require("modules.animations")
-
-require("modules.workspaces")
-require("modules.rules")
-
-require("modules.keybinds.applications")
-require("modules.keybinds.navigation")
-require("modules.keybinds.resize")
-require("modules.keybinds.mouse")
-require("modules.keybinds.window")
-require("modules.keybinds.workspaces")
-require("modules.keybinds.screenshots")
-require("modules.keybinds.media")
-require("modules.keybinds.quickshell")
-
-try_require((os.getenv("XDG_CONFIG_HOME") or (os.getenv("HOME") .. "/.config")) .. "/hypr/openwhispr-binds.lua")
+try_require(conf_home .. "/hypr/openwhispr-binds.lua")

@@ -1,50 +1,23 @@
 local mod = "SUPER"
 local step = 20
 
-hl.bind(
-    mod .. " + CTRL + left",
-    hl.dsp.window.resize({
-        x = -step,
-        y = 0,
-        relative = true,
-    }),
-    {
-        repeating = true,
-    }
-)
+local moves = {
+    left = { -step, 0 },
+    right = { step, 0 },
+    up = { 0, -step },
+    down = { 0, step },
+}
 
-hl.bind(
-    mod .. " + CTRL + right",
-    hl.dsp.window.resize({
-        x = step,
-        y = 0,
-        relative = true,
-    }),
-    {
-        repeating = true,
-    }
-)
-
-hl.bind(
-    mod .. " + CTRL + up",
-    hl.dsp.window.resize({
-        x = 0,
-        y = -step,
-        relative = true,
-    }),
-    {
-        repeating = true,
-    }
-)
-
-hl.bind(
-    mod .. " + CTRL + down",
-    hl.dsp.window.resize({
-        x = 0,
-        y = step,
-        relative = true,
-    }),
-    {
-        repeating = true,
-    }
-)
+for key, xy in pairs(moves) do
+    hl.bind(
+        mod .. " + CTRL + " .. key,
+        hl.dsp.window.resize({
+            x = xy[1],
+            y = xy[2],
+            relative = true,
+        }),
+        {
+            repeating = true,
+        }
+    )
+end

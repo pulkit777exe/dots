@@ -17,7 +17,7 @@ hl.config({
             enabled = true,
         },
 
-        ["col.active_border"] = c.accent and ("rgba(" .. c.accent .. "ff)") or nil,
-        ["col.inactive_border"] = c.surface and ("rgba(" .. c.surface .. "aa)") or nil,
+        ["col.active_border"] = c.rgba(c.accent, "ff"),
+        ["col.inactive_border"] = c.rgba(c.surface, "aa"),
     },
 })

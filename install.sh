@@ -2,26 +2,11 @@
 
 set -euo pipefail
 
-resolve_repo_dir() {
-    local src="${BASH_SOURCE[0]:-}"
-    local dir=""
-    if [ -f "$src" ]; then
-        dir="$(cd "$(dirname "$src")" && pwd)"
-    fi
-    if [ -n "$dir" ] && [ -d "$dir/hypr" ] && [ -d "$dir/colors" ]; then
-        printf '%s\n' "$dir"
-        return 0
-    fi
-    local cwd
-    cwd="$(pwd)"
-    if [ -d "$cwd/hypr" ] && [ -d "$cwd/colors" ]; then
-        printf '%s\n' "$cwd"
-        return 0
-    fi
-    return 1
-}
+# Bootstrap: find the root just well enough to source lib.sh; lib's
+# repo_root() does the authoritative check right after.
+REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-}")" 2>/dev/null && pwd || pwd)"
+[ -d "$REPO_DIR/hypr" ] || REPO_DIR="$(pwd)"
 
-REPO_DIR="$(resolve_repo_dir || true)"
 CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}"
 DRY_RUN=0
 CHECK_ONLY=0
@@ -32,6 +17,8 @@ ASSUME_YES=0
     printf 'xx install.sh: cannot load scripts/lib.sh\n' >&2
     exit 1
 }
+
+REPO_DIR="$(repo_root "$REPO_DIR" || true)"
 
 UNITS=(colors hypr kitty quickshell sddm vlc Thunar)
 
@@ -367,7 +354,7 @@ main() {
     fi
 
     echo
-    log "checking runtime dependencies (see README.md > Requirements)"
+    log "checking runtime dependencies (see README.md > needs)"
     echo
     log "required runtime"
     check_bin hyprland "sudo dnf copr enable nett00n/hyprland && sudo dnf install hyprland (or run scripts/setup.sh)"

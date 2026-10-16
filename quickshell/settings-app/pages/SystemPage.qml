@@ -89,29 +89,6 @@ ColumnLayout {
     }
 
     SettingsCard {
-        RowLayout {
-            Layout.fillWidth: true
-            spacing: 8
-
-            StyledButton {
-                Layout.fillWidth: true
-                label: "Lock"
-                accent: Theme.accentFor("settings")
-                onClicked: Power.lock()
-            }
-            StyledButton {
-                Layout.fillWidth: true
-                label: "Suspend"
-                accent: Theme.accentFor("settings")
-                onClicked: Power.suspend()
-            }
-            StyledButton {
-                Layout.fillWidth: true
-                label: "Power menu"
-                accent: Theme.accentFor("settings")
-                filled: true
-                onClicked: UiState.togglePowerMenu()
-            }
-        }
+        SessionActions { powerMenu: true }
     }
 }

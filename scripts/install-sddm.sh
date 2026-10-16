@@ -86,13 +86,7 @@ fi
 if [ "$ASSUME_YES" -eq 0 ]; then
     echo
     warn "This will sudo-copy $SRC -> $DST and write $CONF."
-    if [ ! -t 0 ]; then
-        warn "no terminal to confirm on — re-run with --yes"
-        exit 0
-    fi
-    printf '   Continue? [y/N] '
-    reply=""; read -r reply || reply=""
-    case "$reply" in [yY]|[yY][eE][sS]) ;; *) warn "aborted"; exit 0 ;; esac
+    if ! confirm "Continue?"; then warn "aborted"; exit 0; fi
 fi
 
 command -v sudo >/dev/null 2>&1 || { err "sudo not found"; exit 1; }
@@ -134,7 +128,7 @@ if [ -f "$HOME/.local/share/fonts/SF-Pro-Display-Regular.otf" ]; then
     sudo chmod 644 /usr/local/share/fonts/dots/* 2>/dev/null || true
     sudo fc-cache -f /usr/local/share/fonts/dots >/dev/null 2>&1 || true
 else
-    warn "SF Pro Display not in ~/.local/share/fonts — greeter falls back to system sans (install it once, see README > Fonts)"
+    warn "SF Pro Display not in ~/.local/share/fonts — greeter falls back to system sans (install it once, see README > needs)"
 fi
 
 check_state || { err "installed with warnings — see above"; exit 1; }

@@ -1,30 +1,25 @@
 local mod = "SUPER"
 
-local directions = {
-    left = "left",
-    right = "right",
-    up = "up",
-    down = "down",
-}
+local directions = { "left", "right", "up", "down" }
 
-for key, direction in pairs(directions) do
+for _, direction in ipairs(directions) do
 
     hl.bind(
-        mod .. " + " .. key,
+        mod .. " + " .. direction,
         hl.dsp.focus({
             direction = direction,
         })
     )
 
     hl.bind(
-        mod .. " + SHIFT + " .. key,
+        mod .. " + SHIFT + " .. direction,
         hl.dsp.window.move({
             direction = direction,
         })
     )
 
     hl.bind(
-        mod .. " + ALT + " .. key,
+        mod .. " + ALT + " .. direction,
         hl.dsp.window.swap({
             direction = direction,
         })

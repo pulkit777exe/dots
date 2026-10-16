@@ -2,6 +2,8 @@
 # Quickshell / Hyprland Recovery Utility
 # Usage: ./recovery.sh [stop|reload]
 
+set -euo pipefail
+
 STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/quickshell"
 CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/quickshell"
 
@@ -48,11 +50,11 @@ stop_shell() {
         # that has already exited. Never touch a live one.
         for pid in $(pgrep -f "$pat" 2>/dev/null); do
             if [ "$(ps -o ppid= -p "$pid" 2>/dev/null | tr -d ' ')" = "1" ]; then
-                kill -TERM "$pid" 2>/dev/null && left=$((left + 1))
+                if kill -TERM "$pid" 2>/dev/null; then left=$((left + 1)); fi
             fi
         done
     done
-    [ "$left" -gt 0 ] && sleep 0.5
+    if [ "$left" -gt 0 ]; then sleep 0.5; fi
     for pat in "wl-paste --watch cliphist" "nmcli monitor" "powerprofilesctl monitor"; do
         for pid in $(pgrep -f "$pat" 2>/dev/null); do
             if [ "$(ps -o ppid= -p "$pid" 2>/dev/null | tr -d ' ')" = "1" ]; then

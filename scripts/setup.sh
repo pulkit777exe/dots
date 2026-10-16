@@ -119,11 +119,7 @@ DNF_YES=()
 [ "$(id -u)" -eq 0 ] && die "Refusing to run as root. Run as your normal user; sudo is used per-command."
 [ -f /etc/fedora-release ] || die "This provisions Fedora (dnf). Detected: $(uname -s)."
 
-need_tty() {
-    if [ "$ASSUME_YES" -eq 0 ] && [ ! -t 0 ]; then
-        die "No terminal to confirm on. Re-run with --yes."
-    fi
-}
+# require_tty/confirm/run/log/warn/err/die come from scripts/lib.sh (sourced above).
 
 command -v dnf >/dev/null 2>&1 || die "dnf not found."
 command -v sudo >/dev/null 2>&1 || die "sudo not found."
@@ -131,7 +127,7 @@ if ! command -v curl >/dev/null 2>&1; then
     if [ "$DRY_RUN" -eq 1 ]; then
         log "would run: sudo dnf install curl"
     else
-        need_tty
+        require_tty
         sudo dnf install "${DNF_YES[@]}" curl
     fi
 fi
@@ -149,7 +145,7 @@ dnf_install() {
         log "would run: sudo dnf install ${missing[*]}"
         return 0
     fi
-    need_tty
+    require_tty
     log "installing: ${missing[*]}"
     sudo dnf install "${DNF_YES[@]}" "${missing[@]}"
 }
@@ -162,7 +158,7 @@ ensure_copr() {
         log "would run: sudo dnf copr enable $1"
         return 0
     fi
-    need_tty
+    require_tty
     log "enabling copr $1"
     sudo dnf copr enable "${DNF_YES[@]}" "$1"
 }
@@ -177,7 +173,7 @@ ensure_rpmfusion() {
         log "would run: sudo dnf install rpmfusion-free-release + rpmfusion-nonfree-release ($ver)"
         return 0
     fi
-    need_tty
+    require_tty
     log "enabling RPM Fusion free + nonfree"
     sudo dnf install "${DNF_YES[@]}" \
         "https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-$ver.noarch.rpm" \
@@ -208,7 +204,7 @@ ensure_docker_repo() {
         log "would run: add Docker CE repo from download.docker.com"
         return 0
     fi
-    need_tty
+    require_tty
     log "adding Docker CE repo"
     if dnf config-manager --help 2>/dev/null | grep -q "from-repofile"; then
         sudo dnf config-manager addrepo --from-repofile=https://download.docker.com/linux/fedora/docker-ce.repo
@@ -237,7 +233,7 @@ ensure_pam_keyring() {
         log "would run: add pam_gnome_keyring auth+session lines to $pam (with backup)"
         return 0
     fi
-    need_tty
+    require_tty
     log "enabling keyring unlock in $pam"
     sudo cp "$pam" "$pam.pre-dots-$(date +%Y%m%d-%H%M%S)"
     echo "-auth      optional      pam_gnome_keyring.so" | sudo tee -a "$pam" >/dev/null
@@ -265,7 +261,7 @@ ensure_charge_helper() {
         log "would run: install $dst (root-owned) + $rules for $USER"
         return 0
     fi
-    need_tty
+    require_tty
     if [ -f "$dst" ] && cmp -s "$src" "$dst"; then
         log "charge-limit helper already installed"
     else
@@ -318,7 +314,7 @@ if [ "$WANT_SESSION" -eq 1 ]; then
     elif ! command -v systemctl >/dev/null 2>&1 || [ ! -d /run/systemd/system ]; then
         warn "no systemd — skipping target/DM enablement (container or non-systemd host?)"
     else
-        need_tty
+        require_tty
         if [ "$(systemctl get-default)" != "graphical.target" ]; then
             log "setting default target to graphical.target (Fedora Server boots multi-user)"
             sudo systemctl set-default graphical.target
@@ -368,7 +364,7 @@ if [ "$WANT_SHELL" -eq 1 ]; then
         if [ "$DRY_RUN" -eq 1 ]; then
             log "would run: curl -sS https://starship.rs/install.sh | sudo sh -s -- --yes --bin-dir /usr/local/bin"
         else
-            need_tty
+            require_tty
             curl -sS https://starship.rs/install.sh | sudo sh -s -- --yes --bin-dir /usr/local/bin
         fi
     fi
@@ -377,7 +373,7 @@ if [ "$WANT_SHELL" -eq 1 ]; then
     elif [ "$DRY_RUN" -eq 1 ]; then
         log "would run: oh-my-zsh unattended install (keeps existing .zshrc)"
     else
-        need_tty
+        require_tty
         log "installing oh-my-zsh (unattended, keeps .zshrc)"
         # Unpinned master installer + master clone. Mitigation: KEEP_ZSHRC
         # preserves your config, RUNZSH/CHSH disable surprises; review the
@@ -413,7 +409,7 @@ if [ "$WANT_SHELL" -eq 1 ]; then
     elif [ "$DRY_RUN" -eq 1 ]; then
         log "would run: chsh -s $(command -v zsh) (asks first)"
     else
-        need_tty
+        require_tty
         if [ "$ASSUME_YES" -eq 1 ] || confirm "Make zsh your login shell?"; then
             chsh -s "$(command -v zsh)" && log "login shell is now zsh (takes effect on next login)"
         else

@@ -1,29 +1,12 @@
-hl.window_rule({
-    name = "pavucontrol-floating",
-    match = {
-        class = "^pavucontrol$",
-    },
-    float = true,
-    center = true,
-})
+local floats = {
+    { "pavucontrol-floating", "^pavucontrol$" },
+    { "blueman-floating", "^blueman-manager$" },
+    { "network-manager-floating", "^nm-connection-editor$" },
+}
 
-hl.window_rule({
-    name = "blueman-floating",
-    match = {
-        class = "^blueman-manager$",
-    },
-    float = true,
-    center = true,
-})
-
-hl.window_rule({
-    name = "network-manager-floating",
-    match = {
-        class = "^nm-connection-editor$",
-    },
-    float = true,
-    center = true,
-})
+for _, r in ipairs(floats) do
+    hl.window_rule({ name = r[1], match = { class = r[2] }, float = true, center = true })
+end
 
 hl.window_rule({
     name = "picture-in-picture",

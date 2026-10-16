@@ -201,7 +201,7 @@ ColumnLayout {
         Repeater {
             model: Wifi.networks
 
-            NetRow { required property var modelData }
+            NetRow {}
         }
 
         Label {

@@ -29,8 +29,10 @@ import sys
 import tempfile
 from pathlib import Path
 
-HOME = Path.home()
-STATE_DIR = Path(os.environ.get("XDG_STATE_HOME", HOME / ".local" / "state")) / "quickshell"
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from lib import state_home  # noqa: E402
+
+STATE_DIR = state_home() / "quickshell"
 LOG_FILE = STATE_DIR / "polkit-agent.log"
 WATCHDOG_SECS = 120
 

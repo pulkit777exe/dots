@@ -123,22 +123,9 @@ PopupPanel {
                     Keys.onEscapePressed: (event) => { Auth.cancel(); event.accepted = true; }
                 }
 
-                Item {
-                    Layout.preferredWidth: 28
-                    Layout.preferredHeight: 28
-
-                    Icon {
-                        anchors.centerIn: parent
-                        icon: root.showPassword ? "visibility_off" : "visibility"
-                        size: 16
-                        iconColor: Theme.withAlpha(Theme.colors.text, 0.5)
-                    }
-
-                    MouseArea {
-                        anchors.fill: parent
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: root.showPassword = !root.showPassword;
-                    }
+                IconButton {
+                    icon: root.showPassword ? "visibility_off" : "visibility"
+                    onClicked: root.showPassword = !root.showPassword;
                 }
             }
         }

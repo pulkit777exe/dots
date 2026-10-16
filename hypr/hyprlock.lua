@@ -88,7 +88,7 @@ shape {
 
 label {
     monitor =
-    text = cmd[update:10000] ~/.config/hypr/hyprlock/scripts/battery.sh
+    text = cmd[update:10000] ~/.config/hypr/hyprlock/scripts/status.sh battery
     color = {{text92}}
     font_size = 15
     font_family = SF Pro Display
@@ -99,7 +99,7 @@ label {
 
 label {
     monitor =
-    text = cmd[update:5000] ~/.config/hypr/hyprlock/scripts/wifi.sh
+    text = cmd[update:5000] ~/.config/hypr/hyprlock/scripts/status.sh wifi
     color = {{text92}}
     font_size = 17
     font_family = JetBrainsMonoNL Nerd Font Mono
@@ -215,56 +215,45 @@ label {
 # Glass pills like the macOS lock screen. Shape and label both carry onclick
 # so the whole pill is a hit target.
 
-shape {
-    monitor =
-    size = 150, 40
-    color = {{glass}}
-    rounding = 20
-    border_size = 1
-    border_color = {{hair16}}
-    position = -87, -492
-    halign = center
-    valign = center
-    onclick = systemctl poweroff
-}
-
-label {
-    monitor =
-    text = Shut Down
-    color = {{text92}}
-    font_size = 14
-    font_family = SF Pro Display
-    position = -87, -492
-    halign = center
-    valign = center
-    onclick = systemctl poweroff
-}
-
-shape {
-    monitor =
-    size = 150, 40
-    color = {{glass}}
-    rounding = 20
-    border_size = 1
-    border_color = {{hair16}}
-    position = 87, -492
-    halign = center
-    valign = center
-    onclick = systemctl reboot
-}
-
-label {
-    monitor =
-    text = Restart
-    color = {{text92}}
-    font_size = 14
-    font_family = SF Pro Display
-    position = 87, -492
-    halign = center
-    valign = center
-    onclick = systemctl reboot
-}
+{{powers}}
 ]]
+
+
+local powers = {
+    { "-87", "poweroff", "Shut Down" },
+    { "87", "reboot", "Restart" },
+}
+
+local pill = {}
+for _, b in ipairs(powers) do
+    pill[#pill + 1] = string.format([[
+shape {
+    monitor =
+    size = 150, 40
+    color = {{glass}}
+    rounding = 20
+    border_size = 1
+    border_color = {{hair16}}
+    position = %s, -492
+    halign = center
+    valign = center
+    onclick = systemctl %s
+}
+
+label {
+    monitor =
+    text = %s
+    color = {{text92}}
+    font_size = 14
+    font_family = SF Pro Display
+    position = %s, -492
+    halign = center
+    valign = center
+    onclick = systemctl %s
+}
+]], b[1], b[2], b[3], b[1], b[2])
+end
+config = config:gsub("{{powers}}\n?", (table.concat(pill, "\n"):gsub("%%", "%%%%")))
 
 for token, value in pairs(colours) do
     config = config:gsub(token, value)

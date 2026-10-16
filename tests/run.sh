@@ -20,6 +20,20 @@ section() { printf "\n${DIM}-- %s${RST}\n" "$1"; }
 
 have() { command -v "$1" >/dev/null 2>&1; }
 
+# py_check NAME [ARGS...] <<'PY' — run one embedded-python check.
+# Temp-file handling + ok/FAIL reporting live here, not in every check.
+py_check() {
+    local name="$1"; shift
+    local err summary
+    err=$(mktemp)
+    if summary=$(python3 - "$@" 2>"$err"); then
+        ok "$name ($summary)"
+    else
+        no "$name" "$(head -4 "$err" | tr '\n' ';')"
+    fi
+    rm -f "$err"
+}
+
 QS_CMD_OUT=""
 QS_CMD_STALLED=0
 qs_cmd() {
@@ -291,19 +305,8 @@ section "IPC contract"
 if ! quickshell ipc show >/dev/null 2>&1; then
     sk "every advertised IPC function is callable" "no quickshell instance"
 else
-    read_only() {
-        case "$1:$2" in
-            uis:isSettingsOpen|uis:isLauncherOpen|uis:isControlCenterOpen|\
-            uis:isPowerMenuOpen|uis:isThemePickerOpen|uis:isWallpaperPickerOpen|\
-            uis:isClipboardOpen|uis:isAuthOpen|\
-            brightness:get|wifi:status|theme:get|theme:list|theme:getWallpaper|\
-            powerprofile:get|powerprofile:isAvailable|nightlight:isEnabled|\
-            audio:getVolume|notifs:count|notifs:isDndEnabled)
-                return 0 ;;
-            *) return 1 ;;
-        esac
-    }
-
+    # READ-ONLY calls only: every pair here is EXECUTED against the live
+    # shell, so a mutating function in this list would have side effects.
     missing=""
     stalled=""
     checked=0
@@ -315,7 +318,6 @@ else
                 "powerprofile:isAvailable" "nightlight:isEnabled" \
                 "audio:getVolume" "notifs:count" "notifs:isDndEnabled"; do
         tgt="${pair%%:*}"; fn="${pair##*:}"
-        read_only "$tgt" "$fn" || continue
         qs quickshell ipc call "$tgt" "$fn"
         out=$QS_OUT
         checked=$((checked+1))
@@ -404,13 +406,24 @@ else
                 "toggleClipboard:isClipboardOpen"; do
         t="${pair%%:*}"; p="${pair##*:}"
         qs quickshell ipc call shell closeAll
-        sleep 2.5
-        qs quickshell ipc call shell "$t"
-        opened=""
-        for _ in 1 2 3 4 5; do
-            sleep 1
+        # Wait for the close to land instead of hoping a fixed sleep is
+        # enough; a toggle fired mid-close is swallowed and flakes the test.
+        for _ in $(seq 1 10); do
+            sleep 0.5
             qs quickshell ipc call uis "$p"
-            [ "$QS_OUT" = "true" ] && { opened=1; break; }
+            [ "$QS_OUT" = "false" ] && break
+        done
+        # Re-fire the toggle while the surface is confirmed closed: safe
+        # (closed->open only) and covers a swallowed first attempt.
+        opened=""
+        for _ in 1 2 3; do
+            qs quickshell ipc call shell "$t"
+            for _ in 1 2 3 4 5; do
+                sleep 1
+                qs quickshell ipc call uis "$p"
+                [ "$QS_OUT" = "true" ] && { opened=1; break; }
+            done
+            [ -n "$opened" ] && break
         done
         [ -n "$opened" ] || bad="$bad $t"
     done
@@ -449,8 +462,7 @@ if ! compgen -G "$THEME_DIR/*/colors.json" >/dev/null; then
 elif ! have python3; then
     sk "every Theme.colors key exists in every palette" "no python3"
 else
-    err=$(mktemp)
-    if summary=$(python3 - "$QS_DIR" "$THEME_DIR" 2>"$err" <<'PY'
+    py_check "every Theme.colors key exists in every palette" "$QS_DIR" "$THEME_DIR" <<'PY'
 import json, pathlib, re, sys
 
 qs_dir, theme_dir = pathlib.Path(sys.argv[1]), pathlib.Path(sys.argv[2])
@@ -532,12 +544,6 @@ print(f"{len(refs)} refs, {len(keys)} keys, {len(palettes)} palettes"
       + (f", {len(set(unsupported))} computed access(es) unsupported" if unsupported else ""))
 sys.exit(1 if bad else 0)
 PY
-    ); then
-        ok "every Theme.colors key exists in every palette ($summary)"
-    else
-        no "every Theme.colors key exists in every palette" "$(head -4 "$err" | tr '\n' ';')"
-    fi
-    rm -f "$err"
 fi
 
 if [ -z "$(ls "$THEME_DIR"/*/colors.json 2>/dev/null)" ]; then
@@ -545,8 +551,7 @@ if [ -z "$(ls "$THEME_DIR"/*/colors.json 2>/dev/null)" ]; then
 elif ! have python3; then
     sk "every palette defines the same keys" "no python3"
 else
-    err=$(mktemp)
-    if summary=$(python3 - "$THEME_DIR" 2>"$err" <<'PY'
+    py_check "every palette defines the same keys" "$THEME_DIR" <<'PY'
 import json, pathlib, sys
 
 theme_dir = pathlib.Path(sys.argv[1])
@@ -576,12 +581,6 @@ print(f"{len(palettes)} palettes, {len(union)} distinct keys, "
       + ("identical key sets" if not bad else f"{len(bad)} divergent"))
 sys.exit(1 if bad else 0)
 PY
-    ); then
-        ok "every palette defines the same keys ($summary)"
-    else
-        no "every palette defines the same keys" "$(head -4 "$err" | tr '\n' ';')"
-    fi
-    rm -f "$err"
 fi
 
 printf "\n"

@@ -7,6 +7,8 @@
 #   ./dots fonts [font-file ...]         install vendored (+ given) fonts
 #   ./dots apps                          third-party apps (brave, flatpaks; needs a terminal)
 #   ./dots check                         verify install + session; make no changes
+#   ./dots lint                          static checks (QML rules, IPC scope, imports)
+#   ./dots test [args]                   contract tests (needs a live shell for some)
 #   ./dots update [args]                 update the clone and re-link (via bootstrap.sh)
 #
 # The older per-task scripts still work (scripts/setup.sh, install.sh,
@@ -57,6 +59,10 @@ case "$CMD" in
         bash "$REPO_DIR/install-software" "${EXTRA[@]}" ;;
     check)
         bash "$REPO_DIR/install.sh" --check ;;
+    lint)
+        bash "$REPO_DIR/scripts/lint.sh" "${REST[@]}" ;;
+    test)
+        bash "$REPO_DIR/tests/run.sh" "${REST[@]}" ;;
     update)
         bash "$REPO_DIR/bootstrap.sh" "${EXTRA[@]}" "${REST[@]}" ;;
     -h|--help|help)

@@ -1,95 +1,14 @@
-hl.bind(
-    "XF86AudioRaiseVolume",
-    hl.dsp.exec_cmd(
-        "wpctl set-volume -l 1 @DEFAULT_AUDIO_SINK@ 5%+"
-    ),
-    {
-        repeating = true,
-        locked = true,
-    }
-)
+local function L(key, cmd, repeating)
+    hl.bind(key, hl.dsp.exec_cmd(cmd), { repeating = repeating or false, locked = true })
+end
 
-hl.bind(
-    "XF86AudioLowerVolume",
-    hl.dsp.exec_cmd(
-        "wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-"
-    ),
-    {
-        repeating = true,
-        locked = true,
-    }
-)
-
-hl.bind(
-    "XF86AudioMute",
-    hl.dsp.exec_cmd(
-        "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"
-    ),
-    {
-        locked = true,
-    }
-)
-
-hl.bind(
-    "XF86AudioMicMute",
-    hl.dsp.exec_cmd(
-        "wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle"
-    ),
-    {
-        locked = true,
-    }
-)
-
-hl.bind(
-    "XF86MonBrightnessUp",
-    hl.dsp.exec_cmd(
-        "quickshell ipc call shell brightnessUp"
-    ),
-    {
-        repeating = true,
-        locked = true,
-    }
-)
-
-hl.bind(
-    "XF86MonBrightnessDown",
-    hl.dsp.exec_cmd(
-        "quickshell ipc call shell brightnessDown"
-    ),
-    {
-        repeating = true,
-        locked = true,
-    }
-)
-
-hl.bind(
-    "XF86AudioNext",
-    hl.dsp.exec_cmd("playerctl next"),
-    {
-        locked = true,
-    }
-)
-
-hl.bind(
-    "XF86AudioPrev",
-    hl.dsp.exec_cmd("playerctl previous"),
-    {
-        locked = true,
-    }
-)
-
-hl.bind(
-    "XF86AudioPlay",
-    hl.dsp.exec_cmd("playerctl play-pause"),
-    {
-        locked = true,
-    }
-)
-
-hl.bind(
-    "XF86AudioPause",
-    hl.dsp.exec_cmd("playerctl play-pause"),
-    {
-        locked = true,
-    }
-)
+L("XF86AudioRaiseVolume", "wpctl set-volume -l 1 @DEFAULT_AUDIO_SINK@ 5%+", true)
+L("XF86AudioLowerVolume", "wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-", true)
+L("XF86AudioMute", "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle")
+L("XF86AudioMicMute", "wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle")
+L("XF86MonBrightnessUp", "quickshell ipc call shell brightnessUp", true)
+L("XF86MonBrightnessDown", "quickshell ipc call shell brightnessDown", true)
+L("XF86AudioNext", "playerctl next")
+L("XF86AudioPrev", "playerctl previous")
+L("XF86AudioPlay", "playerctl play-pause")
+L("XF86AudioPause", "playerctl play-pause")

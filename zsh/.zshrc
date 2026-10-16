@@ -134,18 +134,9 @@ if command -v docker >/dev/null 2>&1; then
     alias dex='docker exec -it'
     alias dlogs='docker logs -f'
     alias dclean='docker system prune'
-
-    dcu() {
-        docker compose up -d "$@"
-    }
-
-    dcd() {
-        docker compose down "$@"
-    }
-
-    dcl() {
-        docker compose logs -f "$@"
-    }
+    alias dcu='docker compose up -d'
+    alias dcd='docker compose down'
+    alias dcl='docker compose logs -f'
 fi
 
 if command -v kubectl >/dev/null 2>&1; then

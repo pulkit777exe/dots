@@ -17,21 +17,18 @@ startup runs it before enabling the hypridle unit.
 from __future__ import annotations
 
 import glob
-import json
 import os
 import sys
 from pathlib import Path
 
-HOME = Path.home()
-STATE_HOME = Path(os.environ.get("XDG_STATE_HOME", HOME / ".local" / "state"))
-CONF = (
-    Path(os.environ.get("XDG_CONFIG_HOME", HOME / ".config"))
-    / "hypr"
-    / "hypridle.conf"
-)
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from lib import config_home, load_json, state_home  # noqa: E402
+
+STATE_HOME = state_home()
+CONF = config_home() / "hypr" / "hypridle.conf"
 # lock_cmd must point at the same tree this file lands in (hypridle.conf
 # itself may live under a custom XDG_CONFIG_HOME, and hyprlock expands ~).
-CONFIG_HOME = Path(os.environ.get("XDG_CONFIG_HOME", HOME / ".config"))
+CONFIG_HOME = config_home()
 LOCK_CMD = (
     "pidof hyprlock || "
     + str(CONFIG_HOME / "hypr" / "hyprlock" / "scripts" / "lock.sh")
@@ -64,10 +61,7 @@ def candidate_settings_paths() -> list[Path]:
 
 def load_settings() -> dict:
     for path in candidate_settings_paths():
-        try:
-            data = json.loads(path.read_text())
-        except Exception:
-            continue
+        data = load_json(path, None)
         if isinstance(data, dict):
             return data
     return {}
