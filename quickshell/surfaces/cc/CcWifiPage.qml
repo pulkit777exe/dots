@@ -30,7 +30,7 @@ CcPage {
             anchors.fill: parent
             anchors.margins: -5
             cornerRadius: 20
-            glowColor: Theme.withAlpha(Theme.accentFor("control-center"), 0.12)
+            glowColor: Theme.withAlpha(Theme.accentFor("control-center"), 0.08)
         }
 
         RowLayout {

@@ -121,7 +121,7 @@ PopupPanel {
                     anchors.fill: parent
                     anchors.margins: -5
                     cornerRadius: 19
-                    glowColor: Theme.withAlpha(Theme.accentFor("wallpaper-picker"), 0.14)
+                    glowColor: Theme.withAlpha(Theme.accentFor("wallpaper-picker"), 0.08)
                     on: card.selected
                 }
 

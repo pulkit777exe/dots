@@ -234,7 +234,7 @@ PopupPanel {
                         anchors.fill: parent
                         anchors.margins: -5
                         cornerRadius: 15
-                        glowColor: Theme.withAlpha(Theme.accentFor("clipboard"), 0.14)
+                        glowColor: Theme.withAlpha(Theme.accentFor("clipboard"), 0.08)
                         on: row.index === root.selectedIndex
                     }
 

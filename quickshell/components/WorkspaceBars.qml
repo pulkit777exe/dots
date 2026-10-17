@@ -47,7 +47,7 @@ Item {
                 anchors.fill: parent
                 anchors.margins: -6
                 cornerRadius: 11
-                glowColor: Theme.withAlpha(accent, 0.18)
+                glowColor: Theme.withAlpha(accent, 0.08)
                 glowBlur: 7
                 on: bar.active
             }

@@ -16,7 +16,7 @@ Item {
     property real borderWidth: 1
 
     property bool shadow: true
-    property color shadowColor: Theme.withAlpha(Theme.shadowTint, 0.20)
+    property color shadowColor: Theme.withAlpha(Theme.shadowTint, 0.16)
 
     default property alias content: contentWrap.data
 
@@ -37,11 +37,14 @@ Item {
 
         layer.enabled: root.shadow
         layer.effect: MultiEffect {
+            // macOS-like: one wide, soft, low-opacity shadow with a small
+            // downward offset. No hard ring, no long drop.
             shadowEnabled: true
             autoPaddingEnabled: true
-            shadowBlur: 0.85
+            blurMax: 48
+            shadowBlur: 0.8
             shadowColor: root.shadowColor
-            shadowVerticalOffset: 14
+            shadowVerticalOffset: 4
             shadowHorizontalOffset: 0
             blurEnabled: false
         }

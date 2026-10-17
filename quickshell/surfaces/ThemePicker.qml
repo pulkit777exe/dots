@@ -143,7 +143,7 @@ PopupPanel {
                         anchors.fill: parent
                         anchors.margins: -5
                         cornerRadius: 20
-                        glowColor: Theme.withAlpha(card.modelData.accent, 0.14)
+                        glowColor: Theme.withAlpha(card.modelData.accent, 0.08)
                         on: card.highlighted
                     }
 

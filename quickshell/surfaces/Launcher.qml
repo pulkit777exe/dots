@@ -149,7 +149,7 @@ PopupPanel {
                             anchors.margins: -6
                             cornerRadius: 11
                             glowBlur: 7
-                            glowColor: Theme.withAlpha(Theme.accentFor("launcher"), 0.18)
+                            glowColor: Theme.withAlpha(Theme.accentFor("launcher"), 0.08)
                         }
                     }
 

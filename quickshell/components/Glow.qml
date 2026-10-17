@@ -10,7 +10,7 @@ import "../services"
 RectangularShadow {
     id: root
 
-    property color glowColor: Theme.withAlpha(Theme.colors.accent, 0.15)
+    property color glowColor: Theme.withAlpha(Theme.colors.accent, 0.08)
     property bool on: true
     property real cornerRadius: 16
     property real glowBlur: 8
