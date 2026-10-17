@@ -107,6 +107,7 @@ Item {
     }
 
     Rectangle {
+        id: notifCard
         y: notifTop
         width: parent.width
         height: notifH
@@ -115,101 +116,112 @@ Item {
         border.color: Theme.cc.border
         border.width: 1
 
-        ColumnLayout {
-            anchors { fill: parent; margins: 14 }
-            spacing: 8
+        Label {
+            id: notifTitle
+            anchors { left: parent.left; top: parent.top; leftMargin: 14; topMargin: 13 }
+            text: "Notifications"
+            font.pixelSize: Theme.px(12)
+            font.weight: Font.Medium
+            color: Theme.withAlpha(Theme.colors.text, 0.55)
+        }
 
-            RowLayout {
-                Layout.fillWidth: true
-                Label {
-                    text: "Notifications"
-                    font.pixelSize: Theme.px(12)
-                    font.weight: Font.Medium
-                    color: Theme.withAlpha(Theme.colors.text, 0.55)
-                    Layout.fillWidth: true
-                }
-                Label {
-                    visible: Notifications.history.length > 0
-                    text: "Clear all"
-                    font.pixelSize: Theme.px(12)
-                    color: Theme.accentFor("control-center")
-                    TapHandler { onTapped: Notifications.clearAll() }
-                    HoverHandler { cursorShape: Qt.PointingHandCursor }
-                }
+        Label {
+            anchors { right: parent.right; top: parent.top; rightMargin: 14; topMargin: 13 }
+            visible: Notifications.history.length > 0
+            text: "Clear all"
+            font.pixelSize: Theme.px(12)
+            color: Theme.accentFor("control-center")
+            TapHandler { onTapped: Notifications.clearAll() }
+            HoverHandler { cursorShape: Qt.PointingHandCursor }
+        }
+
+        Label {
+            anchors {
+                left: parent.left
+                top: notifTitle.bottom
+                leftMargin: 14
+                topMargin: 10
             }
+            visible: Notifications.history.length === 0
+            text: "No notifications"
+            font.pixelSize: Theme.px(13)
+            color: Theme.withAlpha(Theme.colors.text, 0.35)
+        }
 
-            Label {
-                visible: Notifications.history.length === 0
-                text: "No notifications"
-                font.pixelSize: Theme.px(13)
-                color: Theme.withAlpha(Theme.colors.text, 0.35)
+        RowLayout {
+            id: notifBox
+            visible: Notifications.history.length > 0
+            anchors {
+                left: parent.left
+                right: parent.right
+                top: notifTitle.bottom
+                leftMargin: 14
+                rightMargin: 14
+                topMargin: 10
             }
+            height: Math.max(0, Math.min(Config.notifHistoryHeight,
+                parent.height - y - 14))
+            spacing: 6
 
-            RowLayout {
+            Flickable {
+                id: notifFlick
                 Layout.fillWidth: true
                 Layout.fillHeight: true
-                Layout.maximumHeight: Config.notifHistoryHeight
-                spacing: 6
-                visible: Notifications.history.length > 0
+                contentWidth: width
+                contentHeight: notifList.implicitHeight
+                clip: true
+                boundsBehavior: Flickable.StopAtBounds
 
-                Flickable {
-                    id: notifFlick
-                    Layout.fillWidth: true
-                    Layout.fillHeight: true
-                    contentWidth: width
-                    contentHeight: notifList.implicitHeight
-                    clip: true
-                    boundsBehavior: Flickable.StopAtBounds
+                Column {
+                    id: notifList
+                    width: parent.width
+                    spacing: 8
 
-                    Column {
-                        id: notifList
-                        width: parent.width
-                        spacing: 8
+                    Repeater {
+                        model: Notifications.history
+                        delegate: RowLayout {
+                            id: notifRow
+                            required property var modelData
+                            width: notifList.width
+                            height: Math.max(44, notifText.implicitHeight + 14)
+                            spacing: 10
 
-                        Repeater {
-                            model: Notifications.history
-                            delegate: RowLayout {
-                                required property var modelData
-                                width: notifList.width
-                                height: 64
-                                spacing: 10
-
-                                Rectangle {
-                                    Layout.preferredWidth: 4
-                                    Layout.preferredHeight: 32
-                                    Layout.alignment: Qt.AlignVCenter
-                                    radius: width / 2
-                                    color: Theme.accentFor("control-center")
-                                    opacity: modelData.urgent ? 1 : 0.35
-                                }
-                                Icon {
-                                    icon: modelData.appIcon || "notifications"
-                                    size: 18
-                                    Layout.alignment: Qt.AlignVCenter
-                                }
-                                NotificationText {
-                                    Layout.fillWidth: true
-                                    Layout.alignment: Qt.AlignVCenter
-                                    summary: modelData.summary
-                                    body: modelData.body
-                                }
-                                Icon {
-                                    icon: "close"
-                                    size: 14
-                                    iconColor: Theme.withAlpha(Theme.colors.text, 0.4)
-                                    Layout.alignment: Qt.AlignVCenter
-                                    HoverHandler { cursorShape: Qt.PointingHandCursor }
-                                    TapHandler { onTapped: Notifications.dismiss(modelData.key) }
-                                }
+                            Rectangle {
+                                Layout.preferredWidth: 4
+                                Layout.preferredHeight: 28
+                                Layout.alignment: Qt.AlignVCenter
+                                radius: width / 2
+                                color: Theme.accentFor("control-center")
+                                opacity: notifRow.modelData.urgent ? 1 : 0.35
+                            }
+                            Icon {
+                                icon: notifRow.modelData.appIcon || "notifications"
+                                size: 18
+                                Layout.alignment: Qt.AlignVCenter
+                            }
+                            NotificationText {
+                                id: notifText
+                                Layout.fillWidth: true
+                                Layout.alignment: Qt.AlignVCenter
+                                summary: notifRow.modelData.summary
+                                body: notifRow.modelData.body
+                            }
+                            Icon {
+                                icon: "close"
+                                size: 14
+                                iconColor: Theme.withAlpha(Theme.colors.text, 0.4)
+                                Layout.alignment: Qt.AlignVCenter
+                                HoverHandler { cursorShape: Qt.PointingHandCursor }
+                                TapHandler { onTapped: Notifications.dismiss(notifRow.modelData.key) }
                             }
                         }
                     }
                 }
+            }
 
-                ScrollRail {
-                    flickable: notifFlick
-                    accent: Theme.accentFor("control-center")
-                }
+            ScrollRail {
+                flickable: notifFlick
+                accent: Theme.accentFor("control-center")
             }
         }
     }
