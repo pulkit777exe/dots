@@ -17,15 +17,16 @@ Item {
         NumberAnimation { duration: Config.fade(); easing.type: Easing.OutCubic }
     }
 
-    readonly property int richHeight: 76
-    readonly property int cardW: 156
-    readonly property int cardH: 30
+    readonly property int richHeight: 96
+    readonly property int cardW: 300
+    readonly property int cardH: 46
     readonly property int pad: 16
     readonly property int restGap: 20
     readonly property int richGap: 40
 
     readonly property real leftWidth: Math.max(nameZone.implicitWidth, bars.implicitWidth)
-    readonly property real statusWidth: showStatus ? statusRow.implicitWidth : 0
+    readonly property real statusWidth: showStatus
+        ? (rich ? statusCol.width : badgeRow.implicitWidth) : 0
 
     readonly property real restWidth:
         2 * pad + bars.implicitWidth + 2 * restGap + clock.implicitWidth + statusWidth
@@ -85,6 +86,7 @@ Item {
         }
     }
 
+    // Collapsed chrome.
     Label {
         id: clock
         text: island.clockText
@@ -97,43 +99,46 @@ Item {
         Behavior on opacity { NumberAnimation { duration: Config.fade(); easing.type: Easing.OutCubic } }
     }
 
+    // Header: clock + date, top centre.
     Row {
         id: header
         spacing: 8
         x: (island.width - width) / 2
-        y: island.zoneY(12, height)
+        y: island.zoneY(16, height)
         opacity: island.rich ? 1 : 0
 
         Behavior on opacity { NumberAnimation { duration: Config.fade(); easing.type: Easing.OutCubic } }
 
         Label {
+            id: clockLabel
             text: island.clockText
-            font.pixelSize: Theme.px(12)
+            font.pixelSize: Theme.px(18)
             font.weight: Font.DemiBold
             color: Theme.colors.text
         }
         Label {
             text: island.dateText
-            font.pixelSize: Theme.px(9)
+            font.pixelSize: Theme.px(12)
             font.weight: Font.Medium
             color: Theme.withAlpha(Theme.colors.text, 0.55)
+            y: (clockLabel.implicitHeight - implicitHeight) / 2
         }
     }
 
     Item {
         id: nameZone
         x: island.pad
-        y: island.zoneY(30, height)
+        y: island.zoneY(18, height)
         opacity: island.rich ? 1 : 0
         implicitWidth: 11 + nameText.implicitWidth
-        implicitHeight: Math.max(3, nameText.implicitHeight)
+        implicitHeight: Math.max(4, nameText.implicitHeight)
 
         Behavior on opacity { NumberAnimation { duration: Config.fade(); easing.type: Easing.OutCubic } }
 
         Rectangle {
-            width: 3
-            height: 3
-            radius: 1.5
+            width: 4
+            height: 4
+            radius: 2
             color: Theme.accentFor("island")
             anchors.verticalCenter: parent.verticalCenter
         }
@@ -142,7 +147,7 @@ Item {
             x: 11
             anchors.verticalCenter: parent.verticalCenter
             text: Workspaces.focusedName
-            font.pixelSize: Theme.px(9)
+            font.pixelSize: Theme.px(12)
             font.weight: Font.DemiBold
             color: Theme.colors.text
         }
@@ -152,7 +157,7 @@ Item {
         id: bars
         accent: Theme.accentFor("island")
         x: island.pad
-        y: island.zoneY(46, height)
+        y: island.zoneY(40, height)
     }
 
     Item {
@@ -161,26 +166,26 @@ Item {
         width: island.cardW
         height: island.cardH
         x: (island.width - width) / 2
-        y: island.zoneY(33, height)
+        y: island.zoneY(46, height)
         opacity: island.rich ? 1 : 0
 
         Behavior on opacity { NumberAnimation { duration: Config.fade(); easing.type: Easing.OutCubic } }
 
         Rectangle {
             anchors.fill: parent
-            radius: 10
+            radius: 12
             color: Theme.withAlpha(Theme.colors.text, 0.09)
         }
 
         Item {
-            x: Config.cardPad + 2
+            x: 8
             y: (card.height - height) / 2
-            width: 22
-            height: 22
+            width: 34
+            height: 34
 
             Rectangle {
                 anchors.fill: parent
-                radius: 5
+                radius: 8
                 color: Theme.withAlpha(Theme.colors.text, 0.10)
                 clip: true
 
@@ -197,21 +202,21 @@ Item {
                 anchors.centerIn: parent
                 visible: Media.artUrl.length === 0
                 icon: "music_note"
-                size: 13
+                size: 16
                 iconColor: Theme.withAlpha(Theme.colors.text, 0.55)
             }
         }
 
         Column {
-            x: Config.cardPad + 32
-            width: card.width - x - 50
-            spacing: 1
+            x: 52
+            width: card.width - x - dots.width - 18
+            spacing: 2
             anchors.verticalCenter: parent.verticalCenter
 
             Label {
                 width: parent.width
                 text: Media.hasPlayer ? Media.title : "No media"
-                font.pixelSize: Theme.px(11)
+                font.pixelSize: Theme.px(13)
                 font.weight: Font.DemiBold
                 color: Theme.colors.text
                 elide: Text.ElideRight
@@ -221,7 +226,7 @@ Item {
                 width: parent.width
                 visible: Media.hasPlayer && Media.artist.length > 0
                 text: Media.artist
-                font.pixelSize: Theme.px(9)
+                font.pixelSize: Theme.px(10)
                 color: Theme.withAlpha(Theme.colors.text, 0.55)
                 elide: Text.ElideRight
                 maximumLineCount: 1
@@ -229,19 +234,20 @@ Item {
         }
 
         Row {
-            x: card.width - (Config.cardPad + 4) - width
-            spacing: 1.5
+            id: dots
+            x: card.width - 12 - width
+            spacing: 2.5
             anchors.verticalCenter: parent.verticalCenter
             visible: Media.hasPlayer && Media.length > 0
 
             Repeater {
-                model: 12
+                model: 14
                 delegate: Rectangle {
                     required property int index
-                    width: 1.5
-                    height: 1.5
-                    radius: 0.75
-                    color: index < Math.round(Media.progress * 12)
+                    width: 2
+                    height: 2
+                    radius: 1
+                    color: index < Math.round(Media.progress * 14)
                         ? Theme.accentFor("island")
                         : Theme.withAlpha(Theme.colors.text, 0.25)
                 }
@@ -249,21 +255,54 @@ Item {
         }
     }
 
-    Row {
-        id: statusRow
-        spacing: 6
+    // Right column: notification status over the signal/battery badges.
+    Column {
+        id: statusCol
         visible: island.showStatus
+        width: Math.max(notifRow.implicitWidth, badgeRow.implicitWidth)
+        spacing: 6
         x: island.width - island.pad - width
-        y: (island.height - height) / 2
+        y: island.zoneY(18, height)
 
-        SignalBars {
-            accent: Theme.accentFor("island")
-            strength: Wifi.enabled && Wifi.connected ? Wifi.strength : 0
+        Row {
+            id: notifRow
+            x: statusCol.width - width
+            spacing: 6
+            visible: island.rich
+            opacity: island.rich ? 1 : 0
+
+            Behavior on opacity { NumberAnimation { duration: Config.fade(); easing.type: Easing.OutCubic } }
+
+            Label {
+                text: Notifications.history.length === 0
+                    ? "All caught up"
+                    : Notifications.history.length + " new"
+                font.pixelSize: Theme.px(12)
+                font.weight: Font.Medium
+                color: Theme.colors.text
+            }
+            Icon {
+                icon: Notifications.dnd ? "do_not_disturb_on" : "notifications"
+                size: 15
+                iconColor: Theme.withAlpha(Theme.colors.text, 0.8)
+                anchors.verticalCenter: parent.verticalCenter
+            }
         }
-        BatteryBadge {
-            accent: Theme.accentFor("island")
-            percentage: Battery.percentage
-            charging: Battery.charging
+
+        Row {
+            id: badgeRow
+            x: statusCol.width - width
+            spacing: 8
+
+            SignalBars {
+                accent: Theme.accentFor("island")
+                strength: Wifi.enabled && Wifi.connected ? Wifi.strength : 0
+            }
+            BatteryBadge {
+                accent: Theme.accentFor("island")
+                percentage: Battery.percentage
+                charging: Battery.charging
+            }
         }
     }
 
@@ -278,7 +317,7 @@ Item {
         cursorShape: Qt.PointingHandCursor
 
         onClicked: (mouse) => {
-            if (island.showStatus && island.inside(statusRow, mouse.x, mouse.y)) {
+            if (island.showStatus && island.inside(statusCol, mouse.x, mouse.y)) {
                 UiState.toggleControlCenter();
             } else if (island.rich && island.showCard && island.inside(card, mouse.x, mouse.y)) {
                 Media.togglePlay();

@@ -5,7 +5,6 @@ import "../../services"
 
 CcPage {
     id: page
-    sideMargin: 15
 
     CcHeader {
         Layout.fillWidth: true

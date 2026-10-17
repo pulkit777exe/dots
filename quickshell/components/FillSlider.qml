@@ -1,6 +1,8 @@
 import QtQuick
 import "../services"
 
+// Slider: a pill track with an accent fill and the leading icon sitting on the
+// fill, as used across the control center and settings.
 Item {
     id: root
 

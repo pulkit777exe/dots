@@ -5,7 +5,6 @@ import "../../services"
 
 CcPage {
     id: page
-    sideMargin: 15
     onVisibleChanged: if (visible) Brightness.refreshMonitors()
 
     CcHeader {

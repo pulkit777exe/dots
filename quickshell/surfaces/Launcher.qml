@@ -143,6 +143,14 @@ PopupPanel {
                         height: 24
                         radius: 2
                         color: Theme.accentFor("launcher")
+
+                        Glow {
+                            anchors.fill: parent
+                            anchors.margins: -6
+                            cornerRadius: 11
+                            glowBlur: 7
+                            glowColor: Theme.withAlpha(Theme.accentFor("launcher"), 0.18)
+                        }
                     }
 
                     RowLayout {

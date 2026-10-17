@@ -15,29 +15,19 @@ PopupPanel {
 
     readonly property bool drillOpen: UiState.ccView !== "home"
 
-    readonly property real drillTop: 14 + homePage.firstRowBottom
-    readonly property int homeBottom: Math.ceil(homePage.contentBottom + 28)
-
-    readonly property real activeContent: {
-        switch (UiState.ccView) {
-        case "display": return displayPage.contentHeight;
-        case "sound": return soundPage.contentHeight;
-        case "wifi": return wifiPage.contentHeight;
-        case "bluetooth": return btPage.contentHeight;
-        }
-        return 0;
-    }
-    readonly property int drillBottom: Math.ceil(drillTop + Math.max(140, activeContent) + 14)
-
-    readonly property int panelHeight: drillOpen ? Math.max(homeBottom, drillBottom) : homeBottom
-    readonly property real drillHeight: Math.max(140, panelHeight - 14 - drillTop)
+    // Fixed geometry: the box never resizes between pages or as content
+    // changes -- pages scroll inside it instead.
+    readonly property int panelHeight: 544
+    readonly property int inset: 14
+    readonly property real drillTop: inset + homePage.firstRowBottom
+    readonly property real drillHeight: panelHeight - inset - drillTop
 
     implicitHeight: panelHeight
 
     CcHomePage {
         id: homePage
-        anchors { top: parent.top; left: parent.left; right: parent.right }
-        anchors.margins: 14
+        anchors { top: parent.top; left: parent.left; right: parent.right; bottom: parent.bottom }
+        anchors.margins: cc.inset
         drillOpen: cc.drillOpen
         onDrill: page => UiState.ccView = page
     }
@@ -45,12 +35,9 @@ PopupPanel {
     Rectangle {
         id: drillCard
 
-        readonly property int inset:
-            (UiState.ccView === "display" || UiState.ccView === "sound") ? 22 : 10
-
-        x: inset
+        x: cc.inset
         y: cc.drillTop + (cc.drillOpen ? 0 : -22)
-        width: cc.width - inset * 2
+        width: cc.width - cc.inset * 2
         height: cc.drillHeight
         radius: 22
         color: Theme.cc.surface
@@ -74,25 +61,25 @@ PopupPanel {
 
         CcDisplayPage {
             id: displayPage
-            anchors { top: parent.top; left: parent.left; right: parent.right }
+            anchors.fill: parent
             visible: UiState.ccView === "display"
             onBack: UiState.ccView = "home"
         }
         CcSoundPage {
             id: soundPage
-            anchors { top: parent.top; left: parent.left; right: parent.right }
+            anchors.fill: parent
             visible: UiState.ccView === "sound"
             onBack: UiState.ccView = "home"
         }
         CcWifiPage {
             id: wifiPage
-            anchors { top: parent.top; left: parent.left; right: parent.right }
+            anchors.fill: parent
             visible: UiState.ccView === "wifi"
             onBack: UiState.ccView = "home"
         }
         CcBluetoothPage {
             id: btPage
-            anchors { top: parent.top; left: parent.left; right: parent.right }
+            anchors.fill: parent
             visible: UiState.ccView === "bluetooth"
             onBack: UiState.ccView = "home"
         }

@@ -109,7 +109,7 @@ PopupPanel {
             id: list
 
             Layout.fillWidth: true
-            Layout.preferredHeight: 112
+            Layout.preferredHeight: 116
             orientation: ListView.Horizontal
             spacing: 10
             clip: true
@@ -126,54 +126,68 @@ PopupPanel {
                 required property int index
 
                 width: 176
-                height: 98
+                height: 114
 
                 readonly property bool selected: modelData.selected
                 readonly property bool highlighted: ListView.isCurrentItem
 
-                opacity: highlighted ? 1 : 0.72
+                opacity: highlighted ? 1 : 0.8
                 Behavior on opacity { NumberAnimation { duration: Config.hover() } }
 
-                Rectangle {
-                    anchors.fill: parent
-                    radius: 13
-                    color: card.modelData.cardColor
-                    border.width: card.highlighted ? 2 : 1
-                    border.color: card.highlighted
-                        ? card.modelData.accent
-                        : Theme.withAlpha(Theme.colors.text, 0.06)
+                Item {
+                    id: cardRect
+                    anchors { left: parent.left; right: parent.right; top: parent.top }
+                    height: 86
 
-                    SelectionDot {
-                        selected: card.selected
-                        color: card.modelData.accent
+                    Glow {
+                        anchors.fill: parent
+                        anchors.margins: -5
+                        cornerRadius: 20
+                        glowColor: Theme.withAlpha(card.modelData.accent, 0.14)
+                        on: card.highlighted
                     }
-                }
 
-                Row {
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    anchors.top: parent.top
-                    anchors.topMargin: 32
-                    spacing: 5
+                    Rectangle {
+                        anchors.fill: parent
+                        radius: 13
+                        color: card.modelData.cardColor
+                        border.width: card.highlighted ? 2 : 1
+                        border.color: card.highlighted
+                            ? card.modelData.accent
+                            : Theme.withAlpha(Theme.colors.text, 0.06)
 
-                    Repeater {
-                        model: card.modelData.swatchColors
+                        SelectionDot {
+                            selected: card.selected
+                            color: card.modelData.accent
+                        }
+                    }
 
-                        Rectangle {
-                            required property var modelData
+                    Row {
+                        anchors.centerIn: parent
+                        spacing: 5
 
-                            width: 10
-                            height: 10
-                            radius: 5
-                            color: modelData
+                        Repeater {
+                            model: card.modelData.swatchColors
+
+                            Rectangle {
+                                required property var modelData
+
+                                width: 10
+                                height: 10
+                                radius: 5
+                                color: modelData
+                            }
                         }
                     }
                 }
 
                 Label {
-                    anchors.left: parent.left
-                    anchors.right: parent.right
-                    anchors.bottom: parent.bottom
-                    anchors.bottomMargin: 10
+                    anchors {
+                        left: parent.left
+                        right: parent.right
+                        top: cardRect.bottom
+                        topMargin: 7
+                    }
                     text: card.modelData.name
                     font.pixelSize: Theme.px(11)
                     font.weight: card.selected ? Font.DemiBold : Font.Normal

@@ -117,6 +117,14 @@ PopupPanel {
                 opacity: current ? 1 : 0.86
                 Behavior on opacity { NumberAnimation { duration: Config.hover() } }
 
+                Glow {
+                    anchors.fill: parent
+                    anchors.margins: -5
+                    cornerRadius: 19
+                    glowColor: Theme.withAlpha(Theme.accentFor("wallpaper-picker"), 0.14)
+                    on: card.selected
+                }
+
                 Rectangle {
                     anchors.fill: parent
                     radius: 12

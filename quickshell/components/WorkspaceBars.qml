@@ -42,14 +42,14 @@ Item {
                 SpringAnimation { spring: 6.0; damping: Config.springDamping; mass: 0.4 }
             }
 
-            Rectangle {
-                anchors.centerIn: parent
-                width: 8.4
-                height: 12.5
-                radius: width / 2
-                color: Theme.withAlpha(accent, 0.16)
-                opacity: bar.active ? 1 : 0
-                Behavior on opacity { NumberAnimation { duration: Config.hover(); easing.type: Easing.OutCubic } }
+            // Soft blurred glow behind the active bar (see Glow.qml).
+            Glow {
+                anchors.fill: parent
+                anchors.margins: -6
+                cornerRadius: 11
+                glowColor: Theme.withAlpha(accent, 0.18)
+                glowBlur: 7
+                on: bar.active
             }
 
             Rectangle {

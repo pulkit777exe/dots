@@ -26,6 +26,13 @@ CcPage {
         border.width: 1
         visible: Wifi.connected
 
+        Glow {
+            anchors.fill: parent
+            anchors.margins: -5
+            cornerRadius: 20
+            glowColor: Theme.withAlpha(Theme.accentFor("control-center"), 0.12)
+        }
+
         RowLayout {
             anchors { fill: parent; leftMargin: 12; rightMargin: 12 }
             spacing: 12

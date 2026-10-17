@@ -12,13 +12,8 @@ Item {
 
     readonly property real rowH: 60
     readonly property real firstRowBottom: rowH + 5
-    readonly property real notifH: {
-        const n = Notifications.history.length;
-        const list = n > 0 ? Math.min(72 * n - 8, Config.notifHistoryHeight) : 17;
-        return Math.max(176, 16 + 8 + list + 28);
-    }
-    readonly property real contentBottom: 264 + notifH
-    implicitHeight: contentBottom
+    readonly property real notifTop: 264
+    readonly property real notifH: Math.max(0, height - notifTop)
 
     function liveAt(bottom): bool { return !drillOpen || bottom <= firstRowBottom; }
 
@@ -112,7 +107,7 @@ Item {
     }
 
     Rectangle {
-        y: 264
+        y: notifTop
         width: parent.width
         height: notifH
         radius: 14
@@ -150,15 +145,17 @@ Item {
                 color: Theme.withAlpha(Theme.colors.text, 0.35)
             }
 
-            Item {
+            RowLayout {
                 Layout.fillWidth: true
-                Layout.preferredHeight: Math.min(notifList.implicitHeight,
-                                                 Config.notifHistoryHeight)
+                Layout.fillHeight: true
+                Layout.maximumHeight: Config.notifHistoryHeight
+                spacing: 6
                 visible: Notifications.history.length > 0
-                clip: true
 
                 Flickable {
-                    anchors.fill: parent
+                    id: notifFlick
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
                     contentWidth: width
                     contentHeight: notifList.implicitHeight
                     clip: true
@@ -207,6 +204,11 @@ Item {
                             }
                         }
                     }
+                }
+
+                ScrollRail {
+                    flickable: notifFlick
+                    accent: Theme.accentFor("control-center")
                 }
             }
         }

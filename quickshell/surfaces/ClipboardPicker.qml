@@ -230,6 +230,14 @@ PopupPanel {
                     width: list.width
                     height: root.rowHeight(modelData)
 
+                    Glow {
+                        anchors.fill: parent
+                        anchors.margins: -5
+                        cornerRadius: 15
+                        glowColor: Theme.withAlpha(Theme.accentFor("clipboard"), 0.14)
+                        on: row.index === root.selectedIndex
+                    }
+
                     Rectangle {
                         anchors.fill: parent
                         visible: row.index === root.selectedIndex
