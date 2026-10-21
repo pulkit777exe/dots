@@ -2,8 +2,9 @@
 # setup.sh — provision a Fedora machine for this dots repo, then link it.
 #
 # Installs dnf packages per group, fills the gaps dnf cannot cover
-# (oh-my-zsh + plugins, nvm, starship, grimblast, envycontrol), then runs
-# install.sh. Idempotent: anything already present is skipped.
+# (oh-my-zsh + plugins, nvm, starship, grimblast, envycontrol, the latest
+# Apple Color Emoji RPM), then runs install.sh. Idempotent: anything already
+# present is skipped.
 #
 # Usage: ./scripts/setup.sh [--dry-run] [--yes] [--all] [--desktop]
 #                            [--shell] [--session] [--nvidia] [--dev] [--no-link] [--list] [--help]
@@ -82,8 +83,14 @@ DEV_PKGS=(docker-ce docker-ce-cli containerd.io docker-buildx-plugin
 COPR_HYPRLAND="nett00n/hyprland"
 COPR_ENVY="sunwire/envycontrol"
 
+# Fedora cannot ship Apple's emoji (licensing). The upstream project rebuilds
+# the RPM for every macOS release and keeps this asset name stable, so the
+# /latest/download/ URL always resolves to the current build.
+APPLE_EMOJI_PKG="fonts-apple-color-emoji"
+APPLE_EMOJI_RPM_URL="https://github.com/samuelngs/apple-emoji-ttf/releases/latest/download/fonts-apple-color-emoji.rpm"
+
 list_groups() {
-    echo "desktop: ${DESKTOP_PKGS[*]} (+ grimblast; third-party apps are ./dots apps)"
+    echo "desktop: ${DESKTOP_PKGS[*]} (+ grimblast, latest Apple Color Emoji RPM; third-party apps are ./dots apps)"
     echo "shell:   ${SHELL_PKGS[*]} (+ starship, oh-my-zsh, plugins, nvm)"
     echo "session: ${SESSION_PKGS[*]} (+ sequoia login theme, graphical target, sddm enable, session checks)"
     echo "nvidia:  ${NVIDIA_PKGS[*]} (+ envycontrol)"
@@ -161,6 +168,48 @@ ensure_copr() {
     require_tty
     log "enabling copr $1"
     sudo dnf copr enable "${DNF_YES[@]}" "$1"
+}
+
+ensure_apple_emoji_font() {
+    # One-time system-wide font. The RPM also drops a fontconfig snippet that
+    # prefers Apple Color Emoji for emoji/serif/sans/mono, which a manual TTF
+    # copy into ~/.local/share/fonts does not do. Re-runs skip it once the
+    # package is present; provision again later to pick up a newer release by
+    # removing the package first.
+    local pkg="$APPLE_EMOJI_PKG"
+    if pkg_installed "$pkg"; then
+        log "$pkg already installed ($(rpm -q --qf '%{VERSION}-%{RELEASE}' "$pkg"))"
+        return 0
+    fi
+    if [ "$DRY_RUN" -eq 1 ]; then
+        log "would run: curl -fL $APPLE_EMOJI_RPM_URL -> temp"
+        log "would run: sudo dnf install <rpm>  # $pkg"
+        return 0
+    fi
+    if [ "$ASSUME_YES" -eq 0 ] && [ ! -t 0 ]; then
+        warn "no terminal for the sudo prompt — skipping Apple Color Emoji"
+        warn "  re-run interactively, or pass --yes (with cached/NOPASSWD sudo)"
+        return 0
+    fi
+    local tmp rc=0
+    tmp="$(mktemp -d)"
+    log "downloading the latest Apple Color Emoji RPM (~110 MB)"
+    if curl -fL --retry 3 --progress-bar "$APPLE_EMOJI_RPM_URL" \
+        -o "$tmp/$pkg.rpm"; then
+        log "installing $pkg from the latest upstream release"
+        sudo dnf install "${DNF_YES[@]}" "$tmp/$pkg.rpm" || rc=$?
+    else
+        rc=1
+    fi
+    rm -rf "$tmp"
+    if [ "$rc" -ne 0 ]; then
+        warn "Apple Color Emoji install failed — fetch the RPM later from"
+        warn "  https://github.com/samuelngs/apple-emoji-ttf/releases"
+        return 0
+    fi
+    local ver
+    ver="$(rpm -q --qf '%{VERSION}-%{RELEASE}' "$pkg" 2>/dev/null || true)"
+    log "installed $pkg${ver:+ ($ver)}"
 }
 
 ensure_rpmfusion() {
@@ -288,6 +337,7 @@ if [ "$WANT_DESKTOP" -eq 1 ]; then
     log "group: desktop"
     ensure_copr "$COPR_HYPRLAND"
     dnf_install "${DESKTOP_PKGS[@]}"
+    ensure_apple_emoji_font
     if command -v grimblast >/dev/null 2>&1; then
         log "found grimblast"
     elif dnf list --available grimblast 2>/dev/null | grep -q "^grimblast"; then

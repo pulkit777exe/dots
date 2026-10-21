@@ -9,7 +9,7 @@ fresh fedora machine? three steps, then reboot:
 
 ```bash
 git clone https://github.com/pulkit777exe/dots.git ~/dots
-~/dots/dots packages --all    # dnf stuff, drivers, shell tooling, login theme
+~/dots/dots packages --all    # dnf stuff, drivers, shell tooling, emoji font, login theme
 ~/dots/dots link              # symlink configs into ~/.config + ~/.zshrc
 ~/dots/dots apps              # brave + flatpaks (needs a terminal for sudo)
 ```
@@ -34,7 +34,7 @@ curl-pipebash = whoever owns this repo runs code as you. standard dotfiles trade
 
 | cmd | does what |
 | --- | --- |
-| `./dots packages [--all\|--desktop\|--shell\|--session\|--nvidia\|--dev]` | dnf groups. default = desktop + shell + session |
+| `./dots packages [--all\|--desktop\|--shell\|--session\|--nvidia\|--dev]` | dnf groups. default = desktop + shell + session. desktop also pulls the latest Apple Color Emoji RPM |
 | `./dots link [--dry-run] [--yes]` | symlink units |
 | `./dots check` | verify everything, change nothing |
 | `./dots lint` | static checks (qml rules, ipc scope, imports, qmllint) |
@@ -69,7 +69,7 @@ fedora-first. `./dots check` snitches what's missing.
 
 **optional (feature degrades without):** `brightnessctl` (brightness keys), `playerctl` (media keys), `hyprsunset` (night light), `openwhispr` (only for its binds file), `starship zoxide` (prompt/jumper, guarded).
 
-**fonts** (two vendored, auto-installed; one manual): `sf pro display` = all ui text — apple won't let us vendor it, so drop `SF Pro Display Regular/Bold.otf` in `~/.local/share/fonts` once (or `dots fonts ~/Downloads/*.otf`). till then qt substitutes, check stays green. `JetBrainsMonoNL Nerd Font Mono` (kitty + lock wifi glyph, vendored) + `Material Symbols Rounded` (shell icons, vendored).
+**fonts** (two vendored, one system RPM, one manual): `sf pro display` = all ui text — apple won't let us vendor it, so drop `SF Pro Display Regular/Bold.otf` in `~/.local/share/fonts` once (or `dots fonts ~/Downloads/*.otf`). till then qt substitutes, check stays green. `JetBrainsMonoNL Nerd Font Mono` (kitty + lock wifi glyph, vendored) + `Material Symbols Rounded` (shell icons, vendored). `Apple Color Emoji` is installed system-wide from the latest `samuelngs/apple-emoji-ttf` Fedora RPM on first provision (`dots packages` / `dots packages --desktop`); re-runs skip it once the package exists.
 
 ## keybinds
 

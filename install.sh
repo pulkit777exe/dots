@@ -403,6 +403,7 @@ main() {
     check_font "SF Pro Display" "UI text; until installed Qt falls back to fontconfig substitution" optional
     check_font "JetBrainsMonoNL Nerd Font Mono" "kitty + lock-screen wifi glyph"
     check_font "Material Symbols Rounded" "shell icon glyphs"
+    check_font "Apple Color Emoji" "emoji; ./dots packages --desktop installs the latest Fedora RPM" optional
 
     if [ "$CHECK_ONLY" -eq 0 ] && [ "$DRY_RUN" -eq 0 ]; then
         echo

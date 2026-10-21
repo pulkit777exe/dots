@@ -63,6 +63,12 @@ for fam in "JetBrainsMonoNL Nerd Font Mono" "Material Symbols Rounded"; do
     fi
 done
 
+if have_font "Apple Color Emoji"; then
+    log "font: Apple Color Emoji (Fedora RPM)"
+else
+    warn "Apple Color Emoji not installed — ./dots packages --desktop adds the latest Fedora RPM"
+fi
+
 if have_font "SF Pro Display"; then
     log "font: SF Pro Display"
 else

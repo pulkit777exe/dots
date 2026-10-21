@@ -33,9 +33,11 @@ scope: that statement covers `install.sh` and `bootstrap.sh`, which only
 write inside `$HOME` and never touch the network. `scripts/setup.sh` and
 `install-software` are provision-time fetchers, not pure config — they
 download and execute upstream code (grimblast script, starship installer,
-oh-my-zsh installer, brave installer; one pipe runs under `sudo`). Each
-fetch site carries a comment stating this; read those before running them
-on a machine you care about. `scripts/install-sddm.sh` is the other
+oh-my-zsh installer, brave installer; one pipe runs under `sudo`), and
+`setup.sh` also downloads the latest Apple Color Emoji RPM from the
+`samuelngs/apple-emoji-ttf` GitHub releases and installs it with `dnf`.
+Each fetch site carries a comment stating this; read those before running
+them on a machine you care about. `scripts/install-sddm.sh` is the other
 exception: it `sudo`-copies the login theme to
 `/usr/share/sddm/themes/sequoia`, writes
 `/etc/sddm.conf.d/10-sequoia.conf`, installs the user avatar under
@@ -78,8 +80,9 @@ path, so the installed desktop cannot phone home, and there is no update
 check that runs on its own.
 
 Provisioning is the exception: `scripts/setup.sh` and `install-software`
-fetch upstream installers at setup time (see the trust-model note above).
-That happens once, interactively, never on its own afterwards.
+fetch upstream installers (and the Apple Color Emoji RPM) at setup time
+(see the trust-model note above). That happens once, interactively, never
+on its own afterwards.
 
 ## No secrets in the repository
 
