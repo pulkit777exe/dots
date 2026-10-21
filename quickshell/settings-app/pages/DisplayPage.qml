@@ -55,7 +55,7 @@ ColumnLayout {
                 Label {
                     text: "Night Light"
                     font.pixelSize: Theme.px(13)
-                    font.weight: Font.Medium
+                    font.weight: Font.DemiBold
                     color: Theme.colors.text
                 }
                 Label {

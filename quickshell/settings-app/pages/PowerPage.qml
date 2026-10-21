@@ -48,7 +48,7 @@ ColumnLayout {
                 Label {
                     text: Battery.available ? Battery.percentage + "%" : "No battery"
                     font.pixelSize: Theme.px(13)
-                    font.weight: Font.Medium
+                    font.weight: Font.DemiBold
                     color: Theme.colors.text
                 }
                 Label {
@@ -123,7 +123,7 @@ ColumnLayout {
                     anchors.leftMargin: 12
                     anchors.rightMargin: 12
                     verticalAlignment: TextInput.AlignVCenter
-                    font.family: "SF Pro Display"
+                    font.family: Theme.fontFamily
                     font.pixelSize: Theme.px(14)
                     color: Theme.withAlpha(Theme.colors.text, 0.92)
                     selectionColor: Theme.withAlpha(Theme.colors.accent, 0.35)

@@ -101,7 +101,7 @@ ColumnLayout {
                         Layout.fillWidth: true
                         text: Volume.displayName(modelData)
                         font.pixelSize: Theme.px(13)
-                        font.weight: Font.Medium
+                        font.weight: Font.DemiBold
                         color: Theme.colors.text
                         elide: Text.ElideRight
                     }

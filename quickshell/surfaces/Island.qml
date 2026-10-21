@@ -278,7 +278,7 @@ Item {
                     ? "All caught up"
                     : Notifications.history.length + " new"
                 font.pixelSize: Theme.px(12)
-                font.weight: Font.Medium
+                font.weight: Font.DemiBold
                 color: Theme.colors.text
             }
             Icon {

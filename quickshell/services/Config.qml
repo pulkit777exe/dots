@@ -11,7 +11,6 @@ Singleton {
     readonly property int barHeight: data.barHeight
     readonly property int collapsedWidth: data.collapsedWidth
     readonly property int gapFromEdge: data.gapFromEdge
-    readonly property int cardPad: data.cardPad
     readonly property int collapsedRadius: data.collapsedRadius
     readonly property int expandedRadius: data.expandedRadius
     readonly property bool statusEnabled: data.statusEnabled
@@ -82,7 +81,6 @@ Singleton {
             property int barHeight: 33
             property int collapsedWidth: 90
             property int gapFromEdge: 11
-            property int cardPad: 3
             property int collapsedRadius: 20
             property int expandedRadius: 27
             property bool statusEnabled: true

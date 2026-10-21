@@ -49,7 +49,7 @@ Rectangle {
                 Label {
                     text: card.name
                     font.pixelSize: Theme.px(13)
-                    font.weight: Font.DemiBold
+                    font.weight: Font.Bold
                     color: Theme.colors.text
                 }
                 Label {
@@ -103,7 +103,7 @@ Rectangle {
                         anchors.centerIn: parent
                         text: Number(modelData).toFixed(2).replace(/0$/, "") + "x"
                         font.pixelSize: Theme.px(12)
-                        font.weight: Font.Medium
+                        font.weight: Font.DemiBold
                         color: selected ? Theme.colors.accentText
                             : Theme.withAlpha(Theme.colors.text, 0.70)
                     }

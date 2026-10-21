@@ -61,7 +61,7 @@ CcPage {
                 ColumnLayout {
                     Layout.fillWidth: true
                     spacing: 1
-                    Label { text: "Night Light"; font.pixelSize: Theme.px(13); font.weight: Font.Medium; color: Theme.colors.text }
+                    Label { text: "Night Light"; font.pixelSize: Theme.px(13); font.weight: Font.DemiBold; color: Theme.colors.text }
                     Label {
                         text: NightLight.enabled ? NightLight.temperature + " K" : "Off"
                         font.pixelSize: Theme.px(12)

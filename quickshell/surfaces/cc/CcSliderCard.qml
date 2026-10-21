@@ -36,7 +36,7 @@ Rectangle {
             Label {
                 text: card.label
                 font.pixelSize: Theme.px(13)
-                font.weight: Font.DemiBold
+                font.weight: Font.Bold
                 color: Theme.colors.text
                 Layout.fillWidth: true
             }

@@ -160,7 +160,7 @@ PopupPanel {
             Label {
                 text: "Clipboard Manager"
                 font.pixelSize: Theme.px(15)
-                font.weight: Font.Medium
+                font.weight: Font.DemiBold
                 color: Theme.withAlpha(Theme.colors.text, 0.95)
             }
             Item { Layout.fillWidth: true }

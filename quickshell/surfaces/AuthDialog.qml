@@ -110,7 +110,7 @@ PopupPanel {
                     Layout.fillWidth: true
                     Layout.fillHeight: true
                     verticalAlignment: TextInput.AlignVCenter
-                    font.family: "SF Pro Display"
+                    font.family: Theme.fontFamily
                     font.pixelSize: Theme.px(14)
                     color: Theme.withAlpha(Theme.colors.text, 0.92)
                     selectionColor: Theme.withAlpha(Theme.colors.accent, 0.35)

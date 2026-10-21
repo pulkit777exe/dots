@@ -58,7 +58,7 @@ CcPage {
                     Layout.fillWidth: true
                     text: Wifi.ssid
                     font.pixelSize: Theme.px(13)
-                    font.weight: Font.DemiBold
+                    font.weight: Font.Bold
                     color: Theme.colors.text
                     elide: Text.ElideRight
                 }

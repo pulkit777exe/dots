@@ -59,7 +59,7 @@ Rectangle {
                 Layout.fillWidth: true
                 text: pill.title
                 font.pixelSize: Theme.px(13)
-                font.weight: Font.DemiBold
+                font.weight: Font.Bold
                 color: Theme.colors.text
                 elide: Text.ElideRight
             }

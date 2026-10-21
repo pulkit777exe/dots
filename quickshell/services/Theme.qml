@@ -43,6 +43,8 @@ Singleton {
 
     readonly property color panelFill: colors.background
     readonly property color shadowTint: "#000000"
+    // Single source for the UI typeface (see components/Label.qml).
+    readonly property string fontFamily: "SF Pro Display"
     readonly property QtObject cc: QtObject {
         readonly property color surface: root.colors.background
         readonly property color card: root.colors.surface

@@ -44,7 +44,7 @@ RowLayout {
         Layout.fillWidth: true
         text: header.title
         font.pixelSize: Theme.px(18)
-        font.weight: Font.DemiBold
+        font.weight: Font.Bold
         color: Theme.colors.text
         elide: Text.ElideRight
     }

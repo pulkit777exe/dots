@@ -121,7 +121,7 @@ Item {
             anchors { left: parent.left; top: parent.top; leftMargin: 14; topMargin: 13 }
             text: "Notifications"
             font.pixelSize: Theme.px(12)
-            font.weight: Font.Medium
+            font.weight: Font.DemiBold
             color: Theme.withAlpha(Theme.colors.text, 0.55)
         }
 

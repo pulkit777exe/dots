@@ -171,6 +171,7 @@ ColumnLayout {
                             id: pwInput
                             anchors.fill: parent
                             verticalAlignment: TextInput.AlignVCenter
+                            font.family: Theme.fontFamily
                             font.pixelSize: Theme.px(13)
                             color: Theme.colors.text
                             echoMode: TextInput.Password
