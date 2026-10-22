@@ -105,18 +105,12 @@ PopupPanel {
                 anchors.rightMargin: 6
                 spacing: 6
 
-                TextInput {
+                TextField {
                     id: pass
                     Layout.fillWidth: true
                     Layout.fillHeight: true
-                    verticalAlignment: TextInput.AlignVCenter
-                    font.family: Theme.fontFamily
-                    font.pixelSize: Theme.px(14)
-                    color: Theme.withAlpha(Theme.colors.text, 0.92)
-                    selectionColor: Theme.withAlpha(Theme.colors.accent, 0.35)
                     echoMode: root.showPassword ? TextInput.Normal : TextInput.Password
                     passwordCharacter: "•"
-                    clip: true
 
                     Keys.onReturnPressed: root.submit()
                     Keys.onEnterPressed: root.submit()

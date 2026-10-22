@@ -167,13 +167,10 @@ ColumnLayout {
                         Layout.fillWidth: true
                         Layout.preferredHeight: 30
 
-                        TextInput {
+                        TextField {
                             id: pwInput
                             anchors.fill: parent
-                            verticalAlignment: TextInput.AlignVCenter
-                            font.family: Theme.fontFamily
-                            font.pixelSize: Theme.px(13)
-                            color: Theme.colors.text
+                            textSize: 13
                             echoMode: TextInput.Password
                             onAccepted: joinBtn.clicked()
                         }

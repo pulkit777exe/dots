@@ -117,19 +117,13 @@ ColumnLayout {
                     : Theme.withAlpha(Theme.colors.text, 0.12)
                 border.width: 1
 
-                TextInput {
+                TextField {
                     id: chargeField
                     anchors.fill: parent
                     anchors.leftMargin: 12
                     anchors.rightMargin: 12
-                    verticalAlignment: TextInput.AlignVCenter
-                    font.family: Theme.fontFamily
-                    font.pixelSize: Theme.px(14)
-                    color: Theme.withAlpha(Theme.colors.text, 0.92)
-                    selectionColor: Theme.withAlpha(Theme.colors.accent, 0.35)
                     validator: IntValidator { bottom: 40; top: 100 }
                     inputMethodHints: Qt.ImhDigitsOnly
-                    clip: true
 
                     function commit() {
                         if (text.length > 0)

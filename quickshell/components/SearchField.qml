@@ -42,15 +42,9 @@ Rectangle {
             Layout.fillWidth: true
             Layout.fillHeight: true
 
-            TextInput {
+            TextField {
                 id: input
                 anchors.fill: parent
-                verticalAlignment: TextInput.AlignVCenter
-                font.family: Theme.fontFamily
-                font.pixelSize: Theme.px(14)
-                color: Theme.withAlpha(Theme.colors.text, 0.92)
-                clip: true
-                selectionColor: Theme.withAlpha(Theme.colors.accent, 0.35)
 
                 Keys.onReturnPressed: root.accepted()
                 Keys.onEnterPressed: root.accepted()
