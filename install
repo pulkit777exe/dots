@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# One-shot installer for a fresh Fedora machine.
+#
+#   ./install
+#
+# Installs packages and session components, links configs, generates runtime
+# state, installs fonts/theme where possible, and verifies the result.
+# Idempotent and safe to re-run. No manual setup should be required beyond
+# running this command (font licensing may still require an optional manual
+# SF Pro download; the desktop works without it).
+
+set -euo pipefail
+
+REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+exec bash "$REPO_DIR/scripts/setup.sh" --all --yes "$@"

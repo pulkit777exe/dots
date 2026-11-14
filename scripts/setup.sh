@@ -289,47 +289,41 @@ ensure_pam_keyring() {
     echo "-session   optional      pam_gnome_keyring.so auto_start" | sudo tee -a "$pam" >/dev/null
 }
 
-ensure_charge_helper() {
-    # Battery charge limit without a polkit round-trip: interactive polkit
-    # cannot work until desktop processes join a logind session (see
-    # SECURITY.md), so the slider uses a root-owned, validated helper plus
-    # a NOPASSWD sudoers entry scoped to that one path. The helper keeps
-    # validating 40-100 itself, so the sudoers line grants nothing broader.
-    local node=""
-    for f in /sys/class/power_supply/BAT*/charge_control_end_threshold; do
-        [ -e "$f" ] && { node="$f"; break; }
-    done
-    if [ -z "$node" ]; then
-        log "no charge-control node — skipping the charge-limit helper"
-        return 0
-    fi
-    local src="$REPO_DIR/quickshell/scripts/set-charge-limit.sh"
-    local dst=/usr/local/bin/dots-set-charge-limit
-    local rules=/etc/sudoers.d/dots-charge-limit
+ensure_system_services() {
     if [ "$DRY_RUN" -eq 1 ]; then
-        log "would run: install $dst (root-owned) + $rules for $USER"
+        log "would run: enable core system services when present (NetworkManager, bluetooth, upower, power-profiles-daemon)"
+        log "would run: enable user audio session targets when possible (pipewire, wireplumber, pipewire-pulse)"
         return 0
     fi
+    if ! command -v systemctl >/dev/null 2>&1 || [ ! -d /run/systemd/system ]; then
+        warn "no systemd — skipping service enablement"
+        return 0
+    fi
+
     require_tty
-    if [ -f "$dst" ] && cmp -s "$src" "$dst"; then
-        log "charge-limit helper already installed"
-    else
-        log "installing charge-limit helper to $dst"
-        sudo install -o root -g root -m 0755 "$src" "$dst"
-    fi
-    local want1="$USER ALL=(root) NOPASSWD: $dst [4-9][0-9]"
-    local want2="$USER ALL=(root) NOPASSWD: $dst 100"
-    if [ -f "$rules" ] && grep -qxF "$want1" "$rules" && grep -qxF "$want2" "$rules"; then
-        log "charge-limit sudoers already in place"
-    else
-        log "granting $USER passwordless $dst (validated 40-100 only)"
-        local tmp
-        tmp="$(mktemp)"
-        trap 'rm -f "$tmp"' RETURN
-        printf '%s\n%s\n' "$want1" "$want2" > "$tmp"
-        sudo visudo -c -f "$tmp" >/dev/null
-        sudo install -o root -g root -m 0440 "$tmp" "$rules"
-    fi
+    for svc in NetworkManager.service bluetooth.service upower.service power-profiles-daemon.service; do
+        if systemctl list-unit-files "$svc" >/dev/null 2>&1; then
+            if systemctl is-enabled --quiet "$svc" 2>/dev/null; then
+                log "service enabled: $svc"
+            else
+                log "enabling $svc"
+                sudo systemctl enable --now "$svc" 2>/dev/null || sudo systemctl enable "$svc" || warn "could not enable $svc"
+            fi
+        fi
+    done
+
+    # User audio stack: best effort (may require an active user session/bus).
+    for usvc in pipewire.service pipewire-pulse.service wireplumber.service pipewire.socket pipewire-pulse.socket wireplumber.service; do
+        if systemctl --user list-unit-files "$usvc" >/dev/null 2>&1; then
+            if systemctl --user is-enabled --quiet "$usvc" 2>/dev/null; then
+                log "user service enabled: $usvc"
+            else
+                systemctl --user enable --now "$usvc" >/dev/null 2>&1 \
+                    || systemctl --user enable "$usvc" >/dev/null 2>&1 \
+                    || true
+            fi
+        fi
+    done
 }
 
 if [ "$WANT_DESKTOP" -eq 1 ]; then
@@ -350,6 +344,7 @@ if [ "$WANT_DESKTOP" -eq 1 ]; then
     fi
     ensure_pam_keyring
     ensure_charge_helper
+    ensure_system_services
 fi
 
 if [ "$WANT_SESSION" -eq 1 ]; then
@@ -396,6 +391,7 @@ if [ "$WANT_SESSION" -eq 1 ]; then
         else
             warn "python3 -c 'import xdg' failed — uwsm sessions need python3-pyxdg"
         fi
+        ensure_pam_keyring
     fi
 fi
 
@@ -461,7 +457,7 @@ if [ "$WANT_SHELL" -eq 1 ]; then
     else
         require_tty
         if [ "$ASSUME_YES" -eq 1 ] || confirm "Make zsh your login shell?"; then
-            chsh -s "$(command -v zsh)" && log "login shell is now zsh (takes effect on next login)"
+            chsh -s "$(command -v zsh)" && log "login shell is now zsh (takes effect on next login)" || warn "could not change login shell automatically (run: chsh -s \"$(command -v zsh)\")"
         else
             warn "left the login shell as ${SHELL:-unknown}"
         fi

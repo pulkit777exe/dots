@@ -49,6 +49,7 @@ while [ $# -gt 0 ]; do
         --dry-run)   DRY_RUN=1 ;;
         --check)     CHECK_ONLY=1 ;;
         -y|--yes)    ASSUME_YES=1 ;;
+        --full)      FULL_INSTALL=1 ;;
         -h|--help)   usage; exit 0 ;;
         *)           err "unknown argument: $1"; usage >&2; exit 2 ;;
     esac
@@ -221,6 +222,10 @@ check_session() {
 
     if [ ! -e "$HOME/.zshrc.local" ]; then
         warn "home: .zshrc.local not present — secrets stay out of the repo; copy zsh/.zshrc.local.example there if you need API keys"
+        if [ "$CHECK_ONLY" -eq 0 ] && [ "$DRY_RUN" -eq 0 ] && [ -f "$REPO_DIR/zsh/.zshrc.local.example" ]; then
+            cp "$REPO_DIR/zsh/.zshrc.local.example" "$HOME/.zshrc.local"
+            log "created ~/.zshrc.local from template"
+        fi
     fi
 
 
@@ -412,6 +417,7 @@ main() {
             run python3 "$CONFIG_DIR/quickshell/scripts/list-themes.py" >/dev/null || warn "list-themes.py failed — run it by hand"
             run python3 "$CONFIG_DIR/quickshell/scripts/publish-colors.py" || warn "publish-colors.py failed — run it by hand"
             run python3 "$CONFIG_DIR/quickshell/scripts/generate-hypridle-conf.py" || warn "generate-hypridle-conf.py failed — run it by hand"
+            run python3 "$CONFIG_DIR/quickshell/scripts/generate-hypr-conf.py" || warn "generate-hypr-conf.py failed — run it by hand"
         fi
         if command -v lua >/dev/null 2>&1; then
             run lua "$CONFIG_DIR/hypr/hyprlock.lua" || warn "hyprlock.conf not generated — run it by hand"

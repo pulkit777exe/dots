@@ -61,19 +61,14 @@ for arg in "$@"; do
     case "$arg" in
         -h|--help)
             cat <<'USAGE'
-usage: bootstrap.sh [install.sh options]
+usage: bootstrap.sh [--check] [--dry-run]
 
-Clones/updates the dots repo into $DOTS_DIR (default ~/dots) and runs
-install.sh, which symlinks each config unit into ~/.config.
+Clones/updates the dots repo into $DOTS_DIR (default ~/dots) and runs the
+one-shot installer.
 
   -h, --help    show this message without cloning anything
-
-Any other arguments are passed straight through to install.sh, so
---dry-run, --check and --yes all work here:
-
-    bootstrap.sh --dry-run    preview, change nothing
-    bootstrap.sh --check      verify an existing install
-    bootstrap.sh --yes        relocate existing configs without prompting
+  --check       verify an existing install without changing anything
+  --dry-run     show the install plan without changing anything
 
 Environment:
   DOTS_REPO_URL   override the repository URL
@@ -124,9 +119,23 @@ else
     fi
 fi
 
-log "installing configs"
-bash "$CLONE_DIR/install.sh" "$@"
+for arg in "$@"; do
+    [ "$arg" = "--check" ] && CHECK_ONLY=1
+    [ "$arg" = "--dry-run" ] && DRY_RUN=1
+done
+
+if [ "${CHECK_ONLY:-0}" -eq 1 ]; then
+    log "verifying install"
+    bash "$CLONE_DIR/install.sh" --check
+else
+    log "running one-shot install"
+    if [ "${DRY_RUN:-0}" -eq 1 ]; then
+        bash "$CLONE_DIR/install" --dry-run
+    else
+        bash "$CLONE_DIR/install"
+    fi
+fi
 
 echo
-log "next: log out, pick the Hyprland session, log back in"
-log "then verify with: $CLONE_DIR/install.sh --check"
+log "done — log out, pick the Hyprland session, and log back in if needed"
+log "verify with: $CLONE_DIR/install.sh --check"
