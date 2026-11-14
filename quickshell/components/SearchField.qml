@@ -48,7 +48,7 @@ Rectangle {
 
                 Keys.onReturnPressed: root.accepted()
                 Keys.onEnterPressed: root.accepted()
-                Keys.onEscapePressed: { UiState.closeAll(); event.accepted = true; }
+                Keys.onEscapePressed: (event) => { UiState.closeAll(); event.accepted = true; }
                 Keys.onPressed: (event) => {
                     if (event.key === Qt.Key_Left && root.externalNavigation) {
                         root.navigateLeft(); event.accepted = true;

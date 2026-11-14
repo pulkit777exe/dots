@@ -98,7 +98,10 @@ ColumnLayout {
                         MouseArea {
                             anchors.fill: parent
                             cursorShape: Qt.PointingHandCursor
-                            onClicked: Config.set("accentOverride", swatch.modelData)
+                            onClicked: {
+                                Config.set("accentOverride", swatch.modelData);
+                                Theme.publish(Theme.currentName);
+                            }
                         }
                     }
                 }

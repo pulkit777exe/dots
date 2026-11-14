@@ -9,7 +9,8 @@ ColumnLayout {
     spacing: 12
 
     readonly property var searchKeys: ["display", "monitor", "screen",
-        "brightness", "scale", "resolution", "night light", "temperature"]
+        "brightness", "scale", "resolution", "refresh", "rotation", "transform",
+        "night light", "temperature"]
 
     SettingsHeader {
         icon: "monitor"

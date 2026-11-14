@@ -10,24 +10,47 @@ Singleton {
     property bool available: false
     property bool enabled: false
     property int temperature: 4000
+    property bool restored: false
+
+    function restoreFromConfig() {
+        enabled = Config.nightLightEnabled;
+        temperature = Config.nightLightTemperature;
+        restored = true;
+        if (available && enabled) apply();
+    }
 
     function toggle() { setEnabled(!enabled); }
 
-    function setEnabled(value: bool) {
+    function save() {
+        Config.set("nightLightEnabled", enabled);
+        Config.set("nightLightTemperature", temperature);
+    }
+
+    function apply() {
         if (!available) return;
-        enabled = value;
-        setter.command = value
+        setter.command = enabled
             ? ["hyprctl", "hyprsunset", "temperature", String(temperature)]
             : ["hyprctl", "hyprsunset", "identity"];
         setter.running = true;
     }
 
+    function setEnabled(value: bool) {
+        enabled = value;
+        save();
+        if (available) apply();
+    }
+
     function setTemperature(k: int) {
-        temperature = k;
-        if (available && enabled) {
-            setter.command = ["hyprctl", "hyprsunset", "temperature", String(k)];
-            setter.running = true;
-        }
+        temperature = Math.max(1000, Math.min(6500, Math.round(k)));
+        save();
+        if (available && enabled) apply();
+    }
+
+    onAvailableChanged: if (available && restored && enabled) apply()
+
+    Connections {
+        target: Config
+        function onLoadedChanged() { if (Config.loaded) root.restoreFromConfig(); }
     }
 
     Process { id: setter; onExited: (code) => { if (code !== 0) console.warn("NightLight: failed, exit", code); } }
@@ -39,7 +62,10 @@ Singleton {
             onRead: (line) => { if (line.trim() === "yes") root.available = true; }
         }
     }
-    Component.onCompleted: probe.running = true
+    Component.onCompleted: {
+        probe.running = true;
+        if (Config.loaded) restoreFromConfig();
+    }
 
     IpcHandler {
         target: "nightlight"

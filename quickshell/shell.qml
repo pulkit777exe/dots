@@ -181,7 +181,7 @@ ShellRoot {
             anchors { top: true; bottom: true; left: true; right: true }
             exclusiveZone: -1
             color: "transparent"
-            WlrLayershell.layer: WlrLayer.Top
+            WlrLayershell.layer: WlrLayer.Overlay
             WlrLayershell.namespace: "quickshell-settings"
 
             focusable: UiState.settingsOpen

@@ -190,15 +190,31 @@ Singleton {
         onExited: infoProc.running = true
     }
 
-    function applyMonitor(name: string, mode: string, scale: real) {
+    function applyMonitor(name: string, mode: string, scale: real, transform: int) {
+        const t = (transform === undefined || transform === null) ? 0 : transform;
         Quickshell.execDetached(["hyprctl", "eval",
             "hl.monitor({ output = \"" + name + "\", mode = \"" + mode
-            + "\", position = \"auto\", scale = " + scale + " })"]);
+            + "\", position = \"auto\", scale = " + scale + ", transform = " + t + " })"]);
         infoProc.running = true;
     }
 
+    function setMonitorConfig(name: string, opts) {
+        const monitors = Object.assign({}, Config.monitors || {});
+        const entry = Object.assign({}, monitors[name] || {});
+        const mode = (opts && opts.mode) || entry.mode || "preferred";
+        const scale = (opts && opts.scale !== undefined) ? opts.scale : (entry.scale || 1.0);
+        const transform = (opts && opts.transform !== undefined) ? opts.transform : (entry.transform || 0);
+        entry.mode = mode;
+        entry.scale = scale;
+        entry.transform = transform;
+        monitors[name] = entry;
+        Config.set("monitors", monitors);
+        root.applyMonitor(name, mode, scale, transform);
+        HyprSettings.apply();
+    }
+
     function setMonitorScale(name: string, scale: real) {
-        root.applyMonitor(name, "preferred", scale);
+        root.setMonitorConfig(name, { scale: scale });
     }
 
     IpcHandler {

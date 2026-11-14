@@ -55,6 +55,39 @@ Singleton {
 
     readonly property int currentPage: data.currentPage
 
+    readonly property int gapsIn: data.gapsIn
+    readonly property int gapsOut: data.gapsOut
+    readonly property int borderSize: data.borderSize
+    readonly property int rounding: data.rounding
+    readonly property real activeOpacity: data.activeOpacity
+    readonly property real inactiveOpacity: data.inactiveOpacity
+    readonly property bool dimInactive: data.dimInactive
+    readonly property real dimStrength: data.dimStrength
+    readonly property bool shadowEnabled: data.shadowEnabled
+    readonly property int shadowRange: data.shadowRange
+    readonly property bool blurEnabled: data.blurEnabled
+    readonly property int blurSize: data.blurSize
+    readonly property int blurPasses: data.blurPasses
+    readonly property bool animationsEnabled: data.animationsEnabled
+
+    readonly property string kbLayout: data.kbLayout
+    readonly property string kbVariant: data.kbVariant
+    readonly property int repeatRate: data.repeatRate
+    readonly property int repeatDelay: data.repeatDelay
+    readonly property bool numlock: data.numlock
+    readonly property real sensitivity: data.sensitivity
+    readonly property string accelProfile: data.accelProfile
+    readonly property bool naturalScroll: data.naturalScroll
+    readonly property bool tapToClick: data.tapToClick
+    readonly property bool disableWhileTyping: data.disableWhileTyping
+    readonly property string scrollMethod: data.scrollMethod
+
+    readonly property var monitors: data.monitors
+    readonly property var autostart: data.autostart
+
+    readonly property bool nightLightEnabled: data.nightLightEnabled
+    readonly property int nightLightTemperature: data.nightLightTemperature
+
     function set(key: string, value) {
         data[key] = value;
         save();
@@ -113,6 +146,35 @@ Singleton {
             property int cDisplayTimeoutSec: 600
             property int cSuspendTimeoutSec: 1800
             property int currentPage: 0
+            property int gapsIn: 5
+            property int gapsOut: 10
+            property int borderSize: 2
+            property int rounding: 10
+            property real activeOpacity: 1.0
+            property real inactiveOpacity: 1.0
+            property bool dimInactive: true
+            property real dimStrength: 0.25
+            property bool shadowEnabled: true
+            property int shadowRange: 4
+            property bool blurEnabled: true
+            property int blurSize: 7
+            property int blurPasses: 2
+            property bool animationsEnabled: true
+            property string kbLayout: "us"
+            property string kbVariant: ""
+            property int repeatRate: 25
+            property int repeatDelay: 600
+            property bool numlock: true
+            property real sensitivity: 0
+            property string accelProfile: "adaptive"
+            property bool naturalScroll: false
+            property bool tapToClick: true
+            property bool disableWhileTyping: true
+            property string scrollMethod: "two_finger"
+            property var monitors: ({})
+            property var autostart: []
+            property bool nightLightEnabled: false
+            property int nightLightTemperature: 4000
         }
     }
 }
