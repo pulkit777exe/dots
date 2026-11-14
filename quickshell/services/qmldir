@@ -19,3 +19,4 @@ singleton ChargeLimit 1.0 ChargeLimit.qml
 singleton Idle 1.0 Idle.qml
 singleton Tray 1.0 Tray.qml
 singleton Auth 1.0 Auth.qml
+singleton HyprSettings 1.0 HyprSettings.qml

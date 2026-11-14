@@ -22,9 +22,8 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from lib import config_home, load_json, state_home  # noqa: E402
+from lib import config_home, load_settings  # noqa: E402
 
-STATE_HOME = state_home()
 CONF = config_home() / "hypr" / "hypridle.conf"
 # lock_cmd must point at the same tree this file lands in (hypridle.conf
 # itself may live under a custom XDG_CONFIG_HOME, and hyprlock expands ~).
@@ -44,27 +43,6 @@ DEFAULTS = {
     "cDisplayTimeoutSec": 600,
     "cSuspendTimeoutSec": 1800,
 }
-
-
-def candidate_settings_paths() -> list[Path]:
-    root = STATE_HOME / "quickshell"
-    # The shell writes per-instance state (Quickshell.statePath resolves
-    # under by-shell/<id>/), so take the most recently modified copy. The
-    # flat path stays as a fallback for fresh checkouts and tests.
-    by_shell = sorted(
-        root.glob("by-shell/*/settings.json"),
-        key=lambda p: p.stat().st_mtime,
-        reverse=True,
-    )
-    return [*by_shell, root / "settings.json"]
-
-
-def load_settings() -> dict:
-    for path in candidate_settings_paths():
-        data = load_json(path, None)
-        if isinstance(data, dict):
-            return data
-    return {}
 
 
 def timeout_of(settings: dict, key: str) -> int:

@@ -32,6 +32,30 @@ def colors_dir() -> Path:
     return config_home() / "colors"
 
 
+def candidate_settings_paths() -> list[Path]:
+    """Settings files, newest first.
+
+    Quickshell writes per-instance state under by-shell/<id>/, so the most
+    recently modified copy wins. The flat path is a fallback for tests and
+    older checkouts.
+    """
+    root = state_home() / "quickshell"
+    by_shell = sorted(
+        root.glob("by-shell/*/settings.json"),
+        key=lambda p: p.stat().st_mtime,
+        reverse=True,
+    )
+    return [*by_shell, root / "settings.json"]
+
+
+def load_settings() -> dict:
+    for path in candidate_settings_paths():
+        data = load_json(path, None)
+        if isinstance(data, dict):
+            return data
+    return {}
+
+
 def load_json(path: Path, default):
     """Read JSON, returning default on any failure (missing/corrupt)."""
     try:

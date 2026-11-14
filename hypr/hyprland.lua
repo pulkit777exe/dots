@@ -26,8 +26,16 @@ for _, m in ipairs({
     "modules.keybinds.screenshots", "modules.keybinds.media", "modules.keybinds.quickshell",
 }) do require(m) end
 
+local state_home = os.getenv("XDG_STATE_HOME") or (os.getenv("HOME") .. "/.local/state")
+try_require(state_home .. "/quickshell/hypr.lua")
+
+local plugin = os.getenv("HOME") .. "/.local/lib/hyprglass/hyprglass.so"
 hl.on("hyprland.start", function()
-    hl.exec_cmd("hyprctl plugin load /home/pulkit/.local/lib/hyprglass/hyprglass.so")
+    local f = io.open(plugin, "r")
+    if f then
+        f:close()
+        hl.exec_cmd("hyprctl plugin load " .. plugin .. " >/dev/null 2>&1 || true")
+    end
 end)
 
 try_require(conf_home .. "/hypr/hyprlock.lua")

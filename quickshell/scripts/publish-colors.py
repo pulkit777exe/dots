@@ -9,7 +9,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from lib import colors_dir, config_home, data_home, hex_to_rgb  # noqa: E402
+from lib import colors_dir, config_home, data_home, hex_to_rgb, load_settings  # noqa: E402
 
 COLORS_DIR = colors_dir()
 ICONS_DIR = data_home() / "icons" / "dots"
@@ -394,6 +394,15 @@ def resolve_theme(cli_theme: str | None) -> str:
             pass
     return DEFAULT_THEME
 
+def apply_accent_override(colors: dict) -> dict:
+    settings = load_settings()
+    override = settings.get("accentOverride", "")
+    if isinstance(override, str) and len(override.lstrip("#")) in (6, 8):
+        out = dict(colors)
+        out["accent"] = override if override.startswith("#") else "#" + override
+        return out
+    return colors
+
 def load_theme_palette(theme: str) -> dict:
 
     path = COLORS_DIR / "themes" / theme / "colors.json"
@@ -406,7 +415,7 @@ def load_theme_palette(theme: str) -> dict:
 
 def main():
     theme = resolve_theme(sys.argv[1] if len(sys.argv) > 1 else None)
-    colors = load_theme_palette(theme)
+    colors = apply_accent_override(load_theme_palette(theme))
     COLORS_DIR.mkdir(parents=True, exist_ok=True)
 
     if INDEX_JSON.is_file():
@@ -424,6 +433,7 @@ def main():
     write_gtk(COLORS_DIR / "gtk.css", colors)
     write_kitty(COLORS_DIR / "kitty.conf", colors)
 
+    run(["python3", str(config_home() / "quickshell" / "scripts" / "generate-hypr-conf.py")])
     apply_live(colors)
     print(json.dumps({"ok": True, "theme": theme, "accent": colors["accent"]}))
 
