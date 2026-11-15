@@ -363,28 +363,35 @@ ensure_system_services() {
 
     require_tty
     for svc in NetworkManager.service bluetooth.service upower.service power-profiles-daemon.service; do
-        if systemctl list-unit-files "$svc" >/dev/null 2>&1; then
+        if systemctl cat "$svc" >/dev/null 2>&1; then
             if systemctl is-enabled --quiet "$svc" 2>/dev/null; then
                 log "service enabled: $svc"
             else
                 log "enabling $svc"
-                sudo systemctl enable --now "$svc" 2>/dev/null || sudo systemctl enable "$svc" || warn "could not enable $svc"
+                # Prefer enabling for future boots; start now when possible without failing install.
+                sudo systemctl enable "$svc" >/dev/null 2>&1 || warn "could not enable $svc"
+                sudo systemctl start "$svc" >/dev/null 2>&1 || true
             fi
+        else
+            info "service not present (skipping): $svc"
         fi
     done
 
     # User audio stack: best effort (may require an active user session/bus).
-    for usvc in pipewire.socket pipewire-pulse.socket wireplumber.service; do
-        if systemctl --user list-unit-files "$usvc" >/dev/null 2>&1; then
-            if systemctl --user is-enabled --quiet "$usvc" 2>/dev/null; then
-                log "user service enabled: $usvc"
-            else
-                systemctl --user enable --now "$usvc" >/dev/null 2>&1 \
-                    || systemctl --user enable "$usvc" >/dev/null 2>&1 \
-                    || true
+    if systemctl --user show-environment >/dev/null 2>&1; then
+        for usvc in pipewire.socket pipewire-pulse.socket wireplumber.service; do
+            if systemctl --user cat "$usvc" >/dev/null 2>&1; then
+                if systemctl --user is-enabled --quiet "$usvc" 2>/dev/null; then
+                    log "user service enabled: $usvc"
+                else
+                    systemctl --user enable "$usvc" >/dev/null 2>&1 || true
+                    systemctl --user start "$usvc" >/dev/null 2>&1 || true
+                fi
             fi
-        fi
-    done
+        done
+    else
+        info "no user systemd session bus — skipping user audio service enablement (will apply on login)"
+    fi
 }
 
 if [ "$WANT_DESKTOP" -eq 1 ]; then

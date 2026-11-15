@@ -118,6 +118,40 @@ check_font() {
     return 0
 }
 
+check_core_services() {
+    local rc=0
+    if [ ! -d /run/systemd/system ] || ! command -v systemctl >/dev/null 2>&1; then
+        warn "no systemd — skipping service checks"
+        return 0
+    fi
+    echo
+    log "verifying core services (actionable)"
+    local svc
+    for svc in NetworkManager.service upower.service power-profiles-daemon.service bluetooth.service; do
+        if ! systemctl list-unit-files "$svc" >/dev/null 2>&1; then
+            info "service not installed/present: $svc (optional depending on hardware)"
+            continue
+        fi
+        if systemctl is-enabled --quiet "$svc" 2>/dev/null || systemctl is-active --quiet "$svc" 2>/dev/null; then
+            log "service ok: $svc ($(systemctl is-enabled "$svc" 2>/dev/null || echo unknown)/$(systemctl is-active "$svc" 2>/dev/null || echo unknown))"
+        else
+            warn "service not enabled/active: $svc — enable with: sudo systemctl enable --now $svc"
+        fi
+    done
+    for svc in pipewire.socket pipewire-pulse.socket wireplumber.service; do
+        if ! systemctl --user list-unit-files "$svc" >/dev/null 2>&1; then
+            info "user service not present: $svc (audio stack may differ)"
+            continue
+        fi
+        if systemctl --user is-enabled --quiet "$svc" 2>/dev/null || systemctl --user is-active --quiet "$svc" 2>/dev/null; then
+            log "user service ok: $svc"
+        else
+            warn "user service not enabled/active: $svc — enable with: systemctl --user enable --now $svc"
+        fi
+    done
+    return "$rc"
+}
+
 check_boot_session() {
     local rc=0
     if [ ! -d /run/systemd/system ] || ! command -v systemctl >/dev/null 2>&1; then
@@ -241,6 +275,39 @@ check_session() {
         fi
     fi
 
+    local state_home="${XDG_STATE_HOME:-$HOME/.local/state}"
+    local runtime_hypr="$state_home/quickshell/hypr.lua"
+    local runtime_idle="$CONFIG_DIR/hypr/hypridle.conf"
+    local runtime_lock="$CONFIG_DIR/hypr/hyprlock.conf"
+    if [ -s "$runtime_hypr" ]; then
+        log "generated: $runtime_hypr"
+    else
+        warn "generated runtime file missing: $runtime_hypr (run ./install or ./dots link/apply flow)"
+        fail=1
+    fi
+    if [ -s "$runtime_idle" ]; then
+        log "generated: $runtime_idle"
+    else
+        warn "generated runtime file missing: $runtime_idle"
+        fail=1
+    fi
+    if [ -s "$runtime_lock" ]; then
+        log "generated: $runtime_lock"
+    else
+        warn "generated runtime file missing: $runtime_lock"
+    fi
+    if [ -d "$state_home/dots/migrations" ]; then
+        log "state dir: $state_home/dots/migrations"
+    fi
+    if [ -x "$REPO_DIR/scripts/migrate.sh" ]; then
+        if pending_migs="$(bash "$REPO_DIR/scripts/migrate.sh" --pending 2>/dev/null)"; then
+            if [ -n "$pending_migs" ]; then
+                warn "pending migrations:"
+                printf '%s\n' "$pending_migs" | sed 's/^/   - /' >&2
+            fi
+        fi
+    fi
+
     if command -v qs >/dev/null 2>&1; then
         if ipc_show="$(qs -p "$CONFIG_DIR/quickshell" ipc show 2>/dev/null)" && [ -n "$ipc_show" ]; then
             missing_targets=""
@@ -307,6 +374,7 @@ check_session() {
         warn "missing optional (features degrade): ${MISSING_OPTIONAL[*]}"
     fi
 
+    check_core_services || fail=1
     check_boot_session || fail=1
 
     local state_log="${XDG_STATE_HOME:-$HOME/.local/state}/hypr/config-errors.log"
@@ -347,7 +415,7 @@ main() {
 
     if [ "$CHECK_ONLY" -eq 0 ]; then
         echo
-        log "linking configs"
+        phase "deploy: link configs"
         for u in "${UNITS[@]}"; do
             backup_and_link "$REPO_DIR/$u" "$CONFIG_DIR/$u" || true
         done
@@ -359,7 +427,7 @@ main() {
     fi
 
     echo
-    log "checking runtime dependencies (see README.md > needs)"
+    phase "verify: dependencies and runtime"
     echo
     log "required runtime"
     check_bin hyprland "sudo dnf copr enable nett00n/hyprland && sudo dnf install hyprland (or run scripts/setup.sh)"
@@ -412,18 +480,59 @@ main() {
 
     if [ "$CHECK_ONLY" -eq 0 ] && [ "$DRY_RUN" -eq 0 ]; then
         echo
-        log "generating derived state (palette outputs + hyprlock.conf)"
+        phase "apply: migrations and generated state"
+        mkdir -p "$(dots_state_dir)" "$(dots_migration_dir)" "$(dots_log_dir)" "${XDG_STATE_HOME:-$HOME/.local/state}/quickshell" "$CONFIG_DIR/hypr" "$CONFIG_DIR/colors" 2>/dev/null || true
+        if [ -x "$REPO_DIR/scripts/migrate.sh" ] || [ -f "$REPO_DIR/scripts/migrate.sh" ]; then
+            bash "$REPO_DIR/scripts/migrate.sh" || warn "migrations reported an issue (continuing)"
+        fi
+
+        log "generating derived state (themes/colors, hypr overrides, idle/lock config)"
         if command -v python3 >/dev/null 2>&1; then
             run python3 "$CONFIG_DIR/quickshell/scripts/list-themes.py" >/dev/null || warn "list-themes.py failed — run it by hand"
             run python3 "$CONFIG_DIR/quickshell/scripts/publish-colors.py" || warn "publish-colors.py failed — run it by hand"
             run python3 "$CONFIG_DIR/quickshell/scripts/generate-hypridle-conf.py" || warn "generate-hypridle-conf.py failed — run it by hand"
             run python3 "$CONFIG_DIR/quickshell/scripts/generate-hypr-conf.py" || warn "generate-hypr-conf.py failed — run it by hand"
+        else
+            warn "python3 not found — generated runtime state was not refreshed"
         fi
         if command -v lua >/dev/null 2>&1; then
             run lua "$CONFIG_DIR/hypr/hyprlock.lua" || warn "hyprlock.conf not generated — run it by hand"
         else
             warn "lua not found — hyprlock.conf not generated (sudo dnf install lua)"
         fi
+
+        # Critical runtime artifacts (scaled gate): missing/broken generated state
+        # can leave Hyprland/idle behavior degraded or unusable.
+        local state_home="${XDG_STATE_HOME:-$HOME/.local/state}"
+        local crit_fail=0
+        if [ ! -s "$state_home/quickshell/hypr.lua" ]; then
+            err "critical: missing generated $state_home/quickshell/hypr.lua"
+            crit_fail=1
+        else
+            log "generated: ${state_home}/quickshell/hypr.lua"
+        fi
+        if [ ! -s "$CONFIG_DIR/hypr/hypridle.conf" ]; then
+            err "critical: missing generated $CONFIG_DIR/hypr/hypridle.conf"
+            crit_fail=1
+        else
+            log "generated: ${CONFIG_DIR}/hypr/hypridle.conf"
+        fi
+        if [ ! -s "$CONFIG_DIR/hypr/hyprlock.conf" ]; then
+            warn "missing generated $CONFIG_DIR/hypr/hyprlock.conf (lock screen may not work as configured)"
+        else
+            log "generated: ${CONFIG_DIR}/hypr/hyprlock.conf"
+        fi
+        if [ "$crit_fail" -ne 0 ]; then
+            err "critical generated-state verification failed"
+            return 1
+        fi
+    elif [ "$DRY_RUN" -eq 1 ]; then
+        echo
+        phase "dry-run: planned apply steps"
+        log "would ensure state dirs under ${XDG_STATE_HOME:-$HOME/.local/state}/dots and ${XDG_STATE_HOME:-$HOME/.local/state}/quickshell"
+        log "would apply pending migrations from $REPO_DIR/migrations (marker-based)"
+        log "would generate themes/colors, hypr overrides, hypridle.conf, and hyprlock.conf"
+        log "would verify critical generated runtime artifacts"
     fi
 
     local cs=0

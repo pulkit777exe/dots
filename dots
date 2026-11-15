@@ -7,6 +7,8 @@
 #   ./dots fonts [font-file ...]         install vendored (+ given) fonts
 #   ./dots apps                          third-party apps (brave, flatpaks; needs a terminal)
 #   ./dots check                         verify install + session; make no changes
+#   ./dots doctor                        alias for check (actionable verification)
+#   ./dots migrate [--dry-run|--pending] apply/list pending repo migrations
 #   ./dots lint                          static checks (QML rules, IPC scope, imports)
 #   ./dots test [args]                   contract tests (needs a live shell for some)
 #   ./dots update [args]                 update the clone and re-link (via bootstrap.sh)
@@ -57,8 +59,10 @@ case "$CMD" in
         bash "$REPO_DIR/scripts/install-fonts.sh" "${REST[@]}" ;;
     apps)
         bash "$REPO_DIR/install-software" "${EXTRA[@]}" ;;
-    check)
+    check|doctor)
         bash "$REPO_DIR/install.sh" --check ;;
+    migrate)
+        bash "$REPO_DIR/scripts/migrate.sh" "${EXTRA[@]}" "${REST[@]}" ;;
     lint)
         bash "$REPO_DIR/scripts/lint.sh" "${REST[@]}" ;;
     test)

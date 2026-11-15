@@ -3,16 +3,15 @@
 #
 #   . "$REPO_DIR/scripts/lib.sh"
 #
-# Contract: the caller sets REPO_DIR (repo root), DRY_RUN (0/1) and
-# ASSUME_YES (0/1) before calling anything that acts. Helpers only read
-# them at call time, so sourcing order does not matter.
+# Contract: callers typically set REPO_DIR, DRY_RUN (0/1), ASSUME_YES (0/1),
+# and CHECK_ONLY (0/1) before calling helpers that act. Helpers read them at
+# call time, so sourcing order does not matter.
 [ -n "${DOTS_LIB_LOADED:-}" ] && return 0
 DOTS_LIB_LOADED=1
 
 have() { command -v "$1" >/dev/null 2>&1; }
 
 # repo_root [START_DIR] — print the repo root (dir containing hypr/ + colors/).
-# Used by every entry point instead of 8 copies of the same cd/dirname block.
 repo_root() {
     local dir="${1:-}"
     if [ -z "$dir" ] && [ -n "${BASH_SOURCE[0]:-}" ] && [ -f "${BASH_SOURCE[0]}" ]; then
@@ -28,7 +27,6 @@ repo_root() {
 }
 
 # require_tty — abort when an interactive prompt would hang (pipe/cron/CI).
-# Call before any sudo/confirm when ASSUME_YES=0.
 require_tty() {
     if [ "${ASSUME_YES:-0}" -eq 0 ] && [ ! -t 0 ]; then
         die "No terminal to confirm on. Re-run with --yes."
@@ -38,8 +36,24 @@ require_tty() {
 log()  { printf '\033[1;32m==>\033[0m %s\n' "$1"; }
 warn() { printf '\033[1;33m!!\033[0m %s\n' "$1" >&2; }
 err()  { printf '\033[1;31mxx\033[0m %s\n' "$1" >&2; }
+info() { printf '   %s\n' "$1"; }
+phase(){ printf '\n\033[1;36m::\033[0m %s\n' "$1"; }
 die()  { err "$1"; exit 1; }
 run()  { if [ "${DRY_RUN:-0}" -eq 1 ]; then printf '   would run: %s\n' "$*"; else "$@"; fi; }
+
+dots_state_dir() { printf '%s\n' "${XDG_STATE_HOME:-$HOME/.local/state}/dots"; }
+dots_migration_dir() { printf '%s\n' "$(dots_state_dir)/migrations"; }
+dots_log_dir() { printf '%s\n' "$(dots_state_dir)/logs"; }
+
+# Bounded summary counters (best-effort; callers may increment).
+: "${DOTS_WARN_COUNT:=0}"
+: "${DOTS_ERR_COUNT:=0}"
+note_warn() { DOTS_WARN_COUNT=$((DOTS_WARN_COUNT + 1)); warn "$1"; }
+note_err()  { DOTS_ERR_COUNT=$((DOTS_ERR_COUNT + 1)); err "$1"; }
+
+summary_line() {
+    printf '  %s\n' "$1"
+}
 
 # confirm PROMPT -> exit 0 on an explicit yes. Refuses without a terminal
 # instead of hanging a pipe, cron job or CI run.
