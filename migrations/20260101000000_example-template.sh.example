@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# Example migration template (rename to *.sh to enable).
+# Naming: YYYYMMDDHHMMSS_short-description.sh
+# Applied once per user by scripts/migrate.sh (marker-based).
+
+set -euo pipefail
+
+REPO_DIR="${REPO_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
+CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
+STATE_HOME="${XDG_STATE_HOME:-$HOME/.local/state}"
+
+log()  { printf '==> [migration] %s\n' "$1"; }
+warn() { printf '!! [migration] %s\n' "$1" >&2; }
+
+# Guard: only run when relevant state exists
+# [ -e "$STATE_HOME/old/path" ] || exit 0
+
+# Guard: idempotent change (safe even if re-run manually)
+# if [ -f "$CONFIG_HOME/example.conf" ] && grep -q '^legacyOption=' "$CONFIG_HOME/example.conf"; then
+#   sed -i 's/^legacyOption=.*/newOption=true/' "$CONFIG_HOME/example.conf"
+#   log "updated example.conf"
+# fi
+
+# Guard: never delete user data; move aside instead
+# if [ -d "$CONFIG_HOME/legacy-dir" ] && [ ! -e "$CONFIG_HOME/legacy-dir.migrated" ]; then
+#   mv "$CONFIG_HOME/legacy-dir" "$CONFIG_HOME/legacy-dir.pre-migrate.$(date +%Y%m%d-%H%M%S)"
+#   : > "$CONFIG_HOME/legacy-dir.migrated"
+#   log "moved legacy-dir aside"
+# fi
+
+log "example template: nothing to do"
+exit 0

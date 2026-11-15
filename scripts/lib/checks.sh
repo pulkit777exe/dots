@@ -266,6 +266,16 @@ check_installed_layout() {
             fi
         fi
     fi
+    if command -v dots_check_manifest_drift >/dev/null 2>&1; then
+        while IFS= read -r line; do
+            [ -n "$line" ] || continue
+            case "$line" in
+                OK$'\t'*) log "${line#OK$'\t'}" ;;
+                WARN$'\t'*) warn "${line#WARN$'\t'}" ;;
+                *) info "$line" ;;
+            esac
+        done < <(dots_check_manifest_drift "$repo_dir" 2>/dev/null || true)
+    fi
     return "$fail"
 }
 

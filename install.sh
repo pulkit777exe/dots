@@ -27,6 +27,10 @@ REPO_DIR="$(repo_root "$REPO_DIR" || true)"
 . "$REPO_DIR/scripts/lib/generate.sh"
 # shellcheck disable=SC1091
 . "$REPO_DIR/scripts/lib/checks.sh"
+# shellcheck disable=SC1091
+. "$REPO_DIR/scripts/lib/logging.sh"
+# shellcheck disable=SC1091
+. "$REPO_DIR/scripts/lib/state.sh"
 
 CONFIG_DIR="$(dots_config_dir)"
 
@@ -61,6 +65,12 @@ while [ $# -gt 0 ]; do
 done
 
 main() {
+    local _run_name="install"
+    [ "$CHECK_ONLY" -eq 1 ] && _run_name="check"
+    [ "$DRY_RUN" -eq 1 ] && _run_name="${_run_name}-dry-run"
+    dots_init_logging "$_run_name"
+    trap dots_finish_run EXIT
+
     local cs=0
 
     if [ "$(id -u)" -eq 0 ]; then
@@ -99,11 +109,18 @@ main() {
     check_fonts
 
     if [ "$CHECK_ONLY" -eq 0 ]; then
-        run_apply_phase "$REPO_DIR" "$DRY_RUN"
+        if run_apply_phase "$REPO_DIR" "$DRY_RUN"; then
+            [ "$DRY_RUN" -eq 0 ] && dots_write_manifest "$REPO_DIR" "applied" >/dev/null 2>&1 || true
+        else
+            cs=1
+        fi
     fi
 
     check_installed_layout "$REPO_DIR" "$CONFIG_DIR" "$CHECK_ONLY" "$DRY_RUN" || cs=1
     check_live_integrations || cs=1
+    [ "$DRY_RUN" -eq 0 ] && [ "$CHECK_ONLY" -eq 1 ] && dots_write_manifest "$REPO_DIR" "checked" >/dev/null 2>&1 || true
+    [ "$cs" -eq 0 ] && [ "$CHECK_ONLY" -eq 0 ] && [ "$DRY_RUN" -eq 0 ] && dots_write_manifest "$REPO_DIR" "ok" >/dev/null 2>&1 || true
+
 
     echo
     if [ "$cs" -eq 0 ]; then
