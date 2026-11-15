@@ -2,14 +2,40 @@
 # One-shot installer for a fresh Fedora machine.
 #
 #   ./install
+#   ./install --dry-run
 #
 # Installs packages and session components, links configs, generates runtime
 # state, installs fonts/theme where possible, and verifies the result.
-# Idempotent and safe to re-run. No manual setup should be required beyond
-# running this command (font licensing may still require an optional manual
-# SF Pro download; the desktop works without it).
+# Idempotent and safe to re-run.
 
 set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-exec bash "$REPO_DIR/scripts/setup.sh" --all --yes "$@"
+
+ARGS=(--all)
+for arg in "$@"; do
+    case "$arg" in
+        --dry-run) ARGS+=(--dry-run) ;;
+        --check)
+            exec bash "$REPO_DIR/install.sh" --check
+            ;;
+        -h|--help)
+            cat <<'USAGE'
+usage: ./install [--dry-run] [--check] [--help]
+
+  --dry-run   show what would be installed/changed
+  --check     verify the installed config without changing anything
+  --help      show this message
+USAGE
+            exit 0
+            ;;
+        *) ARGS+=("$arg") ;;
+    esac
+done
+
+# Non-interactive by default for one-command installs; allow explicit override.
+if [[ " ${ARGS[*]} " != *" --yes "* && " ${ARGS[*]} " != *" -y "* && " ${ARGS[*]} " != *" --dry-run "* ]]; then
+    ARGS+=(--yes)
+fi
+
+exec bash "$REPO_DIR/scripts/setup.sh" "${ARGS[@]}"

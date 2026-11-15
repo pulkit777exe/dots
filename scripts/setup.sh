@@ -117,6 +117,21 @@ done
 
 [ "$GROUPS_GIVEN" -eq 0 ] && { WANT_DESKTOP=1; WANT_SHELL=1; WANT_SESSION=1; }
 
+print_summary() {
+    echo
+    log "install summary"
+    printf '  mode: %s\n' "$([ "$DRY_RUN" -eq 1 ] && echo dry-run || echo apply)"
+    printf '  groups:'
+    [ "$WANT_DESKTOP" -eq 1 ] && printf ' desktop'
+    [ "$WANT_SHELL" -eq 1 ] && printf ' shell'
+    [ "$WANT_SESSION" -eq 1 ] && printf ' session'
+    [ "$WANT_NVIDIA" -eq 1 ] && printf ' nvidia'
+    [ "$WANT_DEV" -eq 1 ] && printf ' dev'
+    printf '\n'
+    printf '  link/config: %s\n' "$([ "$NO_LINK" -eq 1 ] && echo skip || echo yes)"
+    echo
+}
+
 # --yes was silently always-on: ${ASSUME_YES:+-y} expands whenever the
 # variable is set, even to 0 (it is initialised to 0 above). Build the flag
 # once, honestly.
@@ -138,6 +153,8 @@ if ! command -v curl >/dev/null 2>&1; then
         sudo dnf install "${DNF_YES[@]}" curl
     fi
 fi
+
+print_summary
 
 pkg_installed() { rpm -q "$1" >/dev/null 2>&1; }
 
@@ -289,6 +306,50 @@ ensure_pam_keyring() {
     echo "-session   optional      pam_gnome_keyring.so auto_start" | sudo tee -a "$pam" >/dev/null
 }
 
+ensure_charge_helper() {
+    # Battery charge limit without a polkit round-trip: install a root-owned
+    # validated helper and a NOPASSWD sudoers entry scoped to that one path.
+    local node=""
+    for f in /sys/class/power_supply/BAT*/charge_control_end_threshold; do
+        [ -e "$f" ] && { node="$f"; break; }
+    done
+    if [ -z "$node" ]; then
+        log "no charge-control node — skipping charge-limit helper"
+        return 0
+    fi
+    local src="$REPO_DIR/quickshell/scripts/set-charge-limit.sh"
+    local dst=/usr/local/bin/dots-set-charge-limit
+    local rules=/etc/sudoers.d/dots-charge-limit
+    if [ "$DRY_RUN" -eq 1 ]; then
+        log "would run: install $dst (root-owned) + $rules for $USER"
+        return 0
+    fi
+    if [ ! -f "$src" ]; then
+        warn "missing $src — skipping charge-limit helper"
+        return 0
+    fi
+    require_tty
+    if [ -f "$dst" ] && cmp -s "$src" "$dst"; then
+        log "charge-limit helper already installed"
+    else
+        log "installing charge-limit helper to $dst"
+        sudo install -o root -g root -m 0755 "$src" "$dst"
+    fi
+    local want1="$USER ALL=(root) NOPASSWD: $dst [4-9][0-9]"
+    local want2="$USER ALL=(root) NOPASSWD: $dst 100"
+    if [ -f "$rules" ] && sudo grep -qxF "$want1" "$rules" 2>/dev/null && sudo grep -qxF "$want2" "$rules" 2>/dev/null; then
+        log "charge-limit sudoers already in place"
+    else
+        log "granting $USER passwordless $dst (validated 40-100 only)"
+        local tmp
+        tmp="$(mktemp)"
+        printf '%s\n%s\n' "$want1" "$want2" > "$tmp"
+        sudo visudo -c -f "$tmp" >/dev/null
+        sudo install -o root -g root -m 0440 "$tmp" "$rules"
+        rm -f "$tmp"
+    fi
+}
+
 ensure_system_services() {
     if [ "$DRY_RUN" -eq 1 ]; then
         log "would run: enable core system services when present (NetworkManager, bluetooth, upower, power-profiles-daemon)"
@@ -313,7 +374,7 @@ ensure_system_services() {
     done
 
     # User audio stack: best effort (may require an active user session/bus).
-    for usvc in pipewire.service pipewire-pulse.service wireplumber.service pipewire.socket pipewire-pulse.socket wireplumber.service; do
+    for usvc in pipewire.socket pipewire-pulse.socket wireplumber.service; do
         if systemctl --user list-unit-files "$usvc" >/dev/null 2>&1; then
             if systemctl --user is-enabled --quiet "$usvc" 2>/dev/null; then
                 log "user service enabled: $usvc"
