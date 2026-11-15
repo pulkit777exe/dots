@@ -26,6 +26,8 @@ REPO_DIR="$(repo_root "$REPO_DIR" || true)"
 # shellcheck disable=SC1091
 . "$REPO_DIR/scripts/lib/generate.sh"
 # shellcheck disable=SC1091
+. "$REPO_DIR/scripts/lib/capabilities.sh"
+# shellcheck disable=SC1091
 . "$REPO_DIR/scripts/lib/checks.sh"
 # shellcheck disable=SC1091
 . "$REPO_DIR/scripts/lib/logging.sh"
@@ -39,12 +41,12 @@ MISSING_OPTIONAL=()
 
 usage() {
     cat <<'USAGE'
-usage: install.sh [--dry-run] [--check] [--yes] [--help]
+usage: install.sh [--dry-run|--plan] [--check] [--yes] [--help]
 
-  --dry-run   print the plan without touching anything
-  --check     only verify the installed config; make no changes
-  --yes       do not prompt before moving an existing config aside
-  --help      show this message
+  --dry-run, --plan  print the plan without touching anything
+  --check            only verify the installed config; make no changes
+  --yes              do not prompt before moving an existing config aside
+  --help             show this message
 
 Managed configs/home files are linked idempotently. Existing targets are
 moved aside to *.pre-install.<timestamp> (never deleted). Generated runtime
@@ -54,12 +56,12 @@ USAGE
 
 while [ $# -gt 0 ]; do
     case "$1" in
-        --dry-run)   DRY_RUN=1 ;;
-        --check)     CHECK_ONLY=1 ;;
-        -y|--yes)    ASSUME_YES=1 ;;
-        --full)      FULL_INSTALL=1 ;;
-        -h|--help)   usage; exit 0 ;;
-        *)           err "unknown argument: $1"; usage >&2; exit 2 ;;
+        --dry-run|--plan) DRY_RUN=1 ;;
+        --check)          CHECK_ONLY=1 ;;
+        -y|--yes)         ASSUME_YES=1 ;;
+        --full)           FULL_INSTALL=1 ;;
+        -h|--help)        usage; exit 0 ;;
+        *)                err "unknown argument: $1"; usage >&2; exit 2 ;;
     esac
     shift
 done

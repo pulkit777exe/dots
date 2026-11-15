@@ -1,14 +1,15 @@
 #!/usr/bin/env bash
 # dots — one entry point for this repo. Provision, link, verify, update.
 #
-#   ./dots packages [--all|--desktop|--shell|--session|--nvidia|--dev] [--yes] [--dry-run]
-#   ./dots session [--yes] [--dry-run]   login session only (sddm + sequoia theme, uwsm, graphical target)
-#   ./dots link [--yes] [--dry-run]      symlink configs into ~/.config + ~/.zshrc
+#   ./dots packages [--all|--desktop|--shell|--session|--nvidia|--dev] [--yes] [--dry-run|--plan]
+#   ./dots session [--yes] [--dry-run|--plan]   login session only (sddm + sequoia theme, uwsm, graphical target)
+#   ./dots link [--yes] [--dry-run|--plan]      symlink configs into ~/.config + ~/.zshrc
 #   ./dots fonts [font-file ...]         install vendored (+ given) fonts
 #   ./dots apps                          third-party apps (brave, flatpaks; needs a terminal)
 #   ./dots check                         verify install + session; make no changes
 #   ./dots doctor                        alias for check (actionable verification)
 #   ./dots migrate [--dry-run|--pending] apply/list pending repo migrations
+#   ./dots state [show|diff|summary|path] inspect managed-state manifest/receipt and drift
 #   ./dots lint                          static checks (QML rules, IPC scope, imports)
 #   ./dots test [args]                   contract tests (needs a live shell for some)
 #   ./dots update [args]                 update the clone and re-link (via bootstrap.sh)
@@ -36,9 +37,9 @@ EXTRA=()
 POS=()
 for arg in "$@"; do
     case "$arg" in
-        --dry-run) EXTRA+=(--dry-run) ;;
-        -y|--yes)  EXTRA+=(--yes) ;;
-        *)         POS+=("$arg") ;;
+        --dry-run|--plan) EXTRA+=(--dry-run) ;;
+        -y|--yes)         EXTRA+=(--yes) ;;
+        *)                POS+=("$arg") ;;
     esac
 done
 
@@ -63,6 +64,20 @@ case "$CMD" in
         bash "$REPO_DIR/install.sh" --check ;;
     migrate)
         bash "$REPO_DIR/scripts/migrate.sh" "${EXTRA[@]}" "${REST[@]}" ;;
+    state|manifest)
+        # shellcheck disable=SC1091
+        . "$REPO_DIR/scripts/lib/manifest.sh"
+        # shellcheck disable=SC1091
+        . "$REPO_DIR/scripts/lib/state.sh"
+        sub="${REST[0]:-summary}"
+        case "$sub" in
+            show) dots_manifest_show ;;
+            diff) dots_manifest_diff "$REPO_DIR" ;;
+            summary) dots_manifest_summary ;;
+            path) echo "$(dots_state_manifest_file)" ;;
+            *) err "unknown state subcommand: $sub (use show|diff|summary|path)"; exit 2 ;;
+        esac
+        ;;
     lint)
         bash "$REPO_DIR/scripts/lint.sh" "${REST[@]}" ;;
     test)

@@ -31,7 +31,7 @@ usage() {
 usage: scripts/setup.sh [--dry-run] [--yes] [--all] [--desktop] [--shell]
                         [--session] [--nvidia] [--dev] [--no-link] [--list] [--help]
 
-  --dry-run   print the plan without touching anything
+  --dry-run, --plan  print the plan without touching anything
   --yes       pass -y to dnf / copr and skip confirmations
   --all       install every group below
   --desktop   compositor, shell runtime, screenshot + media tools
@@ -49,7 +49,7 @@ USAGE
 
 while [ $# -gt 0 ]; do
     case "$1" in
-        --dry-run) DRY_RUN=1 ;;
+        --dry-run|--plan) DRY_RUN=1 ;;
         -y|--yes)  ASSUME_YES=1 ;;
         --all)     WANT_DESKTOP=1; WANT_SHELL=1; WANT_SESSION=1; WANT_NVIDIA=1; WANT_DEV=1; GROUPS_GIVEN=1 ;;
         --desktop) WANT_DESKTOP=1; GROUPS_GIVEN=1 ;;

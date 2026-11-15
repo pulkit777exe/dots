@@ -29,11 +29,12 @@ After install, log out and choose the Hyprland session.
 
 ## Commands
 
-- `./install [--dry-run|--check]` — one-shot install/verify (phased apply + critical runtime checks)
-- `./dots check` / `./dots doctor` — verify install, generated state, services, and session readiness
-- `./dots link [--dry-run|--yes]` — link configs and regenerate/verify runtime state
+- `./install [--dry-run|--plan|--check]` — one-shot install/verify (phased apply + critical runtime checks)
+- `./dots check` / `./dots doctor` — verify install, generated state, services, capabilities, and session readiness
+- `./dots link [--dry-run|--plan|--yes]` — link configs and regenerate/verify runtime state
 - `./dots migrate [--dry-run|--pending]` — apply/list marker-based repo migrations (`migrations/*.sh`)
-- `./dots packages [--all|--desktop|--shell|--session|--nvidia|--dev]` — package groups only
+- `./dots packages [--all|--desktop|--shell|--session|--nvidia|--dev] [--dry-run|--plan]` — package groups only
+- `./dots state [show|diff|summary|path]` — inspect managed-state manifest/receipt and drift
 - `./dots update` — update and re-run bootstrap
 
 ## Notes

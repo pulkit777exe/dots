@@ -24,7 +24,7 @@ dots_init_logging() {
 }
 
 dots_write_summary() {
-    local status="${1:-unknown}" exit_code="${2:-0}" ended_at details_file
+    local status="${1:-unknown}" exit_code="${2:-0}" ended_at details_file json_file
     ended_at="$(dots_now_iso)"
     mkdir -p "$(dots_state_dir)" "$(dots_log_dir)" 2>/dev/null || true
     details_file="$(dots_state_dir)/last-result.env"
@@ -38,8 +38,33 @@ DOTS_LAST_LOG_FILE=${DOTS_LOG_FILE:-}
 DOTS_LAST_WARN_COUNT=${DOTS_WARN_COUNT:-0}
 DOTS_LAST_ERR_COUNT=${DOTS_ERR_COUNT:-0}
 EOF
-    # Human-readable latest summary pointer
     printf '%s\n' "$DOTS_LOG_FILE" > "$(dots_state_dir)/last-log.path" 2>/dev/null || true
+
+    json_file="$(dots_log_dir)/${DOTS_RUN_NAME:-run}-last.summary.json"
+    if command -v python3 >/dev/null 2>&1; then
+        python3 - "$json_file" "$(dots_state_dir)/last-summary.json" <<'PY' "$DOTS_RUN_NAME" "$status" "$exit_code" "$DOTS_RUN_STARTED_AT" "$ended_at" "$DOTS_LOG_FILE" "${DOTS_WARN_COUNT:-0}" "${DOTS_ERR_COUNT:-0}" "$(pwd)" "$(git -C "${REPO_DIR:-.}" rev-parse HEAD 2>/dev/null || true)"
+import json, os, sys
+out1, out2, name, status, exit_code, started, ended, log_file, warn_count, err_count, cwd, rev = sys.argv[1:13]
+data = {
+  "run_name": name,
+  "status": status,
+  "exit_code": int(exit_code),
+  "started_at": started or None,
+  "ended_at": ended or None,
+  "log_file": log_file or None,
+  "warn_count": int(warn_count),
+  "err_count": int(err_count),
+  "cwd": cwd,
+  "repo_revision": rev or None,
+}
+for path in (out1, out2):
+    tmp = path + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2, sort_keys=True)
+        f.write("\n")
+    os.replace(tmp, path)
+PY
+    fi
 }
 
 dots_finish_run() {

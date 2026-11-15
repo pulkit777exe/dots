@@ -344,6 +344,11 @@ check_live_integrations() {
         warn "missing optional (features degrade): ${MISSING_OPTIONAL[*]}"
     fi
 
+    if command -v print_capability_report >/dev/null 2>&1; then
+        echo
+        print_capability_report || true
+    fi
+
     check_core_services || fail=1
     check_boot_session || fail=1
 

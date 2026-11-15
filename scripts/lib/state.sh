@@ -157,7 +157,53 @@ if issues:
         print(f"WARN\t - {i}")
     if len(issues) > 20:
         print(f"WARN\t - ... and {len(issues)-20} more")
+    sys.exit(1)
 else:
     print("OK\tstate manifest: no drift detected from last recorded state")
+    sys.exit(0)
 PY
 }
+
+dots_manifest_diff() {
+    dots_check_manifest_drift "${1:?repo_dir required}"
+}
+
+dots_manifest_show() {
+    local manifest
+    manifest="$(dots_state_manifest_file)"
+    if [ ! -f "$manifest" ]; then
+        err "state manifest not found: $manifest"
+        return 1
+    fi
+    if command -v python3 >/dev/null 2>&1; then
+        python3 -m json.tool "$manifest"
+    else
+        cat "$manifest"
+    fi
+}
+
+dots_manifest_summary() {
+    local manifest
+    manifest="$(dots_state_manifest_file)"
+    if [ ! -f "$manifest" ]; then
+        warn "state manifest not found: $manifest"
+        return 1
+    fi
+    if ! command -v python3 >/dev/null 2>&1; then
+        echo "$manifest"
+        return 0
+    fi
+    python3 - "$manifest" <<'PY'
+import json, sys
+m = json.load(open(sys.argv[1], 'r', encoding='utf-8'))
+print(f"schema={m.get('schema')} status={m.get('status')} written_at={m.get('written_at')}")
+print(f"repo_revision={m.get('repo_revision')}")
+print(f"config_dir={m.get('config_dir')}")
+print(f"state_home={m.get('state_home')}")
+for sec in ('managed_links','managed_home_files','generated_files'):
+    d = m.get(sec) or {}
+    ok = sum(1 for v in d.values() if isinstance(v, dict) and v.get('exists'))
+    print(f"{sec}: {ok}/{len(d)} present")
+PY
+}
+
